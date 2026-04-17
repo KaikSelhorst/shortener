@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/KaikSelhorst/shortener/internal/config"
+	"github.com/KaikSelhorst/shortener/internal/handler"
 	"github.com/KaikSelhorst/shortener/internal/router"
 )
 
@@ -31,7 +32,15 @@ func main() {
 		logger.Fatal(err)
 	}
 
-	r := router.New(cfg)
+	healthHandler := handler.NewHealthHandler()
+	redirectHandler := handler.NewRedirectHandler(logger)
+
+	handlers := &router.Handlers{
+		HealthHandler:   healthHandler,
+		RedirectHandler: redirectHandler,
+	}
+
+	r := router.New(cfg, handlers)
 
 	go func() {
 		if err := r.Run(); err != nil && err != http.ErrServerClosed {

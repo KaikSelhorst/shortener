@@ -10,18 +10,22 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 )
 
+type Handlers struct {
+	HealthHandler   *handler.HealthHandler
+	RedirectHandler *handler.RedirectHandler
+}
+
 type Router struct {
 	Server *http.Server
 }
 
-func New(cfg *config.Config) *Router {
+func New(cfg *config.Config, handlers *Handlers) *Router {
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Use(middleware.RequestID)
 
-	healthHandler := handler.NewHealthHandler()
-
-	r.Get("/health", healthHandler.Ok)
+	r.Get("/health", handlers.HealthHandler.Ok)
+	r.Get("/{code}", handlers.RedirectHandler.HandleRedirect)
 
 	server := &http.Server{Handler: r, Addr: ":" + cfg.Port}
 
