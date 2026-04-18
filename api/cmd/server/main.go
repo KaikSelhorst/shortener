@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/KaikSelhorst/shortener/internal/config"
+	"github.com/KaikSelhorst/shortener/internal/database"
 	"github.com/KaikSelhorst/shortener/internal/handler"
 	"github.com/KaikSelhorst/shortener/internal/router"
 )
@@ -26,11 +27,22 @@ func main() {
 		}
 	}()
 
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	cfg, err := config.Load()
 
 	if err != nil {
 		logger.Fatal(err)
 	}
+
+	db, err := database.NewDatabase(ctx, cfg.DatabaseURL)
+
+	if err != nil {
+		logger.Fatal(err)
+	}
+
+	defer db.Close()
 
 	healthHandler := handler.NewHealthHandler()
 	redirectHandler := handler.NewRedirectHandler(logger)
@@ -54,10 +66,10 @@ func main() {
 
 	logger.Info("shutting down...")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer shutdownCancel()
 
-	if err := r.Shutdown(ctx); err != nil {
+	if err := r.Shutdown(shutdownCtx); err != nil {
 		logger.Fatal(err)
 	}
 
