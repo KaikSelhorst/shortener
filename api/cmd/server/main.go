@@ -12,6 +12,7 @@ import (
 	"github.com/KaikSelhorst/shortener/internal/config"
 	"github.com/KaikSelhorst/shortener/internal/database"
 	"github.com/KaikSelhorst/shortener/internal/handler"
+	"github.com/KaikSelhorst/shortener/internal/repository"
 	"github.com/KaikSelhorst/shortener/internal/router"
 )
 
@@ -44,8 +45,10 @@ func main() {
 
 	defer db.Close()
 
+	linkRepository := repository.NewLinkRepository(db.Pool)
+
 	healthHandler := handler.NewHealthHandler()
-	redirectHandler := handler.NewRedirectHandler(logger)
+	redirectHandler := handler.NewRedirectHandler(logger, linkRepository)
 
 	handlers := &router.Handlers{
 		HealthHandler:   healthHandler,
