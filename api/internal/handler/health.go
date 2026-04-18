@@ -11,6 +11,6 @@ func NewHealthHandler() *HealthHandler {
 	return &HealthHandler{}
 }
 
-func (c *HealthHandler) Ok(w http.ResponseWriter, r *http.Request) {
+func (h *HealthHandler) Ok(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
