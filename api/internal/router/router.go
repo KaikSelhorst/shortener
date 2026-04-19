@@ -13,6 +13,7 @@ import (
 type Handlers struct {
 	HealthHandler   *handler.HealthHandler
 	RedirectHandler *handler.RedirectHandler
+	ProjectHandler  *handler.ProjectHandler
 }
 
 type Router struct {
@@ -25,6 +26,7 @@ func New(cfg *config.Config, handlers *Handlers) *Router {
 	r.Use(middleware.RequestID)
 
 	r.Get("/health", handlers.HealthHandler.Ok)
+	r.Post("/projects", handlers.ProjectHandler.CreateProject)
 	r.Get("/{code}", handlers.RedirectHandler.HandleRedirect)
 
 	server := &http.Server{Handler: r, Addr: ":" + cfg.Port}

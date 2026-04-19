@@ -12,8 +12,8 @@ type RedirectHandler struct {
 	linkRepository *repository.LinkRepository
 }
 
-func NewRedirectHandler(logger *zap.SugaredLogger, linkRepository *repository.LinkRepository) *RedirectHandler {
-	return &RedirectHandler{logger: logger, linkRepository: linkRepository}
+func NewRedirectHandler(linkRepository *repository.LinkRepository) *RedirectHandler {
+	return &RedirectHandler{linkRepository: linkRepository}
 }
 
 func (h *RedirectHandler) HandleRedirect(w http.ResponseWriter, r *http.Request) {

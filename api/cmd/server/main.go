@@ -51,13 +51,16 @@ func main() {
 	defer db.Close()
 
 	linkRepository := repository.NewLinkRepository(db.Pool)
+	projectRepository := repository.NewProjectRepository(db.Pool)
 
 	healthHandler := handler.NewHealthHandler()
-	redirectHandler := handler.NewRedirectHandler(logger, linkRepository)
+	redirectHandler := handler.NewRedirectHandler(linkRepository)
+	projectHandler := handler.NewProjectHandler(projectRepository)
 
 	handlers := &router.Handlers{
 		HealthHandler:   healthHandler,
 		RedirectHandler: redirectHandler,
+		ProjectHandler:  projectHandler,
 	}
 
 	r := router.New(cfg, handlers)
