@@ -26,8 +26,11 @@ func New(cfg *config.Config, handlers *Handlers) *Router {
 	r.Use(middleware.RequestID)
 
 	r.Get("/health", handlers.HealthHandler.Ok)
+
 	r.Post("/projects", handlers.ProjectHandler.CreateProject)
 	r.Put("/projects/{slug}", handlers.ProjectHandler.UpdateProject)
+	r.Delete("/projects/{slug}", handlers.ProjectHandler.DeleteProject)
+
 	r.Get("/{code}", handlers.RedirectHandler.HandleRedirect)
 
 	server := &http.Server{Handler: r, Addr: ":" + cfg.Port}
