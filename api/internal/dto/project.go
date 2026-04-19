@@ -22,3 +22,19 @@ func (r *CreateProjectRequest) Validate() error {
 
 	return nil
 }
+
+type UpdateProjectRequest struct {
+	Name string `json:"name"`
+}
+
+func (r *UpdateProjectRequest) Validate() error {
+	if r.Name == "" {
+		return errors.New("name is required")
+	}
+
+	if !validName.MatchString(r.Name) {
+		return errors.New("name can only contain letters, digits, spaces, hyphens and underscores")
+	}
+
+	return nil
+}
