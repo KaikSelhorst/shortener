@@ -14,6 +14,7 @@ import (
 	"github.com/KaikSelhorst/shortener/internal/handler"
 	"github.com/KaikSelhorst/shortener/internal/repository"
 	"github.com/KaikSelhorst/shortener/internal/router"
+	"github.com/KaikSelhorst/shortener/migrations"
 )
 
 func main() {
@@ -34,6 +35,10 @@ func main() {
 	cfg, err := config.Load()
 
 	if err != nil {
+		logger.Fatal(err)
+	}
+
+	if err := migrations.Run(cfg.DatabaseURL); err != nil {
 		logger.Fatal(err)
 	}
 
