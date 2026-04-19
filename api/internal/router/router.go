@@ -27,6 +27,7 @@ func New(cfg *config.Config, handlers *Handlers) *Router {
 
 	r.Get("/health", handlers.HealthHandler.Ok)
 	r.Post("/projects", handlers.ProjectHandler.CreateProject)
+	r.Put("/projects/{slug}", handlers.ProjectHandler.UpdateProject)
 	r.Get("/{code}", handlers.RedirectHandler.HandleRedirect)
 
 	server := &http.Server{Handler: r, Addr: ":" + cfg.Port}
