@@ -24,6 +24,15 @@ func (r *ProjectRepository) GetByID(ctx context.Context, id int) (*model.Project
 	return &project, nil
 }
 
+func (r *ProjectRepository) FindBySlug(ctx context.Context, slug string) (*model.Project, error) {
+	var project model.Project
+	err := r.db.QueryRow(ctx, "SELECT id, name, slug, created_at FROM projects WHERE slug = $1", slug).Scan(&project.ID, &project.Name, &project.Slug, &project.CreatedAt)
+	if err != nil {
+		return nil, err
+	}
+	return &project, nil
+}
+
 func (r *ProjectRepository) Create(ctx context.Context, project *model.Project) error {
 	return r.db.QueryRow(ctx,
 		"INSERT INTO projects (name, slug) VALUES ($1, $2) RETURNING id, created_at",
