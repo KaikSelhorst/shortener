@@ -25,8 +25,10 @@ func (r *ProjectRepository) GetByID(ctx context.Context, id int) (*model.Project
 }
 
 func (r *ProjectRepository) Create(ctx context.Context, project *model.Project) error {
-	_, err := r.db.Exec(ctx, "INSERT INTO projects (name, slug) VALUES ($1, $2)", project.Name, project.Slug)
-	return err
+	return r.db.QueryRow(ctx,
+		"INSERT INTO projects (name, slug) VALUES ($1, $2) RETURNING id, created_at",
+		project.Name, project.Slug,
+	).Scan(&project.ID, &project.CreatedAt)
 }
 
 func (r *ProjectRepository) Update(ctx context.Context, project *model.Project) error {
