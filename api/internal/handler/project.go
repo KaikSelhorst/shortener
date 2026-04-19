@@ -80,3 +80,20 @@ func (h *ProjectHandler) UpdateProject(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(existingProject)
 }
+
+func (h *ProjectHandler) DeleteProject(w http.ResponseWriter, r *http.Request) {
+	slug := chi.URLParam(r, "slug")
+	existingProject, err := h.projectRepository.FindBySlug(r.Context(), slug)
+
+	if err != nil {
+		http.Error(w, "Project not found", http.StatusNotFound)
+		return
+	}
+
+	if err := h.projectRepository.Delete(r.Context(), existingProject.ID); err != nil {
+		http.Error(w, "Failed to delete project", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
