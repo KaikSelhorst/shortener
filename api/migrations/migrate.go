@@ -3,6 +3,7 @@ package migrations
 import (
 	"embed"
 	"fmt"
+	"strings"
 
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/pgx/v5"
@@ -18,7 +19,8 @@ func Run(databaseURL string) error {
 		return fmt.Errorf("migrations source: %w", err)
 	}
 
-	m, err := migrate.NewWithSourceInstance("iofs", source, "pgx5://"+databaseURL[len("postgres://"):])
+	pgx5URL := "pgx5://" + strings.TrimPrefix(strings.TrimPrefix(databaseURL, "postgres://"), "postgresql://")
+	m, err := migrate.NewWithSourceInstance("iofs", source, pgx5URL)
 	if err != nil {
 		return fmt.Errorf("migrate init: %w", err)
 	}
