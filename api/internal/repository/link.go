@@ -30,10 +30,10 @@ func (r *LinkRepository) GetByID(ctx context.Context, id int) (*model.Link, erro
 }
 
 func (r *LinkRepository) Create(ctx context.Context, link *model.Link) error {
-	_, err := r.db.Exec(ctx,
-		"INSERT INTO links (project_id, original_url, title, description, og_image) VALUES ($1, $2, $3, $4, $5)",
+	err := r.db.QueryRow(ctx,
+		"INSERT INTO links (project_id, original_url, title, description, og_image) VALUES ($1, $2, $3, $4, $5) RETURNING id, created_at",
 		link.ProjectID, link.OriginalURL, link.Title, link.Description, link.OgImage,
-	)
+	).Scan(&link.ID, &link.CreatedAt)
 
 	return err
 }
