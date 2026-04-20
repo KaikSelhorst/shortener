@@ -45,9 +45,9 @@ func (h *LinkHandler) CreateLink(w http.ResponseWriter, r *http.Request) {
 	newLink := &model.Link{
 		ProjectID:   project.ID,
 		OriginalURL: req.URL,
-		Title:       derefString(req.Title),
-		Description: derefString(req.Description),
-		OgImage:     derefString(req.OgImage),
+		Title:       req.Title,
+		Description: req.Description,
+		OgImage:     req.OgImage,
 	}
 
 	if err := h.linkRepository.Create(r.Context(), newLink); err != nil {
