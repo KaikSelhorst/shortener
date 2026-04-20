@@ -14,6 +14,7 @@ type Handlers struct {
 	HealthHandler   *handler.HealthHandler
 	RedirectHandler *handler.RedirectHandler
 	ProjectHandler  *handler.ProjectHandler
+	LinkHandler     *handler.LinkHandler
 }
 
 type Router struct {
@@ -30,6 +31,7 @@ func New(cfg *config.Config, handlers *Handlers) *Router {
 	r.Post("/projects", handlers.ProjectHandler.CreateProject)
 	r.Put("/projects/{slug}", handlers.ProjectHandler.UpdateProject)
 	r.Delete("/projects/{slug}", handlers.ProjectHandler.DeleteProject)
+	r.Post("/projects/{slug}/links", handlers.LinkHandler.CreateLink)
 
 	r.Get("/{code}", handlers.RedirectHandler.HandleRedirect)
 

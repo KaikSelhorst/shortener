@@ -56,11 +56,13 @@ func main() {
 	healthHandler := handler.NewHealthHandler()
 	redirectHandler := handler.NewRedirectHandler(linkRepository)
 	projectHandler := handler.NewProjectHandler(projectRepository)
+	linkHandler := handler.NewLinkHandler(linkRepository, projectRepository)
 
 	handlers := &router.Handlers{
 		HealthHandler:   healthHandler,
 		RedirectHandler: redirectHandler,
 		ProjectHandler:  projectHandler,
+		LinkHandler:     linkHandler,
 	}
 
 	r := router.New(cfg, handlers)
