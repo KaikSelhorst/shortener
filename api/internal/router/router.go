@@ -31,7 +31,12 @@ func New(cfg *config.Config, handlers *Handlers) *Router {
 	r.Post("/projects", handlers.ProjectHandler.CreateProject)
 	r.Put("/projects/{slug}", handlers.ProjectHandler.UpdateProject)
 	r.Delete("/projects/{slug}", handlers.ProjectHandler.DeleteProject)
+
 	r.Post("/projects/{slug}/links", handlers.LinkHandler.CreateLink)
+	r.Get("/projects/{slug}/links", handlers.LinkHandler.ListLinks)
+	r.Get("/projects/{slug}/links/{code}", handlers.LinkHandler.GetLink)
+	r.Put("/projects/{slug}/links/{code}", handlers.LinkHandler.UpdateLink)
+	r.Delete("/projects/{slug}/links/{code}", handlers.LinkHandler.DeleteLink)
 
 	r.Get("/{code}", handlers.RedirectHandler.HandleRedirect)
 

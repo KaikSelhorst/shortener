@@ -56,7 +56,7 @@ func main() {
 	healthHandler := handler.NewHealthHandler()
 	redirectHandler := handler.NewRedirectHandler(linkRepository)
 	projectHandler := handler.NewProjectHandler(projectRepository)
-	linkHandler := handler.NewLinkHandler(linkRepository, projectRepository)
+	linkHandler := handler.NewLinkHandler(linkRepository, projectRepository, cfg.BaseURL, cfg.CursorSecret)
 
 	handlers := &router.Handlers{
 		HealthHandler:   healthHandler,
