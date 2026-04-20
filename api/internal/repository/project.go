@@ -15,7 +15,7 @@ func NewProjectRepository(db *pgxpool.Pool) *ProjectRepository {
 	return &ProjectRepository{db: db}
 }
 
-func (r *ProjectRepository) GetByID(ctx context.Context, id int) (*model.Project, error) {
+func (r *ProjectRepository) GetByID(ctx context.Context, id int64) (*model.Project, error) {
 	var project model.Project
 	err := r.db.QueryRow(ctx, "SELECT id, name, slug, created_at FROM projects WHERE id = $1", id).Scan(&project.ID, &project.Name, &project.Slug, &project.CreatedAt)
 	if err != nil {
@@ -45,7 +45,7 @@ func (r *ProjectRepository) Update(ctx context.Context, project *model.Project) 
 	return err
 }
 
-func (r *ProjectRepository) Delete(ctx context.Context, id int) error {
+func (r *ProjectRepository) Delete(ctx context.Context, id int64) error {
 	_, err := r.db.Exec(ctx, "DELETE FROM projects WHERE id = $1", id)
 	return err
 }
