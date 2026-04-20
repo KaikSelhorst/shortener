@@ -4,11 +4,9 @@ import (
 	"net/http"
 
 	"github.com/KaikSelhorst/shortener/internal/repository"
-	"go.uber.org/zap"
 )
 
 type RedirectHandler struct {
-	logger         *zap.SugaredLogger
 	linkRepository *repository.LinkRepository
 }
 
