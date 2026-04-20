@@ -20,7 +20,7 @@ func Load() (*Config, error) {
 	}
 
 	if databaseURL == "" {
-		return nil, fmt.Errorf("DatabaseURL is required")
+		return nil, fmt.Errorf("DATABASE_URL is required")
 	}
 
 	return &Config{Port: port, DatabaseURL: databaseURL}, nil
