@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/KaikSelhorst/shortener/internal/repository"
+	"github.com/go-chi/chi/v5"
 )
 
 type RedirectHandler struct {
@@ -15,7 +16,8 @@ func NewRedirectHandler(linkRepository *repository.LinkRepository) *RedirectHand
 }
 
 func (h *RedirectHandler) HandleRedirect(w http.ResponseWriter, r *http.Request) {
-	link, err := h.linkRepository.GetByID(r.Context(), 1)
+	code := chi.URLParam(r, "code")
+	link, err := h.linkRepository.GetByCode(r.Context(), code)
 	if err != nil {
 		http.NotFound(w, r)
 		return

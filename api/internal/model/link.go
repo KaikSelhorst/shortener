@@ -5,6 +5,7 @@ import "time"
 type Link struct {
 	ID          int64     `json:"id"`
 	ProjectID   int64     `json:"project_id"`
+	ShortCode   string    `json:"short_code"`
 	OriginalURL string    `json:"original_url"`
 	Title       *string   `json:"title"`
 	Description *string   `json:"description"`
