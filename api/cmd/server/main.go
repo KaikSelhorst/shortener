@@ -14,6 +14,7 @@ import (
 	"github.com/KaikSelhorst/shortener/internal/handler"
 	"github.com/KaikSelhorst/shortener/internal/repository"
 	"github.com/KaikSelhorst/shortener/internal/router"
+	"github.com/KaikSelhorst/shortener/internal/service"
 	"github.com/KaikSelhorst/shortener/migrations"
 )
 
@@ -52,9 +53,12 @@ func main() {
 
 	linkRepository := repository.NewLinkRepository(db.Pool)
 	projectRepository := repository.NewProjectRepository(db.Pool)
+	clickRepository := repository.NewClickRepository(db.Pool)
+
+	tracker := service.NewTrackerService(clickRepository, logger)
 
 	healthHandler := handler.NewHealthHandler()
-	redirectHandler := handler.NewRedirectHandler(linkRepository)
+	redirectHandler := handler.NewRedirectHandler(linkRepository, tracker)
 	projectHandler := handler.NewProjectHandler(projectRepository)
 	linkHandler := handler.NewLinkHandler(linkRepository, projectRepository, cfg.BaseURL, cfg.CursorSecret)
 
@@ -85,6 +89,8 @@ func main() {
 	if err := r.Shutdown(shutdownCtx); err != nil {
 		logger.Fatal(err)
 	}
+
+	tracker.Shutdown()
 
 	logger.Info("Server stopped")
 }
