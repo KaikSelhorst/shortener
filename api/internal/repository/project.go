@@ -16,32 +16,39 @@ func NewProjectRepository(db *pgxpool.Pool) *ProjectRepository {
 }
 
 func (r *ProjectRepository) GetByID(ctx context.Context, id int64) (*model.Project, error) {
-	var project model.Project
-	err := r.db.QueryRow(ctx, "SELECT id, name, slug, created_at FROM projects WHERE id = $1", id).Scan(&project.ID, &project.Name, &project.Slug, &project.CreatedAt)
+	var p model.Project
+	err := r.db.QueryRow(ctx,
+		"SELECT id, user_id, name, slug, created_at FROM projects WHERE id = $1", id,
+	).Scan(&p.ID, &p.UserID, &p.Name, &p.Slug, &p.CreatedAt)
 	if err != nil {
 		return nil, err
 	}
-	return &project, nil
+	return &p, nil
 }
 
 func (r *ProjectRepository) FindBySlug(ctx context.Context, slug string) (*model.Project, error) {
-	var project model.Project
-	err := r.db.QueryRow(ctx, "SELECT id, name, slug, created_at FROM projects WHERE slug = $1", slug).Scan(&project.ID, &project.Name, &project.Slug, &project.CreatedAt)
+	var p model.Project
+	err := r.db.QueryRow(ctx,
+		"SELECT id, user_id, name, slug, created_at FROM projects WHERE slug = $1", slug,
+	).Scan(&p.ID, &p.UserID, &p.Name, &p.Slug, &p.CreatedAt)
 	if err != nil {
 		return nil, err
 	}
-	return &project, nil
+	return &p, nil
 }
 
 func (r *ProjectRepository) Create(ctx context.Context, project *model.Project) error {
 	return r.db.QueryRow(ctx,
-		"INSERT INTO projects (name, slug) VALUES ($1, $2) RETURNING id, created_at",
-		project.Name, project.Slug,
+		"INSERT INTO projects (user_id, name, slug) VALUES ($1, $2, $3) RETURNING id, created_at",
+		project.UserID, project.Name, project.Slug,
 	).Scan(&project.ID, &project.CreatedAt)
 }
 
 func (r *ProjectRepository) Update(ctx context.Context, project *model.Project) error {
-	_, err := r.db.Exec(ctx, "UPDATE projects SET name = $1, slug = $2 WHERE id = $3", project.Name, project.Slug, project.ID)
+	_, err := r.db.Exec(ctx,
+		"UPDATE projects SET name = $1, slug = $2 WHERE id = $3",
+		project.Name, project.Slug, project.ID,
+	)
 	return err
 }
 
