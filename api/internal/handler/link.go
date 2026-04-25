@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/KaikSelhorst/shortener/internal/dto"
+	"github.com/KaikSelhorst/shortener/internal/middleware"
 	"github.com/KaikSelhorst/shortener/internal/model"
 	"github.com/KaikSelhorst/shortener/internal/repository"
 	"github.com/KaikSelhorst/shortener/internal/service"
@@ -162,24 +163,37 @@ func (h *LinkHandler) GetLink(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *LinkHandler) UpdateLink(w http.ResponseWriter, r *http.Request) {
+	userID, ok := middleware.UserIDFromContext(r.Context())
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
 	code := chi.URLParam(r, "code")
 
 	var req dto.UpdateLinkRequest
-
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "invalid request payload", http.StatusBadRequest)
 		return
 	}
-
 	if err := req.Validate(); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	link, err := h.linkRepository.GetByCode(r.Context(), code)
-
 	if err != nil {
 		http.Error(w, "link not found", http.StatusNotFound)
+		return
+	}
+
+	project, err := h.projectRepository.GetByID(r.Context(), link.ProjectID)
+	if err != nil {
+		http.Error(w, "project not found", http.StatusNotFound)
+		return
+	}
+	if project.UserID != userID {
+		http.Error(w, "Forbidden", http.StatusForbidden)
 		return
 	}
 
@@ -198,7 +212,29 @@ func (h *LinkHandler) UpdateLink(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *LinkHandler) DeleteLink(w http.ResponseWriter, r *http.Request) {
+	userID, ok := middleware.UserIDFromContext(r.Context())
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
 	code := chi.URLParam(r, "code")
+
+	link, err := h.linkRepository.GetByCode(r.Context(), code)
+	if err != nil {
+		http.Error(w, "link not found", http.StatusNotFound)
+		return
+	}
+
+	project, err := h.projectRepository.GetByID(r.Context(), link.ProjectID)
+	if err != nil {
+		http.Error(w, "project not found", http.StatusNotFound)
+		return
+	}
+	if project.UserID != userID {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return
+	}
 
 	if err := h.linkRepository.DeleteByCode(r.Context(), code); err != nil {
 		http.Error(w, "failed to delete link", http.StatusInternalServerError)

@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/KaikSelhorst/shortener/internal/dto"
+	"github.com/KaikSelhorst/shortener/internal/middleware"
 	"github.com/KaikSelhorst/shortener/internal/model"
 	"github.com/KaikSelhorst/shortener/internal/repository"
 	"github.com/KaikSelhorst/shortener/internal/service"
@@ -20,23 +21,27 @@ func NewProjectHandler(projectRepository *repository.ProjectRepository) *Project
 }
 
 func (h *ProjectHandler) CreateProject(w http.ResponseWriter, r *http.Request) {
-	var project dto.CreateProjectRequest
-
-	if err := json.NewDecoder(r.Body).Decode(&project); err != nil {
-		http.Error(w, "Invalid request payload", http.StatusBadRequest)
+	userID, ok := middleware.UserIDFromContext(r.Context())
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
-	if err := project.Validate(); err != nil {
+	var req dto.CreateProjectRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request payload", http.StatusBadRequest)
+		return
+	}
+	if err := req.Validate(); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	newProject := &model.Project{
-		Name: project.Name,
-		Slug: service.GenerateSlug(project.Name),
+		UserID: userID,
+		Name:   req.Name,
+		Slug:   service.GenerateSlug(req.Name),
 	}
-
 	if err := h.projectRepository.Create(r.Context(), newProject); err != nil {
 		http.Error(w, "Failed to create project", http.StatusInternalServerError)
 		return
@@ -48,49 +53,66 @@ func (h *ProjectHandler) CreateProject(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ProjectHandler) UpdateProject(w http.ResponseWriter, r *http.Request) {
-	var project dto.UpdateProjectRequest
-
-	if err := json.NewDecoder(r.Body).Decode(&project); err != nil {
-		http.Error(w, "Invalid request payload", http.StatusBadRequest)
+	userID, ok := middleware.UserIDFromContext(r.Context())
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
-	if err := project.Validate(); err != nil {
+	var req dto.UpdateProjectRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request payload", http.StatusBadRequest)
+		return
+	}
+	if err := req.Validate(); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	slug := chi.URLParam(r, "slug")
-	existingProject, err := h.projectRepository.FindBySlug(r.Context(), slug)
-
+	project, err := h.projectRepository.FindBySlug(r.Context(), slug)
 	if err != nil {
 		http.Error(w, "Project not found", http.StatusNotFound)
 		return
 	}
 
-	existingProject.Name = project.Name
-	existingProject.Slug = service.GenerateSlug(project.Name)
+	if project.UserID != userID {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return
+	}
 
-	if err := h.projectRepository.Update(r.Context(), existingProject); err != nil {
+	project.Name = req.Name
+	project.Slug = service.GenerateSlug(req.Name)
+
+	if err := h.projectRepository.Update(r.Context(), project); err != nil {
 		http.Error(w, "Failed to update project", http.StatusInternalServerError)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(existingProject)
+	json.NewEncoder(w).Encode(project)
 }
 
 func (h *ProjectHandler) DeleteProject(w http.ResponseWriter, r *http.Request) {
-	slug := chi.URLParam(r, "slug")
-	existingProject, err := h.projectRepository.FindBySlug(r.Context(), slug)
+	userID, ok := middleware.UserIDFromContext(r.Context())
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
 
+	slug := chi.URLParam(r, "slug")
+	project, err := h.projectRepository.FindBySlug(r.Context(), slug)
 	if err != nil {
 		http.Error(w, "Project not found", http.StatusNotFound)
 		return
 	}
 
-	if err := h.projectRepository.Delete(r.Context(), existingProject.ID); err != nil {
+	if project.UserID != userID {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return
+	}
+
+	if err := h.projectRepository.Delete(r.Context(), project.ID); err != nil {
 		http.Error(w, "Failed to delete project", http.StatusInternalServerError)
 		return
 	}
