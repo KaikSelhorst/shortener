@@ -6,6 +6,8 @@ import (
 
 	"github.com/KaikSelhorst/shortener/internal/config"
 	"github.com/KaikSelhorst/shortener/internal/handler"
+	authmw "github.com/KaikSelhorst/shortener/internal/middleware"
+	"github.com/KaikSelhorst/shortener/internal/service"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 )
@@ -15,30 +17,41 @@ type Handlers struct {
 	RedirectHandler *handler.RedirectHandler
 	ProjectHandler  *handler.ProjectHandler
 	LinkHandler     *handler.LinkHandler
+	AuthHandler     *handler.AuthHandler
 }
 
 type Router struct {
 	Server *http.Server
 }
 
-func New(cfg *config.Config, handlers *Handlers) *Router {
+func New(cfg *config.Config, handlers *Handlers, authService *service.AuthService) *Router {
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Use(middleware.RequestID)
 
 	r.Get("/health", handlers.HealthHandler.Ok)
-
-	r.Post("/projects", handlers.ProjectHandler.CreateProject)
-	r.Put("/projects/{slug}", handlers.ProjectHandler.UpdateProject)
-	r.Delete("/projects/{slug}", handlers.ProjectHandler.DeleteProject)
-
-	r.Post("/projects/{slug}/links", handlers.LinkHandler.CreateLink)
-	r.Get("/projects/{slug}/links", handlers.LinkHandler.ListLinks)
-	r.Get("/projects/{slug}/links/{code}", handlers.LinkHandler.GetLink)
-	r.Put("/projects/{slug}/links/{code}", handlers.LinkHandler.UpdateLink)
-	r.Delete("/projects/{slug}/links/{code}", handlers.LinkHandler.DeleteLink)
-
 	r.Get("/{code}", handlers.RedirectHandler.HandleRedirect)
+
+	r.Route("/auth", func(r chi.Router) {
+		r.Post("/register", handlers.AuthHandler.Register)
+		r.Post("/login", handlers.AuthHandler.Login)
+		r.Post("/refresh", handlers.AuthHandler.Refresh)
+		r.Post("/logout", handlers.AuthHandler.Logout)
+	})
+
+	r.Route("/projects", func(r chi.Router) {
+		r.Use(authmw.RequireAuth(authService))
+
+		r.Post("/", handlers.ProjectHandler.CreateProject)
+		r.Put("/{slug}", handlers.ProjectHandler.UpdateProject)
+		r.Delete("/{slug}", handlers.ProjectHandler.DeleteProject)
+
+		r.Post("/{slug}/links", handlers.LinkHandler.CreateLink)
+		r.Get("/{slug}/links", handlers.LinkHandler.ListLinks)
+		r.Get("/{slug}/links/{code}", handlers.LinkHandler.GetLink)
+		r.Put("/{slug}/links/{code}", handlers.LinkHandler.UpdateLink)
+		r.Delete("/{slug}/links/{code}", handlers.LinkHandler.DeleteLink)
+	})
 
 	server := &http.Server{Handler: r, Addr: ":" + cfg.Port}
 

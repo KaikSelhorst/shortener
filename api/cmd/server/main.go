@@ -54,22 +54,27 @@ func main() {
 	linkRepository := repository.NewLinkRepository(db.Pool)
 	projectRepository := repository.NewProjectRepository(db.Pool)
 	clickRepository := repository.NewClickRepository(db.Pool)
+	userRepository := repository.NewUserRepository(db.Pool)
+	refreshTokenRepository := repository.NewRefreshTokenRepository(db.Pool)
 
 	tracker := service.NewTrackerService(clickRepository, logger)
+	authService := service.NewAuthService(cfg.JWTSecret)
 
 	healthHandler := handler.NewHealthHandler()
 	redirectHandler := handler.NewRedirectHandler(linkRepository, tracker)
 	projectHandler := handler.NewProjectHandler(projectRepository)
 	linkHandler := handler.NewLinkHandler(linkRepository, projectRepository, cfg.BaseURL, cfg.CursorSecret)
+	authHandler := handler.NewAuthHandler(userRepository, refreshTokenRepository, authService)
 
 	handlers := &router.Handlers{
 		HealthHandler:   healthHandler,
 		RedirectHandler: redirectHandler,
 		ProjectHandler:  projectHandler,
 		LinkHandler:     linkHandler,
+		AuthHandler:     authHandler,
 	}
 
-	r := router.New(cfg, handlers)
+	r := router.New(cfg, handlers, authService)
 
 	go func() {
 		if err := r.Run(); err != nil && err != http.ErrServerClosed {

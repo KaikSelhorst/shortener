@@ -10,6 +10,7 @@ type Config struct {
 	DatabaseURL  string
 	BaseURL      string
 	CursorSecret string
+	JWTSecret    string
 }
 
 func Load() (*Config, error) {
@@ -18,6 +19,7 @@ func Load() (*Config, error) {
 	databaseURL := os.Getenv("DATABASE_URL")
 	baseURL      := os.Getenv("BASE_URL")
 	cursorSecret := os.Getenv("CURSOR_SECRET")
+	jwtSecret    := os.Getenv("JWT_SECRET")
 
 	if port == "" {
 		port = "8080"
@@ -35,5 +37,9 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("CURSOR_SECRET is required")
 	}
 
-	return &Config{Port: port, DatabaseURL: databaseURL, BaseURL: baseURL, CursorSecret: cursorSecret}, nil
+	if jwtSecret == "" {
+		return nil, fmt.Errorf("JWT_SECRET is required")
+	}
+
+	return &Config{Port: port, DatabaseURL: databaseURL, BaseURL: baseURL, CursorSecret: cursorSecret, JWTSecret: jwtSecret}, nil
 }
