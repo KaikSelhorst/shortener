@@ -2,8 +2,23 @@ package dto
 
 import (
 	"errors"
+	"net/url"
 	"time"
 )
+
+func validateURL(raw string) error {
+	if raw == "" {
+		return errors.New("url is required")
+	}
+	u, err := url.ParseRequestURI(raw)
+	if err != nil || u.Host == "" {
+		return errors.New("url is invalid")
+	}
+	if u.Scheme != "http" && u.Scheme != "https" {
+		return errors.New("url must use http or https")
+	}
+	return nil
+}
 
 type CreateLinkRequest struct {
 	URL         string  `json:"url"`
@@ -13,10 +28,7 @@ type CreateLinkRequest struct {
 }
 
 func (r *CreateLinkRequest) Validate() error {
-	if r.URL == "" {
-		return errors.New("url is required")
-	}
-	return nil
+	return validateURL(r.URL)
 }
 
 type UpdateLinkRequest struct {
@@ -27,10 +39,7 @@ type UpdateLinkRequest struct {
 }
 
 func (r *UpdateLinkRequest) Validate() error {
-	if r.URL == "" {
-		return errors.New("url is required")
-	}
-	return nil
+	return validateURL(r.URL)
 }
 
 type LinkResponse struct {
