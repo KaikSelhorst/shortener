@@ -44,6 +44,12 @@ func (h *LinkHandler) toLinkResponse(link *model.Link) dto.LinkResponse {
 }
 
 func (h *LinkHandler) CreateLink(w http.ResponseWriter, r *http.Request) {
+	userID, ok := middleware.UserIDFromContext(r.Context())
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
 	var req dto.CreateLinkRequest
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -61,6 +67,11 @@ func (h *LinkHandler) CreateLink(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		http.Error(w, "project not found", http.StatusNotFound)
+		return
+	}
+
+	if project.UserID != userID {
+		http.Error(w, "Forbidden", http.StatusForbidden)
 		return
 	}
 
@@ -83,10 +94,21 @@ func (h *LinkHandler) CreateLink(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *LinkHandler) ListLinks(w http.ResponseWriter, r *http.Request) {
+	userID, ok := middleware.UserIDFromContext(r.Context())
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
 	slug := chi.URLParam(r, "slug")
 	project, err := h.projectRepository.FindBySlug(r.Context(), slug)
 	if err != nil {
 		http.Error(w, "project not found", http.StatusNotFound)
+		return
+	}
+
+	if project.UserID != userID {
+		http.Error(w, "Forbidden", http.StatusForbidden)
 		return
 	}
 
@@ -149,12 +171,27 @@ func (h *LinkHandler) ListLinks(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *LinkHandler) GetLink(w http.ResponseWriter, r *http.Request) {
+	userID, ok := middleware.UserIDFromContext(r.Context())
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
 	code := chi.URLParam(r, "code")
 
 	link, err := h.linkRepository.GetByCode(r.Context(), code)
-
 	if err != nil {
 		http.Error(w, "link not found", http.StatusNotFound)
+		return
+	}
+
+	project, err := h.projectRepository.GetByID(r.Context(), link.ProjectID)
+	if err != nil {
+		http.Error(w, "project not found", http.StatusNotFound)
+		return
+	}
+	if project.UserID != userID {
+		http.Error(w, "Forbidden", http.StatusForbidden)
 		return
 	}
 
