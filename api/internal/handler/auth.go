@@ -82,6 +82,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 
 	user, err := h.userRepository.FindByEmail(r.Context(), req.Email)
 	if err != nil {
+		_, _ = bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
 		return
 	}
@@ -113,14 +114,9 @@ func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 	}
 
 	hash := service.HashToken(req.RefreshToken)
-	rt, err := h.refreshTokenRepository.FindByTokenHash(r.Context(), hash)
-	if err != nil || rt.RevokedAt != nil || rt.ExpiresAt.Before(time.Now()) {
+	rt, err := h.refreshTokenRepository.RevokeIfActive(r.Context(), hash)
+	if err != nil {
 		http.Error(w, "Invalid or expired refresh token", http.StatusUnauthorized)
-		return
-	}
-
-	if err := h.refreshTokenRepository.Revoke(r.Context(), rt.ID); err != nil {
-		http.Error(w, "Failed to rotate token", http.StatusInternalServerError)
 		return
 	}
 
@@ -146,13 +142,7 @@ func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	}
 
 	hash := service.HashToken(req.RefreshToken)
-	rt, err := h.refreshTokenRepository.FindByTokenHash(r.Context(), hash)
-	if err != nil {
-		w.WriteHeader(http.StatusNoContent)
-		return
-	}
-
-	h.refreshTokenRepository.Revoke(r.Context(), rt.ID)
+	_, _ = h.refreshTokenRepository.RevokeIfActive(r.Context(), hash)
 	w.WriteHeader(http.StatusNoContent)
 }
 
