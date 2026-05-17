@@ -4,6 +4,7 @@ import (
 	"net"
 	"net/http"
 
+	"github.com/KaikSelhorst/shortener/internal/cache"
 	"github.com/KaikSelhorst/shortener/internal/model"
 	"github.com/KaikSelhorst/shortener/internal/repository"
 	"github.com/KaikSelhorst/shortener/internal/service"
@@ -13,18 +14,25 @@ import (
 type RedirectHandler struct {
 	linkRepository *repository.LinkRepository
 	tracker        *service.TrackerService
+	cache          *cache.LinkCache
 }
 
-func NewRedirectHandler(linkRepository *repository.LinkRepository, tracker *service.TrackerService) *RedirectHandler {
-	return &RedirectHandler{linkRepository: linkRepository, tracker: tracker}
+func NewRedirectHandler(linkRepository *repository.LinkRepository, tracker *service.TrackerService, cache *cache.LinkCache) *RedirectHandler {
+	return &RedirectHandler{linkRepository: linkRepository, tracker: tracker, cache: cache}
 }
 
 func (h *RedirectHandler) HandleRedirect(w http.ResponseWriter, r *http.Request) {
 	code := chi.URLParam(r, "code")
-	link, err := h.linkRepository.GetByCode(r.Context(), code)
-	if err != nil {
-		http.NotFound(w, r)
-		return
+
+	link, ok := h.cache.Get(code)
+	if !ok {
+		var err error
+		link, err = h.linkRepository.GetByCode(r.Context(), code)
+		if err != nil {
+			http.NotFound(w, r)
+			return
+		}
+		h.cache.Set(link)
 	}
 
 	http.Redirect(w, r, link.OriginalURL, http.StatusFound)

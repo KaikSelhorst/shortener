@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/KaikSelhorst/shortener/internal/cache"
 	"github.com/KaikSelhorst/shortener/internal/dto"
 	"github.com/KaikSelhorst/shortener/internal/middleware"
 	"github.com/KaikSelhorst/shortener/internal/model"
@@ -16,14 +17,16 @@ import (
 type LinkHandler struct {
 	linkRepository    *repository.LinkRepository
 	projectRepository *repository.ProjectRepository
+	cache             *cache.LinkCache
 	baseURL           string
 	cursorSecret      string
 }
 
-func NewLinkHandler(linkRepository *repository.LinkRepository, projectRepository *repository.ProjectRepository, baseURL, cursorSecret string) *LinkHandler {
+func NewLinkHandler(linkRepository *repository.LinkRepository, projectRepository *repository.ProjectRepository, cache *cache.LinkCache, baseURL, cursorSecret string) *LinkHandler {
 	return &LinkHandler{
 		linkRepository:    linkRepository,
 		projectRepository: projectRepository,
+		cache:             cache,
 		baseURL:           baseURL,
 		cursorSecret:      cursorSecret,
 	}
@@ -244,6 +247,8 @@ func (h *LinkHandler) UpdateLink(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	h.cache.Delete(code)
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(h.toLinkResponse(link))
 }
@@ -277,6 +282,8 @@ func (h *LinkHandler) DeleteLink(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to delete link", http.StatusInternalServerError)
 		return
 	}
+
+	h.cache.Delete(code)
 
 	w.WriteHeader(http.StatusNoContent)
 }

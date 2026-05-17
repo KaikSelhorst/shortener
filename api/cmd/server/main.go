@@ -9,6 +9,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/KaikSelhorst/shortener/internal/cache"
 	"github.com/KaikSelhorst/shortener/internal/config"
 	"github.com/KaikSelhorst/shortener/internal/database"
 	"github.com/KaikSelhorst/shortener/internal/handler"
@@ -60,10 +61,13 @@ func main() {
 	tracker := service.NewTrackerService(clickRepository, logger)
 	authService := service.NewAuthService(cfg.JWTSecret)
 
+	linkCache := cache.NewLinkCache(1000, 5*time.Minute)
+	defer linkCache.Close()
+
 	healthHandler := handler.NewHealthHandler()
-	redirectHandler := handler.NewRedirectHandler(linkRepository, tracker)
+	redirectHandler := handler.NewRedirectHandler(linkRepository, tracker, linkCache)
 	projectHandler := handler.NewProjectHandler(projectRepository)
-	linkHandler := handler.NewLinkHandler(linkRepository, projectRepository, cfg.BaseURL, cfg.CursorSecret)
+	linkHandler := handler.NewLinkHandler(linkRepository, projectRepository, linkCache, cfg.BaseURL, cfg.CursorSecret)
 	authHandler := handler.NewAuthHandler(userRepository, refreshTokenRepository, authService)
 
 	handlers := &router.Handlers{
