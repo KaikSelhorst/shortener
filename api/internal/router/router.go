@@ -42,6 +42,7 @@ func New(cfg *config.Config, handlers *Handlers, authService *service.AuthServic
 	r.Route("/projects", func(r chi.Router) {
 		r.Use(authmw.RequireAuth(authService))
 
+		r.Get("/", handlers.ProjectHandler.ListProjects)
 		r.Post("/", handlers.ProjectHandler.CreateProject)
 		r.Put("/{slug}", handlers.ProjectHandler.UpdateProject)
 		r.Delete("/{slug}", handlers.ProjectHandler.DeleteProject)

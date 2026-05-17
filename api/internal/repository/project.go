@@ -15,6 +15,27 @@ func NewProjectRepository(db *pgxpool.Pool) *ProjectRepository {
 	return &ProjectRepository{db: db}
 }
 
+func (r *ProjectRepository) FindAllByUserID(ctx context.Context, userID int64) ([]*model.Project, error) {
+	rows, err := r.db.Query(ctx,
+		"SELECT id, user_id, name, slug, created_at FROM projects WHERE user_id = $1 ORDER BY created_at DESC",
+		userID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var projects []*model.Project
+	for rows.Next() {
+		var p model.Project
+		if err := rows.Scan(&p.ID, &p.UserID, &p.Name, &p.Slug, &p.CreatedAt); err != nil {
+			return nil, err
+		}
+		projects = append(projects, &p)
+	}
+	return projects, rows.Err()
+}
+
 func (r *ProjectRepository) GetByID(ctx context.Context, id int64) (*model.Project, error) {
 	var p model.Project
 	err := r.db.QueryRow(ctx,
