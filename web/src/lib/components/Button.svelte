@@ -8,6 +8,7 @@
 	interface Props extends HTMLButtonAttributes {
 		variant?: Variant
 		size?: Size
+		href?: string
 		children: Snippet
 	}
 
@@ -15,6 +16,7 @@
 		variant = 'primary',
 		size = 'md',
 		type = 'button',
+		href,
 		class: className,
 		children,
 		...rest
@@ -42,6 +44,12 @@
 	const cls = $derived([base, variants[variant], sizes[size], className].filter(Boolean).join(' '))
 </script>
 
-<button {type} class={cls} {...rest}>
-	{@render children()}
-</button>
+{#if href}
+	<a {href} class={cls}>
+		{@render children()}
+	</a>
+{:else}
+	<button {type} class={cls} {...rest}>
+		{@render children()}
+	</button>
+{/if}

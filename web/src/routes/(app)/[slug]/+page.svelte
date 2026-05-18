@@ -1,34 +1,63 @@
 <script lang="ts">
 	import type { PageData, ActionData } from './$types'
-	import { Button, Input, Dialog, Table, TableHead, TableBody, TableRow, TableHeader, TableCell } from '$lib'
+	import type { SubmitFunction } from '@sveltejs/kit'
+	import { enhance } from '$app/forms'
+	import {
+		Button,
+		Input,
+		Textarea,
+		Dialog,
+		Table,
+		TableHead,
+		TableBody,
+		TableRow,
+		TableHeader,
+		TableCell
+	} from '$lib'
 
 	let { data, form }: { data: PageData; form: ActionData } = $props()
+
+	let createOpen = $state(false)
+	let createError = $state<string | null>(null)
+
+	$effect(() => {
+		if (!createOpen) createError = null
+	})
+
+	const handleCreate: SubmitFunction = () => {
+		createError = null
+		return async ({ result, update }) => {
+			if (result.type === 'failure') {
+				const d = result.data as { error?: string }
+				createError = d?.error ?? 'Failed to create link'
+			} else {
+				await update()
+				createOpen = false
+			}
+		}
+	}
 
 	let pendingCode = $state<string | null>(null)
 	let confirmOpen = $derived(pendingCode !== null)
 </script>
 
-<div class="flex items-center gap-2">
-	<a href="/dashboard" class="text-sm text-muted-foreground hover:text-foreground">Projects</a>
-	<span class="text-muted-foreground">/</span>
-	<h1 class="text-sm font-semibold text-foreground">{data.slug}</h1>
+<div class="flex items-center justify-between">
+	<div class="flex items-center gap-2">
+		<a href="/dashboard" class="text-sm text-muted-foreground hover:text-foreground">Projects</a>
+		<span class="text-muted-foreground">/</span>
+		<h1 class="text-sm font-semibold text-foreground">{data.slug}</h1>
+	</div>
+	<Button size="sm" onclick={() => (createOpen = true)}>New link</Button>
 </div>
 
 {#if form?.error}
 	<p class="mt-4 rounded-md bg-destructive/10 px-4 py-2 text-sm text-destructive">{form.error}</p>
 {/if}
 
-<form method="POST" action="?/create" class="mt-4 grid grid-cols-[1fr_10rem_auto] gap-2">
-	<Input name="url" type="url" placeholder="https://example.com" required />
-	<Input name="title" type="text" placeholder="Title (optional)" />
-	<Button type="submit">Shorten</Button>
-</form>
-
 <div class="mt-6">
 	<Table>
 		<TableHead>
 			<TableRow>
-				<TableHeader>Title</TableHeader>
 				<TableHeader>Original URL</TableHeader>
 				<TableHeader>Short URL</TableHeader>
 				<TableHeader>Created</TableHeader>
@@ -38,13 +67,12 @@
 		<TableBody>
 			{#each data.links.data as link (link.id)}
 				<TableRow>
-					<TableCell class="font-medium">{link.title ?? '—'}</TableCell>
-					<TableCell class="max-w-xs">
+					<TableCell>
 						<a
 							href={link.original_url}
 							target="_blank"
 							rel="noopener noreferrer"
-							class="block truncate text-muted-foreground hover:text-foreground"
+							class="block max-w-xs truncate text-muted-foreground hover:text-foreground"
 							title={link.original_url}
 						>
 							{link.original_url}
@@ -75,8 +103,8 @@
 				</TableRow>
 			{:else}
 				<TableRow>
-					<TableCell colspan={5} class="py-10 text-center text-muted-foreground">
-						No links yet. Add one above.
+					<TableCell colspan={4} class="py-10 text-center text-muted-foreground">
+						No links yet. Click "New link" to add one.
 					</TableCell>
 				</TableRow>
 			{/each}
@@ -84,16 +112,47 @@
 	</Table>
 </div>
 
-{#if data.links.next_cursor}
-	<div class="mt-4 text-center">
-		<a
-			href="?cursor={data.links.next_cursor}"
-			class="text-sm text-muted-foreground hover:text-foreground"
-		>
-			Load more →
-		</a>
+{#if data.links.prev_cursor || data.links.next_cursor}
+	<div class="mt-4 flex items-center justify-between">
+		{#if data.links.prev_cursor}
+			<Button variant="outline" size="sm" href="?cursor={data.links.prev_cursor}">
+				← Previous
+			</Button>
+		{:else}
+			<span></span>
+		{/if}
+
+		{#if data.links.next_cursor}
+			<Button variant="outline" size="sm" href="?cursor={data.links.next_cursor}">
+				Next →
+			</Button>
+		{/if}
 	</div>
 {/if}
+
+<Dialog bind:open={createOpen} title="New link" size="md">
+	{#snippet children()}
+		<form
+			id="create-link-form"
+			method="POST"
+			action="?/create"
+			use:enhance={handleCreate}
+			class="flex flex-col gap-3"
+		>
+			<Input name="url" type="url" label="URL" placeholder="https://example.com" required />
+			<Input name="title" type="text" label="Title" placeholder="Title (optional)" />
+			<Textarea name="description" label="Description" placeholder="Description (optional)" rows={3} />
+			<Input name="og_image" type="url" label="OG Image" placeholder="https://example.com/image.jpg" />
+			{#if createError}
+				<p class="text-sm text-destructive">{createError}</p>
+			{/if}
+		</form>
+	{/snippet}
+	{#snippet footer()}
+		<Button variant="outline" onclick={() => (createOpen = false)}>Cancel</Button>
+		<Button type="submit" form="create-link-form">Create</Button>
+	{/snippet}
+</Dialog>
 
 <Dialog
 	bind:open={confirmOpen}

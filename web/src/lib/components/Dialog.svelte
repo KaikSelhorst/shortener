@@ -5,13 +5,19 @@
 		open: boolean
 		title: string
 		description?: string
+		size?: 'sm' | 'md'
 		children?: Snippet
 		footer?: Snippet
 	}
 
-	let { open = $bindable(), title, description, children, footer }: Props = $props()
+	let { open = $bindable(), title, description, size = 'sm', children, footer }: Props = $props()
 
 	let dialog = $state<HTMLDialogElement>()
+
+	const widths: Record<'sm' | 'md', string> = { sm: 'max-w-sm', md: 'max-w-md' }
+	const dialogCls = $derived(
+		`m-auto w-full ${widths[size]} rounded-md border-2 border-border bg-card p-6 shadow-lg backdrop:bg-black/50`
+	)
 
 	$effect(() => {
 		if (!dialog) return
@@ -25,7 +31,7 @@
 	bind:this={dialog}
 	onclose={() => (open = false)}
 	onmousedown={(e) => { if (e.target === dialog) open = false }}
-	class="m-auto w-full max-w-sm rounded-md border-2 border-border bg-card p-6 shadow-lg backdrop:bg-black/50"
+	class={dialogCls}
 >
 	<h2 class="text-base font-semibold text-foreground">{title}</h2>
 
