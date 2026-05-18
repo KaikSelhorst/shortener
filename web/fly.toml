@@ -1,11 +1,10 @@
-# Rename 'shortener-web' to your chosen app name (must be unique on fly.io)
-app = 'shortener-web'
-primary_region = 'gru'
+app = 'docut-web'
+primary_region = 'iad'
 
 [build]
 
 [env]
-  ORIGIN = 'https://shortener-web.fly.dev'
+  ORIGIN = 'https://docut-web.fly.dev'
 
 [http_service]
   internal_port = 3000
