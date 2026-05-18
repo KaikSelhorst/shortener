@@ -1,3 +1,4 @@
+import { env } from '$env/dynamic/private'
 import type {
 	TokenResponse,
 	Project,
@@ -7,7 +8,7 @@ import type {
 	UpdateLinkRequest,
 } from './types'
 
-const BASE = import.meta.env.PUBLIC_API_URL ?? 'http://localhost:8080'
+const BASE = env.API_URL ?? 'http://localhost:8080'
 
 type Fetch = typeof globalThis.fetch
 
