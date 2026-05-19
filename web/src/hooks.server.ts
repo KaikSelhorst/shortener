@@ -19,13 +19,12 @@ const COOKIE_OPTS = {
 export const handle: Handle = async ({ event, resolve }) => {
 	const token = event.cookies.get('access_token')
 
-	if (!token) return resolve(event)
-
-	const payload = decodeJwtPayload(token)
-
-	if (payload && payload.exp * 1000 > Date.now()) {
-		event.locals.user = { id: payload.user_id }
-		return resolve(event)
+	if (token) {
+		const payload = decodeJwtPayload(token)
+		if (payload && payload.exp * 1000 > Date.now()) {
+			event.locals.user = { id: payload.user_id }
+			return resolve(event)
+		}
 	}
 
 	const refreshToken = event.cookies.get('refresh_token')
