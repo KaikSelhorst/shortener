@@ -9,6 +9,6 @@
 	let { children, class: className, ...rest }: Props = $props()
 </script>
 
-<tbody class={['divide-y-2 divide-border', className].filter(Boolean).join(' ')} {...rest}>
+<tbody class={['divide-y divide-border', className].filter(Boolean).join(' ')} {...rest}>
 	{@render children()}
 </tbody>

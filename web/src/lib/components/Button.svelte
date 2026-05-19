@@ -24,7 +24,7 @@
 
 	const base =
 		'inline-flex cursor-pointer items-center justify-center font-medium transition-colors ' +
-		'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ' +
+		'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring ' +
 		'disabled:pointer-events-none disabled:opacity-50'
 
 	const variants: Record<Variant, string> = {
@@ -33,7 +33,7 @@
 		destructive: 'bg-destructive text-destructive-foreground hover:opacity-90',
 		ghost: 'text-foreground hover:bg-muted hover:text-foreground',
 		'ghost-destructive': 'text-destructive hover:bg-destructive/10 hover:text-destructive',
-		outline: 'border-2 border-input bg-background text-foreground hover:bg-muted',
+		outline: 'border border-input bg-background text-foreground hover:bg-muted',
 	}
 
 	const sizes: Record<Size, string> = {

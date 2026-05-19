@@ -47,7 +47,7 @@
 
 	{#if open}
 		<div
-			class="absolute right-0 top-full z-50 mt-1 w-44 rounded-md border-2 border-border bg-card shadow-sm"
+			class="absolute right-0 top-full z-50 mt-1 w-44 rounded-md border border-border bg-card shadow-sm"
 		>
 			<button
 				onclick={toggleTheme}
@@ -67,7 +67,7 @@
 				{/if}
 			</button>
 
-			<div class="border-t-2 border-border"></div>
+			<div class="border-t border-border"></div>
 
 			<form method="POST" action="/api/auth/logout">
 				<button

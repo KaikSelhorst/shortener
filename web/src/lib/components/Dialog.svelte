@@ -16,7 +16,7 @@
 
 	const widths: Record<'sm' | 'md', string> = { sm: 'max-w-sm', md: 'max-w-md' }
 	const dialogCls = $derived(
-		`m-auto w-full ${widths[size]} rounded-md border-2 border-border bg-card p-6 shadow-lg backdrop:bg-black/50`
+		`m-auto w-full ${widths[size]} rounded-md border border-border bg-card p-6 shadow-lg backdrop:bg-black/50`
 	)
 
 	$effect(() => {
