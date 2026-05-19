@@ -13,10 +13,11 @@
 	let { open = $bindable(), title, description, size = 'sm', children, footer }: Props = $props()
 
 	let dialog = $state<HTMLDialogElement>()
+	let inner = $state<HTMLDivElement>()
 
 	const widths: Record<'sm' | 'md', string> = { sm: 'max-w-sm', md: 'max-w-md' }
 	const dialogCls = $derived(
-		`m-auto w-full ${widths[size]} rounded-md border border-border bg-card p-6 shadow-lg backdrop:bg-black/50`
+		`m-auto w-full ${widths[size]} rounded-md border border-border bg-card shadow-lg backdrop:bg-black/50`
 	)
 
 	$effect(() => {
@@ -30,20 +31,22 @@
 <dialog
 	bind:this={dialog}
 	onclose={() => (open = false)}
-	onmousedown={(e) => { if (e.target === dialog) open = false }}
+	onmousedown={(e) => { if (!inner?.contains(e.target as Node)) open = false }}
 	class={dialogCls}
 >
-	<h2 class="text-base font-semibold text-foreground">{title}</h2>
+	<div bind:this={inner} class="p-6">
+		<h2 class="text-base font-semibold text-foreground">{title}</h2>
 
-	{#if description}
-		<p class="mt-2 text-sm text-muted-foreground">{description}</p>
-	{/if}
+		{#if description}
+			<p class="mt-2 text-sm text-muted-foreground">{description}</p>
+		{/if}
 
-	{#if children}
-		<div class="mt-4">{@render children()}</div>
-	{/if}
+		{#if children}
+			<div class="mt-4">{@render children()}</div>
+		{/if}
 
-	{#if footer}
-		<div class="mt-6 flex justify-end gap-2">{@render footer()}</div>
-	{/if}
+		{#if footer}
+			<div class="mt-6 flex justify-end gap-2">{@render footer()}</div>
+		{/if}
+	</div>
 </dialog>
