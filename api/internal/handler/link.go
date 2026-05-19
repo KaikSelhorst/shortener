@@ -135,28 +135,40 @@ func (h *LinkHandler) ListLinks(w http.ResponseWriter, r *http.Request) {
 
 	cursorID := service.DecodeShortCode(cursorCode)
 
-	links, err := h.linkRepository.List(r.Context(), project.ID, cursorID, direction, limit)
+	links, err := h.linkRepository.List(r.Context(), project.ID, cursorID, direction, limit+1)
 	if err != nil {
 		http.Error(w, "failed to list links", http.StatusInternalServerError)
 		return
 	}
 
+	hasMore := len(links) > limit
+	if hasMore {
+		links = links[:limit]
+	}
+
 	var nextCursor, prevCursor *string
 
 	if len(links) > 0 {
-		enc, err := service.EncodeCursor("next", links[len(links)-1].ShortCode, h.cursorSecret)
-		if err != nil {
-			http.Error(w, "failed to encode cursor", http.StatusInternalServerError)
-			return
-		}
-		nextCursor = &enc
+		shouldSetNext := hasMore || direction == "prev"
+		shouldSetPrev := direction == "next" || (direction == "prev" && hasMore)
 
-		enc, err = service.EncodeCursor("prev", links[0].ShortCode, h.cursorSecret)
-		if err != nil {
-			http.Error(w, "failed to encode cursor", http.StatusInternalServerError)
-			return
+		if shouldSetNext {
+			enc, err := service.EncodeCursor("next", links[len(links)-1].ShortCode, h.cursorSecret)
+			if err != nil {
+				http.Error(w, "failed to encode cursor", http.StatusInternalServerError)
+				return
+			}
+			nextCursor = &enc
 		}
-		prevCursor = &enc
+
+		if shouldSetPrev {
+			enc, err := service.EncodeCursor("prev", links[0].ShortCode, h.cursorSecret)
+			if err != nil {
+				http.Error(w, "failed to encode cursor", http.StatusInternalServerError)
+				return
+			}
+			prevCursor = &enc
+		}
 	}
 
 	data := make([]dto.LinkResponse, len(links))
