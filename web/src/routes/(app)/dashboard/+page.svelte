@@ -5,7 +5,21 @@
 	let { data, form }: { data: PageData; form: ActionData } = $props()
 
 	let pendingSlug = $state<string | null>(null)
-	let confirmOpen = $derived(pendingSlug !== null)
+	let confirmOpen = $state(false)
+
+	$effect(() => {
+		if (!confirmOpen) pendingSlug = null
+	})
+
+	function avatarHue(str: string) {
+		let hash = 0
+		for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash)
+		return Math.abs(hash) % 360
+	}
+
+	function initials(name: string) {
+		return name.slice(0, 2).toUpperCase()
+	}
 </script>
 
 <h1 class="text-lg font-semibold text-foreground">Projects</h1>
@@ -24,28 +38,38 @@
 {:else}
 	<ul class="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
 		{#each data.projects as project (project.id)}
-			<li class="group flex flex-col justify-between rounded-md border-2 border-border bg-card p-5">
-				<div>
-					<p class="text-xs text-muted-foreground">
+			<li class="group flex flex-col gap-3 rounded-md bg-card p-4 shadow-sm">
+				<div class="flex items-start justify-between gap-3">
+					<div class="flex items-center gap-2.5">
+						<div
+							class="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-xs font-semibold text-white"
+							style="background-color: oklch(55% 0.15 {avatarHue(project.name)})"
+						>
+							{initials(project.name)}
+						</div>
+						<div>
+							<a
+								href="/{project.slug}"
+								class="block text-sm font-semibold text-card-foreground hover:underline"
+							>
+								{project.name}
+							</a>
+							<p class="font-mono text-xs text-muted-foreground">{project.slug}</p>
+						</div>
+					</div>
+					<span class="whitespace-nowrap text-xs text-muted-foreground">
 						{new Date(project.created_at).toLocaleDateString()}
-					</p>
-					<a
-						href="/{project.slug}"
-						class="mt-1 block text-base font-semibold text-card-foreground hover:underline"
-					>
-						{project.name}
-					</a>
-					<p class="mt-0.5 font-mono text-xs text-muted-foreground">{project.slug}</p>
+					</span>
 				</div>
 
-				<div class="mt-4 flex items-center justify-between border-t-2 border-border pt-3">
-					<a href="/{project.slug}" class="text-xs font-medium text-foreground hover:underline">
+				<div class="flex items-center justify-between">
+					<a href="/{project.slug}" class="text-xs text-muted-foreground hover:text-foreground">
 						View links →
 					</a>
 					<Button
 						variant="ghost-destructive"
 						size="sm"
-						onclick={() => (pendingSlug = project.slug)}
+						onclick={() => { pendingSlug = project.slug; confirmOpen = true }}
 					>
 						Delete
 					</Button>
@@ -61,7 +85,7 @@
 	description="This will permanently delete the project and all its links. This action cannot be undone."
 >
 	{#snippet footer()}
-		<Button variant="outline" onclick={() => (pendingSlug = null)}>Cancel</Button>
+		<Button variant="outline" onclick={() => (confirmOpen = false)}>Cancel</Button>
 		<form method="POST" action="?/delete">
 			<input type="hidden" name="slug" value={pendingSlug} />
 			<Button type="submit" variant="destructive">Delete</Button>

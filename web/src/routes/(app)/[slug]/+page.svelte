@@ -38,7 +38,11 @@
 	}
 
 	let pendingCode = $state<string | null>(null)
-	let confirmOpen = $derived(pendingCode !== null)
+	let confirmOpen = $state(false)
+
+	$effect(() => {
+		if (!confirmOpen) pendingCode = null
+	})
 </script>
 
 <div class="flex items-center justify-between">
@@ -95,7 +99,7 @@
 						<Button
 							variant="ghost-destructive"
 							size="sm"
-							onclick={() => (pendingCode = link.short_code)}
+							onclick={() => { pendingCode = link.short_code; confirmOpen = true }}
 						>
 							Delete
 						</Button>
@@ -160,7 +164,7 @@
 	description="This will permanently delete the shortened link. This action cannot be undone."
 >
 	{#snippet footer()}
-		<Button variant="outline" onclick={() => (pendingCode = null)}>Cancel</Button>
+		<Button variant="outline" onclick={() => (confirmOpen = false)}>Cancel</Button>
 		<form method="POST" action="?/delete">
 			<input type="hidden" name="code" value={pendingCode} />
 			<Button type="submit" variant="destructive">Delete</Button>
