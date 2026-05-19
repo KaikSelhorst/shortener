@@ -21,6 +21,8 @@ export const actions: Actions = {
 		const title = (data.get('title') as string) || undefined
 		const description = (data.get('description') as string) || undefined
 		const og_image = (data.get('og_image') as string) || undefined
+		const expires_at_raw = data.get('expires_at') as string
+		const expires_at = expires_at_raw ? new Date(expires_at_raw).toISOString() : undefined
 
 		if (!url?.trim()) return fail(400, { error: 'URL is required' })
 
@@ -31,6 +33,7 @@ export const actions: Actions = {
 				title,
 				description,
 				og_image,
+				expires_at,
 			})
 		} catch (err) {
 			return fail(400, { error: err instanceof Error ? err.message : 'Failed to create link' })

@@ -35,6 +35,11 @@ func (h *RedirectHandler) HandleRedirect(w http.ResponseWriter, r *http.Request)
 		h.cache.Set(link)
 	}
 
+	if link.IsExpired() {
+		http.Error(w, "Link has expired", http.StatusGone)
+		return
+	}
+
 	http.Redirect(w, r, link.OriginalURL, http.StatusFound)
 
 	click := model.Click{LinkID: link.ID}

@@ -19,8 +19,8 @@ func NewLinkRepository(db *pgxpool.Pool) *LinkRepository {
 func (r *LinkRepository) GetByCode(ctx context.Context, code string) (*model.Link, error) {
 	var link model.Link
 	err := r.db.QueryRow(ctx,
-		"SELECT id, project_id, short_code, original_url, title, description, og_image, created_at FROM links WHERE short_code = $1", code,
-	).Scan(&link.ID, &link.ProjectID, &link.ShortCode, &link.OriginalURL, &link.Title, &link.Description, &link.OgImage, &link.CreatedAt)
+		"SELECT id, project_id, short_code, original_url, title, description, og_image, expires_at, created_at FROM links WHERE short_code = $1", code,
+	).Scan(&link.ID, &link.ProjectID, &link.ShortCode, &link.OriginalURL, &link.Title, &link.Description, &link.OgImage, &link.ExpiresAt, &link.CreatedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -28,7 +28,7 @@ func (r *LinkRepository) GetByCode(ctx context.Context, code string) (*model.Lin
 }
 
 func (r *LinkRepository) List(ctx context.Context, projectID int64, cursor uint64, direction string, limit int) ([]*model.Link, error) {
-	const cols = "SELECT id, project_id, short_code, original_url, title, description, og_image, created_at FROM links"
+	const cols = "SELECT id, project_id, short_code, original_url, title, description, og_image, expires_at, created_at FROM links"
 
 	var (
 		rows pgx.Rows
@@ -53,7 +53,7 @@ func (r *LinkRepository) List(ctx context.Context, projectID int64, cursor uint6
 	var links []*model.Link
 	for rows.Next() {
 		var link model.Link
-		if err := rows.Scan(&link.ID, &link.ProjectID, &link.ShortCode, &link.OriginalURL, &link.Title, &link.Description, &link.OgImage, &link.CreatedAt); err != nil {
+		if err := rows.Scan(&link.ID, &link.ProjectID, &link.ShortCode, &link.OriginalURL, &link.Title, &link.Description, &link.OgImage, &link.ExpiresAt, &link.CreatedAt); err != nil {
 			return nil, err
 		}
 		links = append(links, &link)
@@ -69,8 +69,8 @@ func (r *LinkRepository) Create(ctx context.Context, link *model.Link, generateC
 	defer tx.Rollback(ctx)
 
 	err = tx.QueryRow(ctx,
-		"INSERT INTO links (project_id, original_url, title, description, og_image) VALUES ($1, $2, $3, $4, $5) RETURNING id, created_at",
-		link.ProjectID, link.OriginalURL, link.Title, link.Description, link.OgImage,
+		"INSERT INTO links (project_id, original_url, title, description, og_image, expires_at) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, created_at",
+		link.ProjectID, link.OriginalURL, link.Title, link.Description, link.OgImage, link.ExpiresAt,
 	).Scan(&link.ID, &link.CreatedAt)
 	if err != nil {
 		return err
@@ -92,8 +92,8 @@ func (r *LinkRepository) Create(ctx context.Context, link *model.Link, generateC
 
 func (r *LinkRepository) Update(ctx context.Context, link *model.Link) error {
 	_, err := r.db.Exec(ctx,
-		"UPDATE links SET original_url = $1, title = $2, description = $3, og_image = $4 WHERE id = $5",
-		link.OriginalURL, link.Title, link.Description, link.OgImage, link.ID,
+		"UPDATE links SET original_url = $1, title = $2, description = $3, og_image = $4, expires_at = $5 WHERE id = $6",
+		link.OriginalURL, link.Title, link.Description, link.OgImage, link.ExpiresAt, link.ID,
 	)
 	return err
 }

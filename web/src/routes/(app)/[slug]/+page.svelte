@@ -65,6 +65,7 @@
 				<TableHeader>Original URL</TableHeader>
 				<TableHeader>Short URL</TableHeader>
 				<TableHeader>Created</TableHeader>
+				<TableHeader>Expires at</TableHeader>
 				<TableHeader class="text-right"></TableHeader>
 			</TableRow>
 		</TableHead>
@@ -95,6 +96,9 @@
 					<TableCell class="text-muted-foreground">
 						{new Date(link.created_at).toLocaleDateString()}
 					</TableCell>
+					<TableCell class="text-muted-foreground">
+						{link.expires_at ? new Date(link.expires_at).toLocaleDateString() : '—'}
+					</TableCell>
 					<TableCell class="text-right">
 						<Button
 							variant="ghost-destructive"
@@ -107,7 +111,7 @@
 				</TableRow>
 			{:else}
 				<TableRow>
-					<TableCell colspan={4} class="py-10 text-center text-muted-foreground">
+					<TableCell colspan={5} class="py-10 text-center text-muted-foreground">
 						No links yet. Click "New link" to add one.
 					</TableCell>
 				</TableRow>
@@ -147,6 +151,7 @@
 			<Input name="title" type="text" label="Title" placeholder="Title (optional)" />
 			<Textarea name="description" label="Description" placeholder="Description (optional)" rows={3} />
 			<Input name="og_image" type="url" label="OG Image" placeholder="https://example.com/image.jpg" />
+			<Input name="expires_at" type="datetime-local" label="Expires at" />
 			{#if createError}
 				<p class="text-sm text-destructive">{createError}</p>
 			{/if}

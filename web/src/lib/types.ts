@@ -21,6 +21,7 @@ export interface Link {
 	title: string | null
 	description: string | null
 	og_image: string | null
+	expires_at: string | null
 	created_at: string
 	short_url: string
 }
@@ -37,6 +38,7 @@ export interface CreateLinkRequest {
 	title?: string
 	description?: string
 	og_image?: string
+	expires_at?: string
 }
 
 export interface UpdateLinkRequest {
@@ -44,4 +46,5 @@ export interface UpdateLinkRequest {
 	title?: string
 	description?: string
 	og_image?: string
+	expires_at?: string
 }

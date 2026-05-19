@@ -21,37 +21,52 @@ func validateURL(raw string) error {
 }
 
 type CreateLinkRequest struct {
-	URL         string  `json:"url"`
-	Title       *string `json:"title"`
-	Description *string `json:"description"`
-	OgImage     *string `json:"og_image"`
+	URL         string     `json:"url"`
+	Title       *string    `json:"title"`
+	Description *string    `json:"description"`
+	OgImage     *string    `json:"og_image"`
+	ExpiresAt   *time.Time `json:"expires_at"`
 }
 
 func (r *CreateLinkRequest) Validate() error {
-	return validateURL(r.URL)
+	if err := validateURL(r.URL); err != nil {
+		return err
+	}
+	if r.ExpiresAt != nil && !r.ExpiresAt.After(time.Now()) {
+		return errors.New("expires_at must be in the future")
+	}
+	return nil
 }
 
 type UpdateLinkRequest struct {
-	URL         string  `json:"url"`
-	Title       *string `json:"title"`
-	Description *string `json:"description"`
-	OgImage     *string `json:"og_image"`
+	URL         string     `json:"url"`
+	Title       *string    `json:"title"`
+	Description *string    `json:"description"`
+	OgImage     *string    `json:"og_image"`
+	ExpiresAt   *time.Time `json:"expires_at"`
 }
 
 func (r *UpdateLinkRequest) Validate() error {
-	return validateURL(r.URL)
+	if err := validateURL(r.URL); err != nil {
+		return err
+	}
+	if r.ExpiresAt != nil && !r.ExpiresAt.After(time.Now()) {
+		return errors.New("expires_at must be in the future")
+	}
+	return nil
 }
 
 type LinkResponse struct {
-	ID          int64     `json:"id"`
-	ProjectID   int64     `json:"project_id"`
-	ShortCode   string    `json:"short_code"`
-	OriginalURL string    `json:"original_url"`
-	Title       *string   `json:"title"`
-	Description *string   `json:"description"`
-	OgImage     *string   `json:"og_image"`
-	CreatedAt   time.Time `json:"created_at"`
-	ShortURL    string    `json:"short_url"`
+	ID          int64      `json:"id"`
+	ProjectID   int64      `json:"project_id"`
+	ShortCode   string     `json:"short_code"`
+	OriginalURL string     `json:"original_url"`
+	Title       *string    `json:"title"`
+	Description *string    `json:"description"`
+	OgImage     *string    `json:"og_image"`
+	ExpiresAt   *time.Time `json:"expires_at"`
+	CreatedAt   time.Time  `json:"created_at"`
+	ShortURL    string     `json:"short_url"`
 }
 
 type ListLinksResponse struct {
