@@ -69,6 +69,18 @@
 
 			<div class="border-t border-border"></div>
 
+			<a
+				href="/settings"
+				class="flex w-full items-center gap-2.5 px-3 py-2 text-sm text-foreground transition-colors hover:bg-muted"
+			>
+				<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+					<path d="M12 20h9"/><path d="M16.376 3.622a1 1 0 0 1 3.002 3.002L7.368 18.635a2 2 0 0 1-.855.506l-2.872.838a.5.5 0 0 1-.62-.62l.838-2.872a2 2 0 0 1 .506-.854z"/>
+				</svg>
+				Settings
+			</a>
+
+			<div class="border-t border-border"></div>
+
 			<form method="POST" action="/api/auth/logout">
 				<button
 					type="submit"
