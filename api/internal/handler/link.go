@@ -50,36 +50,33 @@ func (h *LinkHandler) toLinkResponse(link *model.Link) dto.LinkResponse {
 func (h *LinkHandler) CreateLink(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middleware.UserIDFromContext(r.Context())
 	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		writeError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
 	var req dto.CreateLinkRequest
-
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid request payload", http.StatusBadRequest)
+		writeError(w, http.StatusBadRequest, "invalid request payload")
 		return
 	}
-
 	if err := req.Validate(); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	slug := chi.URLParam(r, "slug")
 	project, err := h.projectRepository.FindBySlug(r.Context(), slug)
-
 	if err != nil {
-		http.Error(w, "project not found", http.StatusNotFound)
+		writeError(w, http.StatusNotFound, "project not found")
 		return
 	}
 
 	if project.UserID != userID {
-		http.Error(w, "Forbidden", http.StatusForbidden)
+		writeError(w, http.StatusForbidden, "forbidden")
 		return
 	}
 	if !middleware.ProjectAllowed(r.Context(), project.ID) {
-		http.Error(w, "Forbidden: key not authorized for this project", http.StatusForbidden)
+		writeError(w, http.StatusForbidden, "key not authorized for this project")
 		return
 	}
 
@@ -93,40 +90,37 @@ func (h *LinkHandler) CreateLink(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.linkRepository.Create(r.Context(), newLink, service.GenerateShortCode); err != nil {
-		http.Error(w, "failed to create link", http.StatusInternalServerError)
+		writeError(w, http.StatusInternalServerError, "failed to create link")
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(h.toLinkResponse(newLink))
+	writeJSON(w, http.StatusCreated, h.toLinkResponse(newLink))
 }
 
 func (h *LinkHandler) ListLinks(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middleware.UserIDFromContext(r.Context())
 	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		writeError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
 	slug := chi.URLParam(r, "slug")
 	project, err := h.projectRepository.FindBySlug(r.Context(), slug)
 	if err != nil {
-		http.Error(w, "project not found", http.StatusNotFound)
+		writeError(w, http.StatusNotFound, "project not found")
 		return
 	}
 
 	if project.UserID != userID {
-		http.Error(w, "Forbidden", http.StatusForbidden)
+		writeError(w, http.StatusForbidden, "forbidden")
 		return
 	}
 	if !middleware.ProjectAllowed(r.Context(), project.ID) {
-		http.Error(w, "Forbidden: key not authorized for this project", http.StatusForbidden)
+		writeError(w, http.StatusForbidden, "key not authorized for this project")
 		return
 	}
 
 	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
-
 	if limit < 1 || limit > 100 {
 		limit = 20
 	}
@@ -138,7 +132,7 @@ func (h *LinkHandler) ListLinks(w http.ResponseWriter, r *http.Request) {
 		var err error
 		direction, cursorCode, err = service.DecodeCursor(raw, h.cursorSecret)
 		if err != nil {
-			http.Error(w, "invalid cursor", http.StatusBadRequest)
+			writeError(w, http.StatusBadRequest, "invalid cursor")
 			return
 		}
 	}
@@ -147,7 +141,7 @@ func (h *LinkHandler) ListLinks(w http.ResponseWriter, r *http.Request) {
 
 	links, err := h.linkRepository.List(r.Context(), project.ID, cursorID, direction, limit+1)
 	if err != nil {
-		http.Error(w, "failed to list links", http.StatusInternalServerError)
+		writeError(w, http.StatusInternalServerError, "failed to list links")
 		return
 	}
 
@@ -165,7 +159,7 @@ func (h *LinkHandler) ListLinks(w http.ResponseWriter, r *http.Request) {
 		if shouldSetNext {
 			enc, err := service.EncodeCursor("next", links[len(links)-1].ShortCode, h.cursorSecret)
 			if err != nil {
-				http.Error(w, "failed to encode cursor", http.StatusInternalServerError)
+				writeError(w, http.StatusInternalServerError, "failed to encode cursor")
 				return
 			}
 			nextCursor = &enc
@@ -174,7 +168,7 @@ func (h *LinkHandler) ListLinks(w http.ResponseWriter, r *http.Request) {
 		if shouldSetPrev {
 			enc, err := service.EncodeCursor("prev", links[0].ShortCode, h.cursorSecret)
 			if err != nil {
-				http.Error(w, "failed to encode cursor", http.StatusInternalServerError)
+				writeError(w, http.StatusInternalServerError, "failed to encode cursor")
 				return
 			}
 			prevCursor = &enc
@@ -186,8 +180,7 @@ func (h *LinkHandler) ListLinks(w http.ResponseWriter, r *http.Request) {
 		data[i] = h.toLinkResponse(link)
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(dto.ListLinksResponse{
+	writeJSON(w, http.StatusOK, dto.ListLinksResponse{
 		Data:       data,
 		NextCursor: nextCursor,
 		PrevCursor: prevCursor,
@@ -198,7 +191,7 @@ func (h *LinkHandler) ListLinks(w http.ResponseWriter, r *http.Request) {
 func (h *LinkHandler) GetLink(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middleware.UserIDFromContext(r.Context())
 	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		writeError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
@@ -206,32 +199,31 @@ func (h *LinkHandler) GetLink(w http.ResponseWriter, r *http.Request) {
 
 	link, err := h.linkRepository.GetByCode(r.Context(), code)
 	if err != nil {
-		http.Error(w, "link not found", http.StatusNotFound)
+		writeError(w, http.StatusNotFound, "link not found")
 		return
 	}
 
 	project, err := h.projectRepository.GetByID(r.Context(), link.ProjectID)
 	if err != nil {
-		http.Error(w, "project not found", http.StatusNotFound)
+		writeError(w, http.StatusNotFound, "project not found")
 		return
 	}
 	if project.UserID != userID {
-		http.Error(w, "Forbidden", http.StatusForbidden)
+		writeError(w, http.StatusForbidden, "forbidden")
 		return
 	}
 	if !middleware.ProjectAllowed(r.Context(), project.ID) {
-		http.Error(w, "Forbidden: key not authorized for this project", http.StatusForbidden)
+		writeError(w, http.StatusForbidden, "key not authorized for this project")
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(h.toLinkResponse(link))
+	writeJSON(w, http.StatusOK, h.toLinkResponse(link))
 }
 
 func (h *LinkHandler) UpdateLink(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middleware.UserIDFromContext(r.Context())
 	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		writeError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
@@ -239,31 +231,31 @@ func (h *LinkHandler) UpdateLink(w http.ResponseWriter, r *http.Request) {
 
 	var req dto.UpdateLinkRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid request payload", http.StatusBadRequest)
+		writeError(w, http.StatusBadRequest, "invalid request payload")
 		return
 	}
 	if err := req.Validate(); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	link, err := h.linkRepository.GetByCode(r.Context(), code)
 	if err != nil {
-		http.Error(w, "link not found", http.StatusNotFound)
+		writeError(w, http.StatusNotFound, "link not found")
 		return
 	}
 
 	project, err := h.projectRepository.GetByID(r.Context(), link.ProjectID)
 	if err != nil {
-		http.Error(w, "project not found", http.StatusNotFound)
+		writeError(w, http.StatusNotFound, "project not found")
 		return
 	}
 	if project.UserID != userID {
-		http.Error(w, "Forbidden", http.StatusForbidden)
+		writeError(w, http.StatusForbidden, "forbidden")
 		return
 	}
 	if !middleware.ProjectAllowed(r.Context(), project.ID) {
-		http.Error(w, "Forbidden: key not authorized for this project", http.StatusForbidden)
+		writeError(w, http.StatusForbidden, "key not authorized for this project")
 		return
 	}
 
@@ -274,20 +266,19 @@ func (h *LinkHandler) UpdateLink(w http.ResponseWriter, r *http.Request) {
 	link.ExpiresAt = req.ExpiresAt
 
 	if err := h.linkRepository.Update(r.Context(), link); err != nil {
-		http.Error(w, "failed to update link", http.StatusInternalServerError)
+		writeError(w, http.StatusInternalServerError, "failed to update link")
 		return
 	}
 
 	h.cache.Delete(code)
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(h.toLinkResponse(link))
+	writeJSON(w, http.StatusOK, h.toLinkResponse(link))
 }
 
 func (h *LinkHandler) DeleteLink(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middleware.UserIDFromContext(r.Context())
 	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		writeError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
@@ -295,26 +286,26 @@ func (h *LinkHandler) DeleteLink(w http.ResponseWriter, r *http.Request) {
 
 	link, err := h.linkRepository.GetByCode(r.Context(), code)
 	if err != nil {
-		http.Error(w, "link not found", http.StatusNotFound)
+		writeError(w, http.StatusNotFound, "link not found")
 		return
 	}
 
 	project, err := h.projectRepository.GetByID(r.Context(), link.ProjectID)
 	if err != nil {
-		http.Error(w, "project not found", http.StatusNotFound)
+		writeError(w, http.StatusNotFound, "project not found")
 		return
 	}
 	if project.UserID != userID {
-		http.Error(w, "Forbidden", http.StatusForbidden)
+		writeError(w, http.StatusForbidden, "forbidden")
 		return
 	}
 	if !middleware.ProjectAllowed(r.Context(), project.ID) {
-		http.Error(w, "Forbidden: key not authorized for this project", http.StatusForbidden)
+		writeError(w, http.StatusForbidden, "key not authorized for this project")
 		return
 	}
 
 	if err := h.linkRepository.DeleteByCode(r.Context(), code); err != nil {
-		http.Error(w, "failed to delete link", http.StatusInternalServerError)
+		writeError(w, http.StatusInternalServerError, "failed to delete link")
 		return
 	}
 

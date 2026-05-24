@@ -23,13 +23,13 @@ func NewProjectHandler(projectRepository *repository.ProjectRepository) *Project
 func (h *ProjectHandler) ListProjects(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middleware.UserIDFromContext(r.Context())
 	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		writeError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
 	projects, err := h.projectRepository.FindAllByUserID(r.Context(), userID)
 	if err != nil {
-		http.Error(w, "Failed to list projects", http.StatusInternalServerError)
+		writeError(w, http.StatusInternalServerError, "failed to list projects")
 		return
 	}
 
@@ -37,24 +37,23 @@ func (h *ProjectHandler) ListProjects(w http.ResponseWriter, r *http.Request) {
 		projects = []*model.Project{}
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(projects)
+	writeJSON(w, http.StatusOK, projects)
 }
 
 func (h *ProjectHandler) CreateProject(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middleware.UserIDFromContext(r.Context())
 	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		writeError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
 	var req dto.CreateProjectRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request payload", http.StatusBadRequest)
+		writeError(w, http.StatusBadRequest, "invalid request payload")
 		return
 	}
 	if err := req.Validate(); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -64,45 +63,43 @@ func (h *ProjectHandler) CreateProject(w http.ResponseWriter, r *http.Request) {
 		Slug:   service.GenerateSlug(req.Name),
 	}
 	if err := h.projectRepository.Create(r.Context(), newProject); err != nil {
-		http.Error(w, "Failed to create project", http.StatusInternalServerError)
+		writeError(w, http.StatusInternalServerError, "failed to create project")
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(newProject)
+	writeJSON(w, http.StatusCreated, newProject)
 }
 
 func (h *ProjectHandler) UpdateProject(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middleware.UserIDFromContext(r.Context())
 	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		writeError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
 	var req dto.UpdateProjectRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request payload", http.StatusBadRequest)
+		writeError(w, http.StatusBadRequest, "invalid request payload")
 		return
 	}
 	if err := req.Validate(); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	slug := chi.URLParam(r, "slug")
 	project, err := h.projectRepository.FindBySlug(r.Context(), slug)
 	if err != nil {
-		http.Error(w, "Project not found", http.StatusNotFound)
+		writeError(w, http.StatusNotFound, "project not found")
 		return
 	}
 
 	if project.UserID != userID {
-		http.Error(w, "Forbidden", http.StatusForbidden)
+		writeError(w, http.StatusForbidden, "forbidden")
 		return
 	}
 	if !middleware.ProjectAllowed(r.Context(), project.ID) {
-		http.Error(w, "Forbidden: key not authorized for this project", http.StatusForbidden)
+		writeError(w, http.StatusForbidden, "key not authorized for this project")
 		return
 	}
 
@@ -110,39 +107,38 @@ func (h *ProjectHandler) UpdateProject(w http.ResponseWriter, r *http.Request) {
 	project.Slug = service.GenerateSlug(req.Name)
 
 	if err := h.projectRepository.Update(r.Context(), project); err != nil {
-		http.Error(w, "Failed to update project", http.StatusInternalServerError)
+		writeError(w, http.StatusInternalServerError, "failed to update project")
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(project)
+	writeJSON(w, http.StatusOK, project)
 }
 
 func (h *ProjectHandler) DeleteProject(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middleware.UserIDFromContext(r.Context())
 	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		writeError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
 	slug := chi.URLParam(r, "slug")
 	project, err := h.projectRepository.FindBySlug(r.Context(), slug)
 	if err != nil {
-		http.Error(w, "Project not found", http.StatusNotFound)
+		writeError(w, http.StatusNotFound, "project not found")
 		return
 	}
 
 	if project.UserID != userID {
-		http.Error(w, "Forbidden", http.StatusForbidden)
+		writeError(w, http.StatusForbidden, "forbidden")
 		return
 	}
 	if !middleware.ProjectAllowed(r.Context(), project.ID) {
-		http.Error(w, "Forbidden: key not authorized for this project", http.StatusForbidden)
+		writeError(w, http.StatusForbidden, "key not authorized for this project")
 		return
 	}
 
 	if err := h.projectRepository.Delete(r.Context(), project.ID); err != nil {
-		http.Error(w, "Failed to delete project", http.StatusInternalServerError)
+		writeError(w, http.StatusInternalServerError, "failed to delete project")
 		return
 	}
 

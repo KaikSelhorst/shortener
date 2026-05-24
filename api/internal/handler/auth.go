@@ -36,17 +36,17 @@ func NewAuthHandler(
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	var req dto.RegisterRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request payload", http.StatusBadRequest)
+		writeError(w, http.StatusBadRequest, "invalid request payload")
 		return
 	}
 	if err := req.Validate(); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
-		http.Error(w, "Failed to register user", http.StatusInternalServerError)
+		writeError(w, http.StatusInternalServerError, "failed to register user")
 		return
 	}
 
@@ -57,87 +57,87 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	if err := h.userRepository.Create(r.Context(), user); err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.UniqueViolation {
-			http.Error(w, "Email already in use", http.StatusConflict)
+			writeError(w, http.StatusConflict, "email already in use")
 			return
 		}
-		http.Error(w, "Failed to register user", http.StatusInternalServerError)
+		writeError(w, http.StatusInternalServerError, "failed to register user")
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(user)
+	writeJSON(w, http.StatusCreated, dto.UserResponse{
+		ID:        user.ID,
+		Email:     user.Email,
+		CreatedAt: user.CreatedAt,
+	})
 }
 
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	var req dto.LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request payload", http.StatusBadRequest)
+		writeError(w, http.StatusBadRequest, "invalid request payload")
 		return
 	}
 	if err := req.Validate(); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	user, err := h.userRepository.FindByEmail(r.Context(), req.Email)
 	if err != nil {
 		_, _ = bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
-		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
+		writeError(w, http.StatusUnauthorized, "invalid credentials")
 		return
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)); err != nil {
-		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
+		writeError(w, http.StatusUnauthorized, "invalid credentials")
 		return
 	}
 
 	tokens, err := h.issueTokenPair(r, user.ID)
 	if err != nil {
-		http.Error(w, "Failed to generate tokens", http.StatusInternalServerError)
+		writeError(w, http.StatusInternalServerError, "failed to generate tokens")
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(tokens)
+	writeJSON(w, http.StatusOK, tokens)
 }
 
 func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 	var req dto.RefreshRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request payload", http.StatusBadRequest)
+		writeError(w, http.StatusBadRequest, "invalid request payload")
 		return
 	}
 	if req.RefreshToken == "" {
-		http.Error(w, "refresh_token is required", http.StatusBadRequest)
+		writeError(w, http.StatusBadRequest, "refresh_token is required")
 		return
 	}
 
 	hash := service.HashToken(req.RefreshToken)
 	rt, err := h.refreshTokenRepository.RevokeIfActive(r.Context(), hash)
 	if err != nil {
-		http.Error(w, "Invalid or expired refresh token", http.StatusUnauthorized)
+		writeError(w, http.StatusUnauthorized, "invalid or expired refresh token")
 		return
 	}
 
 	tokens, err := h.issueTokenPair(r, rt.UserID)
 	if err != nil {
-		http.Error(w, "Failed to generate tokens", http.StatusInternalServerError)
+		writeError(w, http.StatusInternalServerError, "failed to generate tokens")
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(tokens)
+	writeJSON(w, http.StatusOK, tokens)
 }
 
 func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	var req dto.LogoutRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request payload", http.StatusBadRequest)
+		writeError(w, http.StatusBadRequest, "invalid request payload")
 		return
 	}
 	if req.RefreshToken == "" {
-		http.Error(w, "refresh_token is required", http.StatusBadRequest)
+		writeError(w, http.StatusBadRequest, "refresh_token is required")
 		return
 	}
 

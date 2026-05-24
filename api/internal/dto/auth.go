@@ -3,6 +3,7 @@ package dto
 import (
 	"errors"
 	"strings"
+	"time"
 )
 
 type RegisterRequest struct {
@@ -46,6 +47,12 @@ type RefreshRequest struct {
 
 type LogoutRequest struct {
 	RefreshToken string `json:"refresh_token"`
+}
+
+type UserResponse struct {
+	ID        int64     `json:"id"`
+	Email     string    `json:"email"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
 type TokenResponse struct {
