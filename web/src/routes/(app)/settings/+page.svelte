@@ -152,7 +152,7 @@
 				<p class="mb-2 text-sm font-medium text-foreground">Scopes</p>
 				<div class="grid grid-cols-2 gap-1.5">
 					{#each ALL_SCOPES as scope}
-						<label class="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted">
+						<label class="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm text-foreground hover:bg-muted">
 							<input type="checkbox" name="scopes" value={scope.value} class="accent-primary" />
 							{scope.label}
 						</label>
