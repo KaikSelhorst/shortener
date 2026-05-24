@@ -35,6 +35,11 @@ func (h *ApiKeyHandler) toResponse(k *model.ApiKey) dto.ApiKeyResponse {
 }
 
 func (h *ApiKeyHandler) CreateApiKey(w http.ResponseWriter, r *http.Request) {
+	if _, isApiKey := middleware.ApiKeyFromContext(r.Context()); isApiKey {
+		http.Error(w, "Forbidden: API keys cannot manage API keys", http.StatusForbidden)
+		return
+	}
+
 	userID, ok := middleware.UserIDFromContext(r.Context())
 	if !ok {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
@@ -80,6 +85,11 @@ func (h *ApiKeyHandler) CreateApiKey(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ApiKeyHandler) ListApiKeys(w http.ResponseWriter, r *http.Request) {
+	if _, isApiKey := middleware.ApiKeyFromContext(r.Context()); isApiKey {
+		http.Error(w, "Forbidden: API keys cannot manage API keys", http.StatusForbidden)
+		return
+	}
+
 	userID, ok := middleware.UserIDFromContext(r.Context())
 	if !ok {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
@@ -102,6 +112,11 @@ func (h *ApiKeyHandler) ListApiKeys(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ApiKeyHandler) DeleteApiKey(w http.ResponseWriter, r *http.Request) {
+	if _, isApiKey := middleware.ApiKeyFromContext(r.Context()); isApiKey {
+		http.Error(w, "Forbidden: API keys cannot manage API keys", http.StatusForbidden)
+		return
+	}
+
 	userID, ok := middleware.UserIDFromContext(r.Context())
 	if !ok {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
