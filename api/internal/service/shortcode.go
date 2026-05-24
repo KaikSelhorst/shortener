@@ -2,8 +2,17 @@ package service
 
 import "github.com/sqids/sqids-go"
 
-var alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-var s, _ = sqids.New(sqids.Options{Alphabet: alphabet})
+const alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+
+var s *sqids.Sqids
+
+func init() {
+	var err error
+	s, err = sqids.New(sqids.Options{Alphabet: alphabet})
+	if err != nil {
+		panic("shortcode: failed to initialize sqids: " + err.Error())
+	}
+}
 
 func numberToDigits(id uint64) []uint64 {
 	var digits []uint64
@@ -23,11 +32,9 @@ func digitsToNumber(digits []uint64) uint64 {
 }
 
 func GenerateShortCode(id uint64) (string, error) {
-	a := numberToDigits(id)
-	return s.Encode(a)
+	return s.Encode(numberToDigits(id))
 }
 
 func DecodeShortCode(code string) uint64 {
-	idSlice := s.Decode(code)
-	return digitsToNumber(idSlice)
+	return digitsToNumber(s.Decode(code))
 }

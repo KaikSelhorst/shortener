@@ -15,5 +15,5 @@ type Link struct {
 }
 
 func (l *Link) IsExpired() bool {
-	return l.ExpiresAt != nil && l.ExpiresAt.Before(time.Now())
+	return l.ExpiresAt != nil && l.ExpiresAt.Before(time.Now().UTC())
 }
