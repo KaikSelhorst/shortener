@@ -19,14 +19,14 @@ type Handlers struct {
 	ProjectHandler  *handler.ProjectHandler
 	LinkHandler     *handler.LinkHandler
 	AuthHandler     *handler.AuthHandler
-	ApiKeyHandler   *handler.ApiKeyHandler
+	APIKeyHandler   *handler.APIKeyHandler
 }
 
 type Router struct {
 	Server *http.Server
 }
 
-func New(cfg *config.Config, handlers *Handlers, authService *service.AuthService, apiKeyRepo *repository.ApiKeyRepository) *Router {
+func New(cfg *config.Config, handlers *Handlers, authService *service.AuthService, apiKeyRepo *repository.APIKeyRepository) *Router {
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Use(middleware.RequestID)
@@ -45,9 +45,9 @@ func New(cfg *config.Config, handlers *Handlers, authService *service.AuthServic
 
 	r.Route("/api-keys", func(r chi.Router) {
 		r.Use(requireAuth)
-		r.Get("/", handlers.ApiKeyHandler.ListApiKeys)
-		r.Post("/", handlers.ApiKeyHandler.CreateApiKey)
-		r.Delete("/{id}", handlers.ApiKeyHandler.DeleteApiKey)
+		r.Get("/", handlers.APIKeyHandler.ListAPIKeys)
+		r.Post("/", handlers.APIKeyHandler.CreateAPIKey)
+		r.Delete("/{id}", handlers.APIKeyHandler.DeleteAPIKey)
 	})
 
 	r.Route("/projects", func(r chi.Router) {

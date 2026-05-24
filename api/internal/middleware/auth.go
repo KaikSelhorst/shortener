@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"context"
+	"log"
 	"net/http"
 	"strings"
 
@@ -13,8 +14,8 @@ import (
 type contextKey string
 
 const (
-	UserIDKey contextKey = "user_id"
-	ApiKeyKey contextKey = "api_key"
+	UserIDKey  contextKey = "user_id"
+	APIKeyKey  contextKey = "api_key"
 )
 
 func UserIDFromContext(ctx context.Context) (int64, bool) {
@@ -22,22 +23,22 @@ func UserIDFromContext(ctx context.Context) (int64, bool) {
 	return id, ok
 }
 
-func ApiKeyFromContext(ctx context.Context) (*model.ApiKey, bool) {
-	k, ok := ctx.Value(ApiKeyKey).(*model.ApiKey)
+func APIKeyFromContext(ctx context.Context) (*model.APIKey, bool) {
+	k, ok := ctx.Value(APIKeyKey).(*model.APIKey)
 	return k, ok
 }
 
 // ProjectAllowed returns false when the request is authenticated via an API Key
 // that is restricted to a specific project and the given projectID doesn't match.
 func ProjectAllowed(ctx context.Context, projectID int64) bool {
-	key, isApiKey := ApiKeyFromContext(ctx)
-	if !isApiKey || key.ProjectID == nil {
+	key, isAPIKey := APIKeyFromContext(ctx)
+	if !isAPIKey || key.ProjectID == nil {
 		return true
 	}
 	return *key.ProjectID == projectID
 }
 
-func RequireAuth(authService *service.AuthService, apiKeyRepo *repository.ApiKeyRepository) func(http.Handler) http.Handler {
+func RequireAuth(authService *service.AuthService, apiKeyRepo *repository.APIKeyRepository) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			authHeader := r.Header.Get("Authorization")
@@ -55,9 +56,13 @@ func RequireAuth(authService *service.AuthService, apiKeyRepo *repository.ApiKey
 					http.Error(w, "Unauthorized", http.StatusUnauthorized)
 					return
 				}
-				go apiKeyRepo.UpdateLastUsed(context.Background(), key.ID)
+				go func(id int64) {
+					if err := apiKeyRepo.UpdateLastUsed(context.Background(), id); err != nil {
+						log.Printf("middleware: failed to update api key last_used_at (id=%d): %v", id, err)
+					}
+				}(key.ID)
 				ctx := context.WithValue(r.Context(), UserIDKey, key.UserID)
-				ctx = context.WithValue(ctx, ApiKeyKey, key)
+				ctx = context.WithValue(ctx, APIKeyKey, key)
 				next.ServeHTTP(w, r.WithContext(ctx))
 				return
 			}
@@ -74,13 +79,13 @@ func RequireAuth(authService *service.AuthService, apiKeyRepo *repository.ApiKey
 	}
 }
 
-// RequireScope verifica se a requisição tem o escopo necessário.
-// Requisições autenticadas via JWT têm todos os escopos implicitamente.
+// RequireScope checks whether the request has the required scope.
+// JWT-authenticated requests implicitly have all scopes.
 func RequireScope(scope string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			key, isApiKey := ApiKeyFromContext(r.Context())
-			if !isApiKey {
+			key, isAPIKey := APIKeyFromContext(r.Context())
+			if !isAPIKey {
 				next.ServeHTTP(w, r)
 				return
 			}

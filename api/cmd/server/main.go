@@ -35,7 +35,6 @@ func main() {
 	defer cancel()
 
 	cfg, err := config.Load()
-
 	if err != nil {
 		logger.Fatal(err)
 	}
@@ -45,11 +44,9 @@ func main() {
 	}
 
 	db, err := database.NewDatabase(ctx, cfg.DatabaseURL)
-
 	if err != nil {
 		logger.Fatal(err)
 	}
-
 	defer db.Close()
 
 	linkRepository := repository.NewLinkRepository(db.Pool)
@@ -57,7 +54,7 @@ func main() {
 	clickRepository := repository.NewClickRepository(db.Pool)
 	userRepository := repository.NewUserRepository(db.Pool)
 	refreshTokenRepository := repository.NewRefreshTokenRepository(db.Pool)
-	apiKeyRepository := repository.NewApiKeyRepository(db.Pool)
+	apiKeyRepository := repository.NewAPIKeyRepository(db.Pool)
 
 	tracker := service.NewTrackerService(clickRepository, logger)
 	authService := service.NewAuthService(cfg.JWTSecret)
@@ -70,7 +67,7 @@ func main() {
 	projectHandler := handler.NewProjectHandler(projectRepository)
 	linkHandler := handler.NewLinkHandler(linkRepository, projectRepository, linkCache, cfg.BaseURL, cfg.CursorSecret)
 	authHandler := handler.NewAuthHandler(userRepository, refreshTokenRepository, authService)
-	apiKeyHandler := handler.NewApiKeyHandler(apiKeyRepository)
+	apiKeyHandler := handler.NewAPIKeyHandler(apiKeyRepository)
 
 	handlers := &router.Handlers{
 		HealthHandler:   healthHandler,
@@ -78,7 +75,7 @@ func main() {
 		ProjectHandler:  projectHandler,
 		LinkHandler:     linkHandler,
 		AuthHandler:     authHandler,
-		ApiKeyHandler:   apiKeyHandler,
+		APIKeyHandler:   apiKeyHandler,
 	}
 
 	r := router.New(cfg, handlers, authService, apiKeyRepository)

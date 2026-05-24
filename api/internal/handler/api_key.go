@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strconv"
 
@@ -13,16 +14,16 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-type ApiKeyHandler struct {
-	apiKeyRepository *repository.ApiKeyRepository
+type APIKeyHandler struct {
+	apiKeyRepository *repository.APIKeyRepository
 }
 
-func NewApiKeyHandler(apiKeyRepository *repository.ApiKeyRepository) *ApiKeyHandler {
-	return &ApiKeyHandler{apiKeyRepository: apiKeyRepository}
+func NewAPIKeyHandler(apiKeyRepository *repository.APIKeyRepository) *APIKeyHandler {
+	return &APIKeyHandler{apiKeyRepository: apiKeyRepository}
 }
 
-func (h *ApiKeyHandler) toResponse(k *model.ApiKey) dto.ApiKeyResponse {
-	return dto.ApiKeyResponse{
+func (h *APIKeyHandler) toResponse(k *model.APIKey) dto.APIKeyResponse {
+	return dto.APIKeyResponse{
 		ID:         k.ID,
 		UserID:     k.UserID,
 		ProjectID:  k.ProjectID,
@@ -34,35 +35,35 @@ func (h *ApiKeyHandler) toResponse(k *model.ApiKey) dto.ApiKeyResponse {
 	}
 }
 
-func (h *ApiKeyHandler) CreateApiKey(w http.ResponseWriter, r *http.Request) {
-	if _, isApiKey := middleware.ApiKeyFromContext(r.Context()); isApiKey {
-		http.Error(w, "Forbidden: API keys cannot manage API keys", http.StatusForbidden)
+func (h *APIKeyHandler) CreateAPIKey(w http.ResponseWriter, r *http.Request) {
+	if _, isAPIKey := middleware.APIKeyFromContext(r.Context()); isAPIKey {
+		writeError(w, http.StatusForbidden, "API keys cannot manage API keys")
 		return
 	}
 
 	userID, ok := middleware.UserIDFromContext(r.Context())
 	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		writeError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
-	var req dto.CreateApiKeyRequest
+	var req dto.CreateAPIKeyRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid request payload", http.StatusBadRequest)
+		writeError(w, http.StatusBadRequest, "invalid request payload")
 		return
 	}
 	if err := req.Validate(); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	raw, hash, err := service.GenerateApiKey()
+	raw, hash, err := service.GenerateAPIKey()
 	if err != nil {
-		http.Error(w, "failed to generate key", http.StatusInternalServerError)
+		writeError(w, http.StatusInternalServerError, "failed to generate key")
 		return
 	}
 
-	key := &model.ApiKey{
+	key := &model.APIKey{
 		UserID:    userID,
 		ProjectID: req.ProjectID,
 		Name:      req.Name,
@@ -72,70 +73,67 @@ func (h *ApiKeyHandler) CreateApiKey(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.apiKeyRepository.Create(r.Context(), key); err != nil {
-		http.Error(w, "failed to create api key", http.StatusInternalServerError)
+		writeError(w, http.StatusInternalServerError, "failed to create api key")
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(dto.CreateApiKeyResponse{
-		ApiKeyResponse: h.toResponse(key),
+	writeJSON(w, http.StatusCreated, dto.CreateAPIKeyResponse{
+		APIKeyResponse: h.toResponse(key),
 		Token:          raw,
 	})
 }
 
-func (h *ApiKeyHandler) ListApiKeys(w http.ResponseWriter, r *http.Request) {
-	if _, isApiKey := middleware.ApiKeyFromContext(r.Context()); isApiKey {
-		http.Error(w, "Forbidden: API keys cannot manage API keys", http.StatusForbidden)
+func (h *APIKeyHandler) ListAPIKeys(w http.ResponseWriter, r *http.Request) {
+	if _, isAPIKey := middleware.APIKeyFromContext(r.Context()); isAPIKey {
+		writeError(w, http.StatusForbidden, "API keys cannot manage API keys")
 		return
 	}
 
 	userID, ok := middleware.UserIDFromContext(r.Context())
 	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		writeError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
 	keys, err := h.apiKeyRepository.List(r.Context(), userID)
 	if err != nil {
-		http.Error(w, "failed to list api keys", http.StatusInternalServerError)
+		writeError(w, http.StatusInternalServerError, "failed to list api keys")
 		return
 	}
 
-	data := make([]dto.ApiKeyResponse, len(keys))
+	data := make([]dto.APIKeyResponse, len(keys))
 	for i, k := range keys {
 		data[i] = h.toResponse(k)
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(data)
+	writeJSON(w, http.StatusOK, data)
 }
 
-func (h *ApiKeyHandler) DeleteApiKey(w http.ResponseWriter, r *http.Request) {
-	if _, isApiKey := middleware.ApiKeyFromContext(r.Context()); isApiKey {
-		http.Error(w, "Forbidden: API keys cannot manage API keys", http.StatusForbidden)
+func (h *APIKeyHandler) DeleteAPIKey(w http.ResponseWriter, r *http.Request) {
+	if _, isAPIKey := middleware.APIKeyFromContext(r.Context()); isAPIKey {
+		writeError(w, http.StatusForbidden, "API keys cannot manage API keys")
 		return
 	}
 
 	userID, ok := middleware.UserIDFromContext(r.Context())
 	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		writeError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
 	idStr := chi.URLParam(r, "id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
-		http.Error(w, "invalid id", http.StatusBadRequest)
+		writeError(w, http.StatusBadRequest, "invalid id")
 		return
 	}
 
 	if err := h.apiKeyRepository.Delete(r.Context(), id, userID); err != nil {
-		if err == repository.ErrNotFound {
-			http.Error(w, "api key not found", http.StatusNotFound)
+		if errors.Is(err, repository.ErrNotFound) {
+			writeError(w, http.StatusNotFound, "api key not found")
 			return
 		}
-		http.Error(w, "failed to delete api key", http.StatusInternalServerError)
+		writeError(w, http.StatusInternalServerError, "failed to delete api key")
 		return
 	}
 

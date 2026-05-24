@@ -17,13 +17,13 @@ var ValidScopes = map[string]bool{
 	"*":               true,
 }
 
-type CreateApiKeyRequest struct {
+type CreateAPIKeyRequest struct {
 	Name      string   `json:"name"`
 	Scopes    []string `json:"scopes"`
 	ProjectID *int64   `json:"project_id"`
 }
 
-func (r *CreateApiKeyRequest) Validate() error {
+func (r *CreateAPIKeyRequest) Validate() error {
 	if r.Name == "" {
 		return errors.New("name is required")
 	}
@@ -38,19 +38,19 @@ func (r *CreateApiKeyRequest) Validate() error {
 	return nil
 }
 
-type ApiKeyResponse struct {
-	ID          int64      `json:"id"`
-	UserID      int64      `json:"user_id"`
-	ProjectID   *int64     `json:"project_id"`
-	Name        string     `json:"name"`
-	KeyPrefix   string     `json:"key_prefix"`
-	Scopes      []string   `json:"scopes"`
-	LastUsedAt  *time.Time `json:"last_used_at"`
-	CreatedAt   time.Time  `json:"created_at"`
+type APIKeyResponse struct {
+	ID         int64      `json:"id"`
+	UserID     int64      `json:"user_id"`
+	ProjectID  *int64     `json:"project_id"`
+	Name       string     `json:"name"`
+	KeyPrefix  string     `json:"key_prefix"`
+	Scopes     []string   `json:"scopes"`
+	LastUsedAt *time.Time `json:"last_used_at"`
+	CreatedAt  time.Time  `json:"created_at"`
 }
 
-// CreateApiKeyResponse inclui o token bruto — retornado apenas na criação.
-type CreateApiKeyResponse struct {
-	ApiKeyResponse
+// CreateAPIKeyResponse includes the raw token — returned only at creation time.
+type CreateAPIKeyResponse struct {
+	APIKeyResponse
 	Token string `json:"token"`
 }
