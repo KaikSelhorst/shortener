@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"errors"
 
 	"github.com/KaikSelhorst/shortener/internal/model"
 	"github.com/jackc/pgx/v5"
@@ -22,6 +23,9 @@ func (r *LinkRepository) GetByCode(ctx context.Context, code string) (*model.Lin
 		"SELECT id, project_id, short_code, original_url, title, description, og_image, expires_at, created_at FROM links WHERE short_code = $1", code,
 	).Scan(&link.ID, &link.ProjectID, &link.ShortCode, &link.OriginalURL, &link.Title, &link.Description, &link.OgImage, &link.ExpiresAt, &link.CreatedAt)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrNotFound
+		}
 		return nil, err
 	}
 	return &link, nil

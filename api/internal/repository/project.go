@@ -2,8 +2,10 @@ package repository
 
 import (
 	"context"
+	"errors"
 
 	"github.com/KaikSelhorst/shortener/internal/model"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -42,6 +44,9 @@ func (r *ProjectRepository) GetByID(ctx context.Context, id int64) (*model.Proje
 		"SELECT id, user_id, name, slug, created_at FROM projects WHERE id = $1", id,
 	).Scan(&p.ID, &p.UserID, &p.Name, &p.Slug, &p.CreatedAt)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrNotFound
+		}
 		return nil, err
 	}
 	return &p, nil
@@ -53,6 +58,9 @@ func (r *ProjectRepository) FindBySlug(ctx context.Context, slug string) (*model
 		"SELECT id, user_id, name, slug, created_at FROM projects WHERE slug = $1", slug,
 	).Scan(&p.ID, &p.UserID, &p.Name, &p.Slug, &p.CreatedAt)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrNotFound
+		}
 		return nil, err
 	}
 	return &p, nil
