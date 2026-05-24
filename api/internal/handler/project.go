@@ -101,6 +101,10 @@ func (h *ProjectHandler) UpdateProject(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Forbidden", http.StatusForbidden)
 		return
 	}
+	if !middleware.ProjectAllowed(r.Context(), project.ID) {
+		http.Error(w, "Forbidden: key not authorized for this project", http.StatusForbidden)
+		return
+	}
 
 	project.Name = req.Name
 	project.Slug = service.GenerateSlug(req.Name)
@@ -130,6 +134,10 @@ func (h *ProjectHandler) DeleteProject(w http.ResponseWriter, r *http.Request) {
 
 	if project.UserID != userID {
 		http.Error(w, "Forbidden", http.StatusForbidden)
+		return
+	}
+	if !middleware.ProjectAllowed(r.Context(), project.ID) {
+		http.Error(w, "Forbidden: key not authorized for this project", http.StatusForbidden)
 		return
 	}
 

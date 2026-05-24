@@ -6,6 +6,9 @@ import type {
 	ListLinksResponse,
 	CreateLinkRequest,
 	UpdateLinkRequest,
+	ApiKey,
+	CreateApiKeyRequest,
+	CreateApiKeyResponse,
 } from './types'
 
 const BASE = env.API_URL ?? 'http://localhost:8080'
@@ -47,6 +50,12 @@ export function createApi(fetch: Fetch, token?: string) {
 			update: (slug: string, name: string) =>
 				req<Project>('PUT', `/projects/${slug}`, { name }),
 			delete: (slug: string) => req<void>('DELETE', `/projects/${slug}`),
+		},
+		apiKeys: {
+			list: () => req<ApiKey[]>('GET', '/api-keys'),
+			create: (data: CreateApiKeyRequest) =>
+				req<CreateApiKeyResponse>('POST', '/api-keys', data),
+			delete: (id: number) => req<void>('DELETE', `/api-keys/${id}`),
 		},
 		links: {
 			list: (slug: string, cursor?: string) =>

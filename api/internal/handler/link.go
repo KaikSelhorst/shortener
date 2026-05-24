@@ -78,6 +78,10 @@ func (h *LinkHandler) CreateLink(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Forbidden", http.StatusForbidden)
 		return
 	}
+	if !middleware.ProjectAllowed(r.Context(), project.ID) {
+		http.Error(w, "Forbidden: key not authorized for this project", http.StatusForbidden)
+		return
+	}
 
 	newLink := &model.Link{
 		ProjectID:   project.ID,
@@ -114,6 +118,10 @@ func (h *LinkHandler) ListLinks(w http.ResponseWriter, r *http.Request) {
 
 	if project.UserID != userID {
 		http.Error(w, "Forbidden", http.StatusForbidden)
+		return
+	}
+	if !middleware.ProjectAllowed(r.Context(), project.ID) {
+		http.Error(w, "Forbidden: key not authorized for this project", http.StatusForbidden)
 		return
 	}
 
@@ -211,6 +219,10 @@ func (h *LinkHandler) GetLink(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Forbidden", http.StatusForbidden)
 		return
 	}
+	if !middleware.ProjectAllowed(r.Context(), project.ID) {
+		http.Error(w, "Forbidden: key not authorized for this project", http.StatusForbidden)
+		return
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(h.toLinkResponse(link))
@@ -248,6 +260,10 @@ func (h *LinkHandler) UpdateLink(w http.ResponseWriter, r *http.Request) {
 	}
 	if project.UserID != userID {
 		http.Error(w, "Forbidden", http.StatusForbidden)
+		return
+	}
+	if !middleware.ProjectAllowed(r.Context(), project.ID) {
+		http.Error(w, "Forbidden: key not authorized for this project", http.StatusForbidden)
 		return
 	}
 
@@ -290,6 +306,10 @@ func (h *LinkHandler) DeleteLink(w http.ResponseWriter, r *http.Request) {
 	}
 	if project.UserID != userID {
 		http.Error(w, "Forbidden", http.StatusForbidden)
+		return
+	}
+	if !middleware.ProjectAllowed(r.Context(), project.ID) {
+		http.Error(w, "Forbidden: key not authorized for this project", http.StatusForbidden)
 		return
 	}
 

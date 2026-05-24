@@ -48,3 +48,24 @@ export interface UpdateLinkRequest {
 	og_image?: string
 	expires_at?: string
 }
+
+export interface ApiKey {
+	id: number
+	user_id: number
+	project_id: number | null
+	name: string
+	key_prefix: string
+	scopes: string[]
+	last_used_at: string | null
+	created_at: string
+}
+
+export interface CreateApiKeyRequest {
+	name: string
+	scopes: string[]
+	project_id?: number
+}
+
+export interface CreateApiKeyResponse extends ApiKey {
+	token: string
+}

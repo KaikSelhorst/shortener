@@ -7,6 +7,7 @@ import (
 	"github.com/KaikSelhorst/shortener/internal/config"
 	"github.com/KaikSelhorst/shortener/internal/handler"
 	authmw "github.com/KaikSelhorst/shortener/internal/middleware"
+	"github.com/KaikSelhorst/shortener/internal/repository"
 	"github.com/KaikSelhorst/shortener/internal/service"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -18,16 +19,19 @@ type Handlers struct {
 	ProjectHandler  *handler.ProjectHandler
 	LinkHandler     *handler.LinkHandler
 	AuthHandler     *handler.AuthHandler
+	ApiKeyHandler   *handler.ApiKeyHandler
 }
 
 type Router struct {
 	Server *http.Server
 }
 
-func New(cfg *config.Config, handlers *Handlers, authService *service.AuthService) *Router {
+func New(cfg *config.Config, handlers *Handlers, authService *service.AuthService, apiKeyRepo *repository.ApiKeyRepository) *Router {
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Use(middleware.RequestID)
+
+	requireAuth := authmw.RequireAuth(authService, apiKeyRepo)
 
 	r.Get("/health", handlers.HealthHandler.Ok)
 	r.Get("/{code}", handlers.RedirectHandler.HandleRedirect)
@@ -39,19 +43,26 @@ func New(cfg *config.Config, handlers *Handlers, authService *service.AuthServic
 		r.Post("/logout", handlers.AuthHandler.Logout)
 	})
 
+	r.Route("/api-keys", func(r chi.Router) {
+		r.Use(requireAuth)
+		r.Get("/", handlers.ApiKeyHandler.ListApiKeys)
+		r.Post("/", handlers.ApiKeyHandler.CreateApiKey)
+		r.Delete("/{id}", handlers.ApiKeyHandler.DeleteApiKey)
+	})
+
 	r.Route("/projects", func(r chi.Router) {
-		r.Use(authmw.RequireAuth(authService))
+		r.Use(requireAuth)
 
-		r.Get("/", handlers.ProjectHandler.ListProjects)
-		r.Post("/", handlers.ProjectHandler.CreateProject)
-		r.Put("/{slug}", handlers.ProjectHandler.UpdateProject)
-		r.Delete("/{slug}", handlers.ProjectHandler.DeleteProject)
+		r.With(authmw.RequireScope("projects:read")).Get("/", handlers.ProjectHandler.ListProjects)
+		r.With(authmw.RequireScope("projects:create")).Post("/", handlers.ProjectHandler.CreateProject)
+		r.With(authmw.RequireScope("projects:update")).Put("/{slug}", handlers.ProjectHandler.UpdateProject)
+		r.With(authmw.RequireScope("projects:delete")).Delete("/{slug}", handlers.ProjectHandler.DeleteProject)
 
-		r.Post("/{slug}/links", handlers.LinkHandler.CreateLink)
-		r.Get("/{slug}/links", handlers.LinkHandler.ListLinks)
-		r.Get("/{slug}/links/{code}", handlers.LinkHandler.GetLink)
-		r.Put("/{slug}/links/{code}", handlers.LinkHandler.UpdateLink)
-		r.Delete("/{slug}/links/{code}", handlers.LinkHandler.DeleteLink)
+		r.With(authmw.RequireScope("links:create")).Post("/{slug}/links", handlers.LinkHandler.CreateLink)
+		r.With(authmw.RequireScope("links:read")).Get("/{slug}/links", handlers.LinkHandler.ListLinks)
+		r.With(authmw.RequireScope("links:read")).Get("/{slug}/links/{code}", handlers.LinkHandler.GetLink)
+		r.With(authmw.RequireScope("links:update")).Put("/{slug}/links/{code}", handlers.LinkHandler.UpdateLink)
+		r.With(authmw.RequireScope("links:delete")).Delete("/{slug}/links/{code}", handlers.LinkHandler.DeleteLink)
 	})
 
 	server := &http.Server{Handler: r, Addr: ":" + cfg.Port}

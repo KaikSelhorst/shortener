@@ -1,0 +1,47 @@
+import { fail } from '@sveltejs/kit'
+import type { Actions, PageServerLoad } from './$types'
+import { createApi } from '$lib/api'
+
+export const load: PageServerLoad = async ({ cookies, fetch }) => {
+	const token = cookies.get('access_token')
+	const api = createApi(fetch, token)
+	const [apiKeys, projects] = await Promise.all([api.apiKeys.list(), api.projects.list()])
+	return { apiKeys, projects }
+}
+
+export const actions: Actions = {
+	create: async ({ request, cookies, fetch }) => {
+		const data = await request.formData()
+		const name = data.get('name') as string
+		const scopes = data.getAll('scopes') as string[]
+		const project_id_raw = data.get('project_id') as string
+		const project_id = project_id_raw ? Number(project_id_raw) : undefined
+
+		if (!name?.trim()) return fail(400, { createError: 'Name is required' })
+		if (!scopes.length) return fail(400, { createError: 'Select at least one scope' })
+
+		try {
+			const token = cookies.get('access_token')
+			const key = await createApi(fetch, token).apiKeys.create({
+				name: name.trim(),
+				scopes,
+				project_id,
+			})
+			return { created: key }
+		} catch (err) {
+			return fail(400, { createError: err instanceof Error ? err.message : 'Failed to create key' })
+		}
+	},
+
+	delete: async ({ request, cookies, fetch }) => {
+		const data = await request.formData()
+		const id = Number(data.get('id'))
+
+		try {
+			const token = cookies.get('access_token')
+			await createApi(fetch, token).apiKeys.delete(id)
+		} catch (err) {
+			return fail(400, { deleteError: err instanceof Error ? err.message : 'Failed to delete key' })
+		}
+	},
+}

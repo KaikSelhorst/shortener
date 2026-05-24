@@ -57,6 +57,7 @@ func main() {
 	clickRepository := repository.NewClickRepository(db.Pool)
 	userRepository := repository.NewUserRepository(db.Pool)
 	refreshTokenRepository := repository.NewRefreshTokenRepository(db.Pool)
+	apiKeyRepository := repository.NewApiKeyRepository(db.Pool)
 
 	tracker := service.NewTrackerService(clickRepository, logger)
 	authService := service.NewAuthService(cfg.JWTSecret)
@@ -69,6 +70,7 @@ func main() {
 	projectHandler := handler.NewProjectHandler(projectRepository)
 	linkHandler := handler.NewLinkHandler(linkRepository, projectRepository, linkCache, cfg.BaseURL, cfg.CursorSecret)
 	authHandler := handler.NewAuthHandler(userRepository, refreshTokenRepository, authService)
+	apiKeyHandler := handler.NewApiKeyHandler(apiKeyRepository)
 
 	handlers := &router.Handlers{
 		HealthHandler:   healthHandler,
@@ -76,9 +78,10 @@ func main() {
 		ProjectHandler:  projectHandler,
 		LinkHandler:     linkHandler,
 		AuthHandler:     authHandler,
+		ApiKeyHandler:   apiKeyHandler,
 	}
 
-	r := router.New(cfg, handlers, authService)
+	r := router.New(cfg, handlers, authService, apiKeyRepository)
 
 	go func() {
 		if err := r.Run(); err != nil && err != http.ErrServerClosed {
