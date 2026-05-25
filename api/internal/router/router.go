@@ -3,6 +3,7 @@ package router
 import (
 	"context"
 	"net/http"
+	"time"
 
 	"github.com/KaikSelhorst/shortener/internal/config"
 	"github.com/KaikSelhorst/shortener/internal/handler"
@@ -65,7 +66,13 @@ func New(cfg *config.Config, handlers *Handlers, authService *service.AuthServic
 		r.With(authmw.RequireScope("links:delete")).Delete("/{slug}/links/{code}", handlers.LinkHandler.DeleteLink)
 	})
 
-	server := &http.Server{Handler: r, Addr: ":" + cfg.Port}
+	server := &http.Server{
+		Handler:           r,
+		Addr:              ":" + cfg.Port,
+		ReadHeaderTimeout: 5 * time.Second,
+		WriteTimeout:      30 * time.Second,
+		IdleTimeout:       120 * time.Second,
+	}
 
 	return &Router{Server: server}
 }
