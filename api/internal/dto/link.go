@@ -20,7 +20,8 @@ func validateURL(raw string) error {
 	return nil
 }
 
-type CreateLinkRequest struct {
+// LinkRequest is used for both creating and updating a link.
+type LinkRequest struct {
 	URL         string     `json:"url"`
 	Title       *string    `json:"title"`
 	Description *string    `json:"description"`
@@ -28,25 +29,7 @@ type CreateLinkRequest struct {
 	ExpiresAt   *time.Time `json:"expires_at"`
 }
 
-func (r *CreateLinkRequest) Validate() error {
-	if err := validateURL(r.URL); err != nil {
-		return err
-	}
-	if r.ExpiresAt != nil && !r.ExpiresAt.After(time.Now().UTC()) {
-		return errors.New("expires_at must be in the future")
-	}
-	return nil
-}
-
-type UpdateLinkRequest struct {
-	URL         string     `json:"url"`
-	Title       *string    `json:"title"`
-	Description *string    `json:"description"`
-	OgImage     *string    `json:"og_image"`
-	ExpiresAt   *time.Time `json:"expires_at"`
-}
-
-func (r *UpdateLinkRequest) Validate() error {
+func (r *LinkRequest) Validate() error {
 	if err := validateURL(r.URL); err != nil {
 		return err
 	}
