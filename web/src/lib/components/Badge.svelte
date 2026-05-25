@@ -18,7 +18,7 @@
 
 	const cls = $derived(
 		[
-			'inline-flex items-center rounded-sm px-1.5 py-0.5 font-mono text-xs font-medium',
+			'inline-flex items-center rounded-sm px-1.5 py-1 font-mono text-xs font-medium leading-none',
 			variants[variant],
 			className,
 		]
