@@ -1,3 +1,4 @@
+export { default as Badge } from './components/Badge.svelte'
 export { default as Button } from './components/Button.svelte'
 export { default as Textarea } from './components/Textarea.svelte'
 export { default as Dialog } from './components/Dialog.svelte'

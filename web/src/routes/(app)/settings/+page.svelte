@@ -3,7 +3,7 @@
 	import type { SubmitFunction } from '@sveltejs/kit'
 	import type { CreateApiKeyResponse } from '$lib/types'
 	import { enhance } from '$app/forms'
-	import { Button, Input, Dialog, Table, TableHead, TableBody, TableRow, TableHeader, TableCell } from '$lib'
+	import { Badge, Button, Input, Dialog, Table, TableHead, TableBody, TableRow, TableHeader, TableCell } from '$lib'
 
 	let { data, form }: { data: PageData; form: ActionData } = $props()
 
@@ -61,10 +61,6 @@
 		if (!confirmOpen) pendingDeleteId = null
 	})
 
-	function formatScopes(scopes: string[]) {
-		if (scopes.includes('*')) return 'Full access'
-		return scopes.join(', ')
-	}
 </script>
 
 <div class="flex items-center justify-between">
@@ -103,7 +99,17 @@
 						<TableCell>
 							<span class="font-mono text-xs text-muted-foreground">{key.key_prefix}...</span>
 						</TableCell>
-						<TableCell class="text-sm text-muted-foreground">{formatScopes(key.scopes)}</TableCell>
+						<TableCell>
+							<div class="flex flex-wrap gap-1">
+								{#if key.scopes.includes('*')}
+									<Badge variant="solid">*</Badge>
+								{:else}
+									{#each key.scopes as scope (scope)}
+										<Badge>{scope}</Badge>
+									{/each}
+								{/if}
+							</div>
+						</TableCell>
 						<TableCell class="text-muted-foreground">
 							{#if key.project_id}
 								{data.projects.find(p => p.id === key.project_id)?.name ?? `#${key.project_id}`}
