@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/KaikSelhorst/shortener/internal/httputil"
 	"github.com/KaikSelhorst/shortener/internal/model"
 	"github.com/KaikSelhorst/shortener/internal/repository"
 	"github.com/KaikSelhorst/shortener/internal/service"
@@ -43,7 +44,7 @@ func RequireAuth(authService *service.AuthService, apiKeyRepo *repository.APIKey
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			authHeader := r.Header.Get("Authorization")
 			if !strings.HasPrefix(authHeader, "Bearer ") {
-				http.Error(w, "Unauthorized", http.StatusUnauthorized)
+				httputil.WriteError(w, http.StatusUnauthorized, "unauthorized")
 				return
 			}
 
@@ -53,7 +54,7 @@ func RequireAuth(authService *service.AuthService, apiKeyRepo *repository.APIKey
 				hash := service.HashToken(token)
 				key, err := apiKeyRepo.GetByHash(r.Context(), hash)
 				if err != nil {
-					http.Error(w, "Unauthorized", http.StatusUnauthorized)
+					httputil.WriteError(w, http.StatusUnauthorized, "unauthorized")
 					return
 				}
 				go func(id int64) {
@@ -69,7 +70,7 @@ func RequireAuth(authService *service.AuthService, apiKeyRepo *repository.APIKey
 
 			userID, err := authService.ValidateAccessToken(token)
 			if err != nil {
-				http.Error(w, "Unauthorized", http.StatusUnauthorized)
+				httputil.WriteError(w, http.StatusUnauthorized, "unauthorized")
 				return
 			}
 
@@ -90,7 +91,7 @@ func RequireScope(scope string) func(http.Handler) http.Handler {
 				return
 			}
 			if !key.HasScope(scope) {
-				http.Error(w, "Forbidden: insufficient scope", http.StatusForbidden)
+				httputil.WriteError(w, http.StatusForbidden, "forbidden: insufficient scope")
 				return
 			}
 			next.ServeHTTP(w, r)
