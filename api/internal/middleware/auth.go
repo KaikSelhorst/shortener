@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/KaikSelhorst/shortener/internal/httputil"
 	"github.com/KaikSelhorst/shortener/internal/model"
@@ -58,7 +59,9 @@ func RequireAuth(authService *service.AuthService, apiKeyRepo *repository.APIKey
 					return
 				}
 				go func(id int64) {
-					if err := apiKeyRepo.UpdateLastUsed(context.Background(), id); err != nil {
+					ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+					defer cancel()
+					if err := apiKeyRepo.UpdateLastUsed(ctx, id); err != nil {
 						log.Printf("middleware: failed to update api key last_used_at (id=%d): %v", id, err)
 					}
 				}(key.ID)
