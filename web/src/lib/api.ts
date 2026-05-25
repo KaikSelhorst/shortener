@@ -15,6 +15,17 @@ const BASE = env.API_URL ?? 'http://localhost:8080'
 
 type Fetch = typeof globalThis.fetch
 
+/** Thrown by the API client when the server returns a non-2xx status. */
+export class ApiError extends Error {
+	constructor(
+		public readonly status: number,
+		message: string,
+	) {
+		super(message)
+		this.name = 'ApiError'
+	}
+}
+
 export function createApi(fetch: Fetch, token?: string) {
 	const headers: Record<string, string> = { 'Content-Type': 'application/json' }
 	if (token) headers['Authorization'] = `Bearer ${token}`
@@ -26,8 +37,14 @@ export function createApi(fetch: Fetch, token?: string) {
 			body: body !== undefined ? JSON.stringify(body) : undefined,
 		})
 		if (!res.ok) {
-			const text = await res.text()
-			throw new Error(text || `${res.status} ${res.statusText}`)
+			let message = `${res.status} ${res.statusText}`
+			try {
+				const data = await res.json()
+				if (typeof data.error === 'string') message = data.error
+			} catch {
+				/* ignore parse error — keep status-based message */
+			}
+			throw new ApiError(res.status, message)
 		}
 		if (res.status === 204) return undefined as T
 		return res.json() as Promise<T>
