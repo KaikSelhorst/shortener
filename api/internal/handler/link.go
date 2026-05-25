@@ -67,7 +67,7 @@ func (h *LinkHandler) CreateLink(w http.ResponseWriter, r *http.Request) {
 	slug := chi.URLParam(r, "slug")
 	project, err := h.projectRepository.FindBySlug(r.Context(), slug)
 	if err != nil {
-		writeError(w, http.StatusNotFound, "project not found")
+		repoError(w, err, "project not found")
 		return
 	}
 
@@ -107,7 +107,7 @@ func (h *LinkHandler) ListLinks(w http.ResponseWriter, r *http.Request) {
 	slug := chi.URLParam(r, "slug")
 	project, err := h.projectRepository.FindBySlug(r.Context(), slug)
 	if err != nil {
-		writeError(w, http.StatusNotFound, "project not found")
+		repoError(w, err, "project not found")
 		return
 	}
 
@@ -199,13 +199,13 @@ func (h *LinkHandler) GetLink(w http.ResponseWriter, r *http.Request) {
 
 	link, err := h.linkRepository.GetByCode(r.Context(), code)
 	if err != nil {
-		writeError(w, http.StatusNotFound, "link not found")
+		repoError(w, err, "link not found")
 		return
 	}
 
 	project, err := h.projectRepository.GetByID(r.Context(), link.ProjectID)
 	if err != nil {
-		writeError(w, http.StatusNotFound, "project not found")
+		repoError(w, err, "project not found")
 		return
 	}
 	if project.UserID != userID {
@@ -241,13 +241,13 @@ func (h *LinkHandler) UpdateLink(w http.ResponseWriter, r *http.Request) {
 
 	link, err := h.linkRepository.GetByCode(r.Context(), code)
 	if err != nil {
-		writeError(w, http.StatusNotFound, "link not found")
+		repoError(w, err, "link not found")
 		return
 	}
 
 	project, err := h.projectRepository.GetByID(r.Context(), link.ProjectID)
 	if err != nil {
-		writeError(w, http.StatusNotFound, "project not found")
+		repoError(w, err, "project not found")
 		return
 	}
 	if project.UserID != userID {
@@ -286,13 +286,13 @@ func (h *LinkHandler) DeleteLink(w http.ResponseWriter, r *http.Request) {
 
 	link, err := h.linkRepository.GetByCode(r.Context(), code)
 	if err != nil {
-		writeError(w, http.StatusNotFound, "link not found")
+		repoError(w, err, "link not found")
 		return
 	}
 
 	project, err := h.projectRepository.GetByID(r.Context(), link.ProjectID)
 	if err != nil {
-		writeError(w, http.StatusNotFound, "project not found")
+		repoError(w, err, "project not found")
 		return
 	}
 	if project.UserID != userID {

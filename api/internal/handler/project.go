@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 
 	"github.com/KaikSelhorst/shortener/internal/dto"
@@ -10,6 +11,8 @@ import (
 	"github.com/KaikSelhorst/shortener/internal/repository"
 	"github.com/KaikSelhorst/shortener/internal/service"
 	"github.com/go-chi/chi/v5"
+	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgerrcode"
 )
 
 type ProjectHandler struct {
@@ -63,6 +66,11 @@ func (h *ProjectHandler) CreateProject(w http.ResponseWriter, r *http.Request) {
 		Slug:   service.GenerateSlug(req.Name),
 	}
 	if err := h.projectRepository.Create(r.Context(), newProject); err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.UniqueViolation {
+			writeError(w, http.StatusConflict, "a project with this name already exists")
+			return
+		}
 		writeError(w, http.StatusInternalServerError, "failed to create project")
 		return
 	}
@@ -90,7 +98,7 @@ func (h *ProjectHandler) UpdateProject(w http.ResponseWriter, r *http.Request) {
 	slug := chi.URLParam(r, "slug")
 	project, err := h.projectRepository.FindBySlug(r.Context(), slug)
 	if err != nil {
-		writeError(w, http.StatusNotFound, "project not found")
+		repoError(w, err, "project not found")
 		return
 	}
 
@@ -107,6 +115,11 @@ func (h *ProjectHandler) UpdateProject(w http.ResponseWriter, r *http.Request) {
 	project.Slug = service.GenerateSlug(req.Name)
 
 	if err := h.projectRepository.Update(r.Context(), project); err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.UniqueViolation {
+			writeError(w, http.StatusConflict, "a project with this name already exists")
+			return
+		}
 		writeError(w, http.StatusInternalServerError, "failed to update project")
 		return
 	}
@@ -124,7 +137,7 @@ func (h *ProjectHandler) DeleteProject(w http.ResponseWriter, r *http.Request) {
 	slug := chi.URLParam(r, "slug")
 	project, err := h.projectRepository.FindBySlug(r.Context(), slug)
 	if err != nil {
-		writeError(w, http.StatusNotFound, "project not found")
+		repoError(w, err, "project not found")
 		return
 	}
 
