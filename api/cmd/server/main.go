@@ -60,15 +60,20 @@ func main() {
 	tracker := service.NewTrackerService(clickRepository, logger)
 	authService := service.NewAuthService(cfg.JWTSecret)
 
+	shortcodeService, err := service.NewShortcodeService()
+	if err != nil {
+		logger.Fatal(err)
+	}
+
 	linkCache := cache.NewLinkCache(1000, 5*time.Minute)
 	defer linkCache.Close()
 
 	healthHandler := handler.NewHealthHandler()
 	redirectHandler := handler.NewRedirectHandler(linkRepository, tracker, linkCache)
 	projectHandler := handler.NewProjectHandler(projectRepository)
-	linkHandler := handler.NewLinkHandler(linkRepository, projectRepository, linkCache, cfg.BaseURL, cfg.CursorSecret)
+	linkHandler := handler.NewLinkHandler(linkRepository, projectRepository, shortcodeService, linkCache, cfg.BaseURL, cfg.CursorSecret)
 	authHandler := handler.NewAuthHandler(userRepository, refreshTokenRepository, authService)
-	apiKeyHandler := handler.NewAPIKeyHandler(apiKeyRepository)
+	apiKeyHandler := handler.NewAPIKeyHandler(apiKeyRepository, authService)
 
 	handlers := &router.Handlers{
 		HealthHandler:   healthHandler,
