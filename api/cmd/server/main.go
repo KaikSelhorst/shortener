@@ -73,7 +73,7 @@ func main() {
 	projectHandler := handler.NewProjectHandler(projectRepository)
 	linkHandler := handler.NewLinkHandler(linkRepository, projectRepository, shortcodeService, linkCache, cfg.BaseURL, cfg.CursorSecret)
 	authHandler := handler.NewAuthHandler(userRepository, refreshTokenRepository, authService)
-	apiKeyHandler := handler.NewAPIKeyHandler(apiKeyRepository, authService)
+	apiKeyHandler := handler.NewAPIKeyHandler(apiKeyRepository, projectRepository, authService)
 
 	handlers := &router.Handlers{
 		HealthHandler:   healthHandler,

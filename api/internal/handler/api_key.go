@@ -15,14 +15,20 @@ import (
 )
 
 type APIKeyHandler struct {
-	apiKeyRepository *repository.APIKeyRepository
-	authService      *service.AuthService
+	apiKeyRepository  *repository.APIKeyRepository
+	projectRepository *repository.ProjectRepository
+	authService       *service.AuthService
 }
 
-func NewAPIKeyHandler(apiKeyRepository *repository.APIKeyRepository, authService *service.AuthService) *APIKeyHandler {
+func NewAPIKeyHandler(
+	apiKeyRepository *repository.APIKeyRepository,
+	projectRepository *repository.ProjectRepository,
+	authService *service.AuthService,
+) *APIKeyHandler {
 	return &APIKeyHandler{
-		apiKeyRepository: apiKeyRepository,
-		authService:      authService,
+		apiKeyRepository:  apiKeyRepository,
+		projectRepository: projectRepository,
+		authService:       authService,
 	}
 }
 
@@ -59,6 +65,23 @@ func (h *APIKeyHandler) CreateAPIKey(w http.ResponseWriter, r *http.Request) {
 	if err := req.Validate(); err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
+	}
+
+	// If the key is scoped to a project, verify the project belongs to this user.
+	if req.ProjectID != nil {
+		project, err := h.projectRepository.GetByID(r.Context(), *req.ProjectID)
+		if err != nil {
+			if errors.Is(err, repository.ErrNotFound) {
+				writeError(w, http.StatusUnprocessableEntity, "project not found")
+				return
+			}
+			writeError(w, http.StatusInternalServerError, "failed to verify project")
+			return
+		}
+		if project.UserID != userID {
+			writeError(w, http.StatusForbidden, "project does not belong to you")
+			return
+		}
 	}
 
 	raw, hash, err := h.authService.GenerateAPIKey()
