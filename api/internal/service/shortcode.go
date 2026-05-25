@@ -1,17 +1,35 @@
 package service
 
-import "github.com/sqids/sqids-go"
+import (
+	"fmt"
+
+	"github.com/sqids/sqids-go"
+)
 
 const alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
-var s *sqids.Sqids
+// ShortcodeService encodes and decodes short codes using a fixed alphabet and
+// a custom base-10 digit mapping. The encoding logic (numberToDigits /
+// digitsToNumber) is a stable contract with the database — changing it would
+// invalidate all existing short_code values.
+type ShortcodeService struct {
+	s *sqids.Sqids
+}
 
-func init() {
-	var err error
-	s, err = sqids.New(sqids.Options{Alphabet: alphabet})
+func NewShortcodeService() (*ShortcodeService, error) {
+	s, err := sqids.New(sqids.Options{Alphabet: alphabet})
 	if err != nil {
-		panic("shortcode: failed to initialize sqids: " + err.Error())
+		return nil, fmt.Errorf("shortcode: failed to initialize sqids: %w", err)
 	}
+	return &ShortcodeService{s: s}, nil
+}
+
+func (svc *ShortcodeService) GenerateShortCode(id uint64) (string, error) {
+	return svc.s.Encode(numberToDigits(id))
+}
+
+func (svc *ShortcodeService) DecodeShortCode(code string) uint64 {
+	return digitsToNumber(svc.s.Decode(code))
 }
 
 func numberToDigits(id uint64) []uint64 {
@@ -29,12 +47,4 @@ func digitsToNumber(digits []uint64) uint64 {
 		id = id*10 + digits[i]
 	}
 	return id
-}
-
-func GenerateShortCode(id uint64) (string, error) {
-	return s.Encode(numberToDigits(id))
-}
-
-func DecodeShortCode(code string) uint64 {
-	return digitsToNumber(s.Decode(code))
 }

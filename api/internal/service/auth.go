@@ -72,7 +72,7 @@ func (s *AuthService) GenerateRefreshToken() (raw string, hash string, err error
 
 // GenerateAPIKey generates an API Key token in the format sk_<64-chars-hex>.
 // Returns the raw token (for one-time display) and its SHA256 hash (for storage).
-func GenerateAPIKey() (raw string, hash string, err error) {
+func (s *AuthService) GenerateAPIKey() (raw string, hash string, err error) {
 	b := make([]byte, 32)
 	if _, err = rand.Read(b); err != nil {
 		return "", "", fmt.Errorf("generate api key: %w", err)
