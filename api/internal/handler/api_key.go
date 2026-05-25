@@ -16,10 +16,14 @@ import (
 
 type APIKeyHandler struct {
 	apiKeyRepository *repository.APIKeyRepository
+	authService      *service.AuthService
 }
 
-func NewAPIKeyHandler(apiKeyRepository *repository.APIKeyRepository) *APIKeyHandler {
-	return &APIKeyHandler{apiKeyRepository: apiKeyRepository}
+func NewAPIKeyHandler(apiKeyRepository *repository.APIKeyRepository, authService *service.AuthService) *APIKeyHandler {
+	return &APIKeyHandler{
+		apiKeyRepository: apiKeyRepository,
+		authService:      authService,
+	}
 }
 
 func (h *APIKeyHandler) toResponse(k *model.APIKey) dto.APIKeyResponse {
@@ -57,7 +61,7 @@ func (h *APIKeyHandler) CreateAPIKey(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	raw, hash, err := service.GenerateAPIKey()
+	raw, hash, err := h.authService.GenerateAPIKey()
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to generate key")
 		return
