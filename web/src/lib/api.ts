@@ -4,9 +4,8 @@ import type {
 	Project,
 	Link,
 	ListLinksResponse,
-	CreateLinkRequest,
-	UpdateLinkRequest,
-	ApiKey,
+	LinkRequest,
+	ApiKeyResponse,
 	CreateApiKeyRequest,
 	CreateApiKeyResponse,
 } from './types'
@@ -69,7 +68,7 @@ export function createApi(fetch: Fetch, token?: string) {
 			delete: (slug: string) => req<void>('DELETE', `/projects/${slug}`),
 		},
 		apiKeys: {
-			list: () => req<ApiKey[]>('GET', '/api-keys'),
+			list: () => req<ApiKeyResponse[]>('GET', '/api-keys'),
 			create: (data: CreateApiKeyRequest) =>
 				req<CreateApiKeyResponse>('POST', '/api-keys', data),
 			delete: (id: number) => req<void>('DELETE', `/api-keys/${id}`),
@@ -80,11 +79,11 @@ export function createApi(fetch: Fetch, token?: string) {
 					'GET',
 					`/projects/${slug}/links${cursor ? `?cursor=${cursor}` : ''}`,
 				),
-			create: (slug: string, data: CreateLinkRequest) =>
+			create: (slug: string, data: LinkRequest) =>
 				req<Link>('POST', `/projects/${slug}/links`, data),
 			get: (slug: string, code: string) =>
 				req<Link>('GET', `/projects/${slug}/links/${code}`),
-			update: (slug: string, code: string, data: UpdateLinkRequest) =>
+			update: (slug: string, code: string, data: LinkRequest) =>
 				req<Link>('PUT', `/projects/${slug}/links/${code}`, data),
 			delete: (slug: string, code: string) =>
 				req<void>('DELETE', `/projects/${slug}/links/${code}`),
