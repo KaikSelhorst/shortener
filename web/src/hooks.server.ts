@@ -1,5 +1,6 @@
 import { env } from '$env/dynamic/private'
 import type { Handle } from '@sveltejs/kit'
+import { setAuthCookies, deleteAuthCookies } from '$lib/server/cookies'
 
 function decodeJwtPayload(token: string): { user_id: number; exp: number } | null {
 	try {
@@ -8,13 +9,6 @@ function decodeJwtPayload(token: string): { user_id: number; exp: number } | nul
 	} catch {
 		return null
 	}
-}
-
-const COOKIE_OPTS = {
-	path: '/',
-	httpOnly: true,
-	sameSite: 'lax' as const,
-	secure: process.env.NODE_ENV === 'production',
 }
 
 export const handle: Handle = async ({ event, resolve }) => {
@@ -41,19 +35,11 @@ export const handle: Handle = async ({ event, resolve }) => {
 
 		if (res.ok) {
 			const data = await res.json()
-			event.cookies.set('access_token', data.access_token, {
-				...COOKIE_OPTS,
-				maxAge: 60 * 15,
-			})
-			event.cookies.set('refresh_token', data.refresh_token, {
-				...COOKIE_OPTS,
-				maxAge: 60 * 60 * 24 * 7,
-			})
+			setAuthCookies(event.cookies, data)
 			const newPayload = decodeJwtPayload(data.access_token)
 			if (newPayload) event.locals.user = { id: newPayload.user_id }
 		} else {
-			event.cookies.delete('access_token', { path: '/' })
-			event.cookies.delete('refresh_token', { path: '/' })
+			deleteAuthCookies(event.cookies)
 		}
 	} catch {
 		// network error — proceed unauthenticated

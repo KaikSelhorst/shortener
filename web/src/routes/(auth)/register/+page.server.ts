@@ -1,6 +1,7 @@
 import { redirect, fail } from '@sveltejs/kit'
 import type { Actions, PageServerLoad } from './$types'
 import { createApi } from '$lib/api'
+import { setAuthCookies } from '$lib/server/cookies'
 
 export const load: PageServerLoad = ({ locals }) => {
 	if (locals.user) redirect(302, '/dashboard')
@@ -14,21 +15,7 @@ export const actions: Actions = {
 
 		try {
 			const tokens = await createApi(fetch).auth.register(email, password)
-
-			cookies.set('access_token', tokens.access_token, {
-				path: '/',
-				httpOnly: true,
-				sameSite: 'lax',
-				secure: process.env.NODE_ENV === 'production',
-				maxAge: 60 * 15,
-			})
-			cookies.set('refresh_token', tokens.refresh_token, {
-				path: '/',
-				httpOnly: true,
-				sameSite: 'lax',
-				secure: process.env.NODE_ENV === 'production',
-				maxAge: 60 * 60 * 24 * 7,
-			})
+			setAuthCookies(cookies, tokens)
 		} catch (err) {
 			return fail(400, { error: err instanceof Error ? err.message : 'Registration failed' })
 		}

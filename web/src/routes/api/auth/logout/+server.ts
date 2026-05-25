@@ -1,6 +1,7 @@
 import { redirect } from '@sveltejs/kit'
 import type { RequestHandler } from './$types'
 import { createApi } from '$lib/api'
+import { deleteAuthCookies } from '$lib/server/cookies'
 
 export const POST: RequestHandler = async ({ cookies, fetch }) => {
 	const refreshToken = cookies.get('refresh_token')
@@ -14,8 +15,7 @@ export const POST: RequestHandler = async ({ cookies, fetch }) => {
 		}
 	}
 
-	cookies.delete('access_token', { path: '/' })
-	cookies.delete('refresh_token', { path: '/' })
+	deleteAuthCookies(cookies)
 
 	redirect(303, '/login')
 }
