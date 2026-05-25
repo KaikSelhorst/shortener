@@ -1,6 +1,6 @@
 import { fail, error } from '@sveltejs/kit'
 import type { Actions, PageServerLoad } from './$types'
-import { createApi } from '$lib/api'
+import { createApi, ApiError } from '$lib/api'
 
 export const load: PageServerLoad = async ({ params, cookies, fetch, url }) => {
 	const token = cookies.get('access_token')
@@ -9,8 +9,9 @@ export const load: PageServerLoad = async ({ params, cookies, fetch, url }) => {
 	try {
 		const links = await createApi(fetch, token).links.list(params.slug, cursor)
 		return { slug: params.slug, links }
-	} catch {
-		error(404, 'Project not found')
+	} catch (err) {
+		if (err instanceof ApiError) error(err.status, err.message)
+		error(500, 'Failed to load links')
 	}
 }
 
