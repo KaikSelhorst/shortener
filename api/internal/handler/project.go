@@ -23,6 +23,15 @@ func NewProjectHandler(projectRepository *repository.ProjectRepository) *Project
 	return &ProjectHandler{projectRepository: projectRepository}
 }
 
+func toProjectResponse(p *model.Project) dto.ProjectResponse {
+	return dto.ProjectResponse{
+		ID:        p.ID,
+		Name:      p.Name,
+		Slug:      p.Slug,
+		CreatedAt: p.CreatedAt,
+	}
+}
+
 func (h *ProjectHandler) ListProjects(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middleware.UserIDFromContext(r.Context())
 	if !ok {
@@ -36,11 +45,12 @@ func (h *ProjectHandler) ListProjects(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if projects == nil {
-		projects = []*model.Project{}
+	data := make([]dto.ProjectResponse, len(projects))
+	for i, p := range projects {
+		data[i] = toProjectResponse(p)
 	}
 
-	writeJSON(w, http.StatusOK, projects)
+	writeJSON(w, http.StatusOK, data)
 }
 
 func (h *ProjectHandler) CreateProject(w http.ResponseWriter, r *http.Request) {
@@ -50,7 +60,7 @@ func (h *ProjectHandler) CreateProject(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req dto.CreateProjectRequest
+	var req dto.ProjectRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request payload")
 		return
@@ -75,7 +85,7 @@ func (h *ProjectHandler) CreateProject(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeJSON(w, http.StatusCreated, newProject)
+	writeJSON(w, http.StatusCreated, toProjectResponse(newProject))
 }
 
 func (h *ProjectHandler) UpdateProject(w http.ResponseWriter, r *http.Request) {
@@ -85,7 +95,7 @@ func (h *ProjectHandler) UpdateProject(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req dto.UpdateProjectRequest
+	var req dto.ProjectRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request payload")
 		return
@@ -124,7 +134,7 @@ func (h *ProjectHandler) UpdateProject(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeJSON(w, http.StatusOK, project)
+	writeJSON(w, http.StatusOK, toProjectResponse(project))
 }
 
 func (h *ProjectHandler) DeleteProject(w http.ResponseWriter, r *http.Request) {

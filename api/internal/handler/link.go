@@ -17,15 +17,23 @@ import (
 type LinkHandler struct {
 	linkRepository    *repository.LinkRepository
 	projectRepository *repository.ProjectRepository
+	shortcodeService  *service.ShortcodeService
 	cache             *cache.LinkCache
 	baseURL           string
 	cursorSecret      string
 }
 
-func NewLinkHandler(linkRepository *repository.LinkRepository, projectRepository *repository.ProjectRepository, cache *cache.LinkCache, baseURL, cursorSecret string) *LinkHandler {
+func NewLinkHandler(
+	linkRepository *repository.LinkRepository,
+	projectRepository *repository.ProjectRepository,
+	shortcodeService *service.ShortcodeService,
+	cache *cache.LinkCache,
+	baseURL, cursorSecret string,
+) *LinkHandler {
 	return &LinkHandler{
 		linkRepository:    linkRepository,
 		projectRepository: projectRepository,
+		shortcodeService:  shortcodeService,
 		cache:             cache,
 		baseURL:           baseURL,
 		cursorSecret:      cursorSecret,
@@ -47,6 +55,51 @@ func (h *LinkHandler) toLinkResponse(link *model.Link) dto.LinkResponse {
 	}
 }
 
+// assertProjectAccess checks ownership and API key scope for the given project.
+// It writes an appropriate HTTP error and returns false if access is denied.
+func (h *LinkHandler) assertProjectAccess(w http.ResponseWriter, r *http.Request, project *model.Project, userID int64) bool {
+	if project.UserID != userID {
+		writeError(w, http.StatusForbidden, "forbidden")
+		return false
+	}
+	if !middleware.ProjectAllowed(r.Context(), project.ID) {
+		writeError(w, http.StatusForbidden, "key not authorized for this project")
+		return false
+	}
+	return true
+}
+
+// loadProjectBySlug resolves the {slug} URL parameter to a project and
+// verifies ownership and API key scope. Returns the project and true on
+// success, or writes an HTTP error and returns nil, false on failure.
+func (h *LinkHandler) loadProjectBySlug(w http.ResponseWriter, r *http.Request, userID int64) (*model.Project, bool) {
+	slug := chi.URLParam(r, "slug")
+	project, err := h.projectRepository.FindBySlug(r.Context(), slug)
+	if err != nil {
+		repoError(w, err, "project not found")
+		return nil, false
+	}
+	if !h.assertProjectAccess(w, r, project, userID) {
+		return nil, false
+	}
+	return project, true
+}
+
+// loadProjectByID resolves a project by its numeric ID and verifies ownership
+// and API key scope. Returns the project and true on success, or writes an
+// HTTP error and returns nil, false on failure.
+func (h *LinkHandler) loadProjectByID(w http.ResponseWriter, r *http.Request, userID int64, projectID int64) (*model.Project, bool) {
+	project, err := h.projectRepository.GetByID(r.Context(), projectID)
+	if err != nil {
+		repoError(w, err, "project not found")
+		return nil, false
+	}
+	if !h.assertProjectAccess(w, r, project, userID) {
+		return nil, false
+	}
+	return project, true
+}
+
 func (h *LinkHandler) CreateLink(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middleware.UserIDFromContext(r.Context())
 	if !ok {
@@ -54,7 +107,7 @@ func (h *LinkHandler) CreateLink(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req dto.CreateLinkRequest
+	var req dto.LinkRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request payload")
 		return
@@ -64,19 +117,8 @@ func (h *LinkHandler) CreateLink(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	slug := chi.URLParam(r, "slug")
-	project, err := h.projectRepository.FindBySlug(r.Context(), slug)
-	if err != nil {
-		repoError(w, err, "project not found")
-		return
-	}
-
-	if project.UserID != userID {
-		writeError(w, http.StatusForbidden, "forbidden")
-		return
-	}
-	if !middleware.ProjectAllowed(r.Context(), project.ID) {
-		writeError(w, http.StatusForbidden, "key not authorized for this project")
+	project, ok := h.loadProjectBySlug(w, r, userID)
+	if !ok {
 		return
 	}
 
@@ -89,7 +131,7 @@ func (h *LinkHandler) CreateLink(w http.ResponseWriter, r *http.Request) {
 		ExpiresAt:   req.ExpiresAt,
 	}
 
-	if err := h.linkRepository.Create(r.Context(), newLink, service.GenerateShortCode); err != nil {
+	if err := h.linkRepository.Create(r.Context(), newLink, h.shortcodeService.GenerateShortCode); err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to create link")
 		return
 	}
@@ -104,19 +146,8 @@ func (h *LinkHandler) ListLinks(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	slug := chi.URLParam(r, "slug")
-	project, err := h.projectRepository.FindBySlug(r.Context(), slug)
-	if err != nil {
-		repoError(w, err, "project not found")
-		return
-	}
-
-	if project.UserID != userID {
-		writeError(w, http.StatusForbidden, "forbidden")
-		return
-	}
-	if !middleware.ProjectAllowed(r.Context(), project.ID) {
-		writeError(w, http.StatusForbidden, "key not authorized for this project")
+	project, ok := h.loadProjectBySlug(w, r, userID)
+	if !ok {
 		return
 	}
 
@@ -137,7 +168,7 @@ func (h *LinkHandler) ListLinks(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	cursorID := service.DecodeShortCode(cursorCode)
+	cursorID := h.shortcodeService.DecodeShortCode(cursorCode)
 
 	links, err := h.linkRepository.List(r.Context(), project.ID, cursorID, direction, limit+1)
 	if err != nil {
@@ -203,17 +234,7 @@ func (h *LinkHandler) GetLink(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	project, err := h.projectRepository.GetByID(r.Context(), link.ProjectID)
-	if err != nil {
-		repoError(w, err, "project not found")
-		return
-	}
-	if project.UserID != userID {
-		writeError(w, http.StatusForbidden, "forbidden")
-		return
-	}
-	if !middleware.ProjectAllowed(r.Context(), project.ID) {
-		writeError(w, http.StatusForbidden, "key not authorized for this project")
+	if _, ok := h.loadProjectByID(w, r, userID, link.ProjectID); !ok {
 		return
 	}
 
@@ -229,7 +250,7 @@ func (h *LinkHandler) UpdateLink(w http.ResponseWriter, r *http.Request) {
 
 	code := chi.URLParam(r, "code")
 
-	var req dto.UpdateLinkRequest
+	var req dto.LinkRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request payload")
 		return
@@ -245,17 +266,7 @@ func (h *LinkHandler) UpdateLink(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	project, err := h.projectRepository.GetByID(r.Context(), link.ProjectID)
-	if err != nil {
-		repoError(w, err, "project not found")
-		return
-	}
-	if project.UserID != userID {
-		writeError(w, http.StatusForbidden, "forbidden")
-		return
-	}
-	if !middleware.ProjectAllowed(r.Context(), project.ID) {
-		writeError(w, http.StatusForbidden, "key not authorized for this project")
+	if _, ok := h.loadProjectByID(w, r, userID, link.ProjectID); !ok {
 		return
 	}
 
@@ -290,17 +301,7 @@ func (h *LinkHandler) DeleteLink(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	project, err := h.projectRepository.GetByID(r.Context(), link.ProjectID)
-	if err != nil {
-		repoError(w, err, "project not found")
-		return
-	}
-	if project.UserID != userID {
-		writeError(w, http.StatusForbidden, "forbidden")
-		return
-	}
-	if !middleware.ProjectAllowed(r.Context(), project.ID) {
-		writeError(w, http.StatusForbidden, "key not authorized for this project")
+	if _, ok := h.loadProjectByID(w, r, userID, link.ProjectID); !ok {
 		return
 	}
 
