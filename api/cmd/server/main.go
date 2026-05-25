@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"log"
 	"net/http"
 	"os"
@@ -81,7 +82,7 @@ func main() {
 	r := router.New(cfg, handlers, authService, apiKeyRepository)
 
 	go func() {
-		if err := r.Run(); err != nil && err != http.ErrServerClosed {
+		if err := r.Run(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			logger.Fatal(err)
 		}
 	}()

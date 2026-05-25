@@ -32,7 +32,7 @@ func (r *CreateLinkRequest) Validate() error {
 	if err := validateURL(r.URL); err != nil {
 		return err
 	}
-	if r.ExpiresAt != nil && !r.ExpiresAt.After(time.Now()) {
+	if r.ExpiresAt != nil && !r.ExpiresAt.After(time.Now().UTC()) {
 		return errors.New("expires_at must be in the future")
 	}
 	return nil
@@ -50,7 +50,7 @@ func (r *UpdateLinkRequest) Validate() error {
 	if err := validateURL(r.URL); err != nil {
 		return err
 	}
-	if r.ExpiresAt != nil && !r.ExpiresAt.After(time.Now()) {
+	if r.ExpiresAt != nil && !r.ExpiresAt.After(time.Now().UTC()) {
 		return errors.New("expires_at must be in the future")
 	}
 	return nil

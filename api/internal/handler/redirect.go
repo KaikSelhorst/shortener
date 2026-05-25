@@ -29,14 +29,14 @@ func (h *RedirectHandler) HandleRedirect(w http.ResponseWriter, r *http.Request)
 		var err error
 		link, err = h.linkRepository.GetByCode(r.Context(), code)
 		if err != nil {
-			http.NotFound(w, r)
+			writeError(w, http.StatusNotFound, "link not found")
 			return
 		}
 		h.cache.Set(link)
 	}
 
 	if link.IsExpired() {
-		http.Error(w, "Link has expired", http.StatusGone)
+		writeError(w, http.StatusGone, "link has expired")
 		return
 	}
 
