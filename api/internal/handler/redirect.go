@@ -32,7 +32,11 @@ func (h *RedirectHandler) HandleRedirect(w http.ResponseWriter, r *http.Request)
 			writeError(w, http.StatusNotFound, "link not found")
 			return
 		}
-		h.cache.Set(link)
+		// Only cache non-expired links; caching an expired link wastes memory
+		// since it will always result in a 410 on every subsequent request.
+		if !link.IsExpired() {
+			h.cache.Set(link)
+		}
 	}
 
 	if link.IsExpired() {
