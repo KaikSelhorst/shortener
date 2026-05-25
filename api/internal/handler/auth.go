@@ -64,11 +64,14 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeJSON(w, http.StatusCreated, dto.UserResponse{
-		ID:        user.ID,
-		Email:     user.Email,
-		CreatedAt: user.CreatedAt,
-	})
+	// Issue tokens immediately so the client is logged in right after registration.
+	tokens, err := h.issueTokenPair(r, user.ID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to generate tokens")
+		return
+	}
+
+	writeJSON(w, http.StatusCreated, tokens)
 }
 
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
