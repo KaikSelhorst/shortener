@@ -7,7 +7,6 @@ export interface TokenResponse {
 
 export interface Project {
 	id: number
-	user_id: number
 	name: string
 	slug: string
 	created_at: string
@@ -33,7 +32,8 @@ export interface ListLinksResponse {
 	limit: number
 }
 
-export interface CreateLinkRequest {
+// LinkRequest is used for both creating and updating a link — mirrors the backend's LinkRequest DTO.
+export interface LinkRequest {
 	url: string
 	title?: string
 	description?: string
@@ -41,15 +41,7 @@ export interface CreateLinkRequest {
 	expires_at?: string
 }
 
-export interface UpdateLinkRequest {
-	url: string
-	title?: string
-	description?: string
-	og_image?: string
-	expires_at?: string
-}
-
-export interface ApiKey {
+export interface ApiKeyResponse {
 	id: number
 	user_id: number
 	project_id: number | null
@@ -66,6 +58,6 @@ export interface CreateApiKeyRequest {
 	project_id?: number
 }
 
-export interface CreateApiKeyResponse extends ApiKey {
+export interface CreateApiKeyResponse extends ApiKeyResponse {
 	token: string
 }
