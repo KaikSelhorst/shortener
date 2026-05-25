@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -65,7 +66,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Issue tokens immediately so the client is logged in right after registration.
-	tokens, err := h.issueTokenPair(r, user.ID)
+	tokens, err := h.issueTokenPair(r.Context(), user.ID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to generate tokens")
 		return
@@ -97,7 +98,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tokens, err := h.issueTokenPair(r, user.ID)
+	tokens, err := h.issueTokenPair(r.Context(), user.ID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to generate tokens")
 		return
@@ -124,7 +125,7 @@ func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tokens, err := h.issueTokenPair(r, rt.UserID)
+	tokens, err := h.issueTokenPair(r.Context(), rt.UserID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to generate tokens")
 		return
@@ -149,7 +150,7 @@ func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func (h *AuthHandler) issueTokenPair(r *http.Request, userID int64) (*dto.TokenResponse, error) {
+func (h *AuthHandler) issueTokenPair(ctx context.Context, userID int64) (*dto.TokenResponse, error) {
 	raw, hash, err := h.authService.GenerateRefreshToken()
 	if err != nil {
 		return nil, err
@@ -160,7 +161,7 @@ func (h *AuthHandler) issueTokenPair(r *http.Request, userID int64) (*dto.TokenR
 		TokenHash: hash,
 		ExpiresAt: time.Now().Add(service.RefreshTokenTTL),
 	}
-	if err := h.refreshTokenRepository.Create(r.Context(), rt); err != nil {
+	if err := h.refreshTokenRepository.Create(ctx, rt); err != nil {
 		return nil, err
 	}
 
