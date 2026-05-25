@@ -22,11 +22,18 @@
 	let createOpen = $state(false)
 	let createError = $state<string | null>(null)
 	let createdKey = $state<CreateApiKeyResponse | null>(null)
+	let tokenOpen = $state(false)
 	let tokenCopied = $state(false)
 
 	$effect(() => {
-		if (!createOpen) {
-			createError = null
+		if (!createOpen) createError = null
+	})
+
+	// When the token dialog closes (Done button or Escape), clear the key so
+	// it cannot be recovered from state and the dialog does not reopen.
+	$effect(() => {
+		if (!tokenOpen) {
+			createdKey = null
 			tokenCopied = false
 		}
 	})
@@ -41,6 +48,7 @@
 				const d = result.data as { created?: CreateApiKeyResponse }
 				if (d?.created) {
 					createdKey = d.created
+					tokenOpen = true
 					createOpen = false
 				}
 				await update()
@@ -196,25 +204,23 @@
 </Dialog>
 
 <!-- Show token once modal -->
-{#if createdKey}
-	<Dialog
-		open={true}
-		title="Save your API Key"
-		description="This key will only be shown once. Copy it now and store it somewhere safe."
-	>
-		{#snippet children()}
-			<div class="mt-2 flex items-center gap-2 rounded-md border border-border bg-muted px-3 py-2">
-				<code class="flex-1 break-all font-mono text-xs text-foreground">{createdKey?.token}</code>
-				<Button variant="outline" size="sm" onclick={copyToken}>
-					{tokenCopied ? 'Copied!' : 'Copy'}
-				</Button>
-			</div>
-		{/snippet}
-		{#snippet footer()}
-			<Button onclick={() => (createdKey = null)}>Done</Button>
-		{/snippet}
-	</Dialog>
-{/if}
+<Dialog
+	bind:open={tokenOpen}
+	title="Save your API Key"
+	description="This key will only be shown once. Copy it now and store it somewhere safe."
+>
+	{#snippet children()}
+		<div class="mt-2 flex items-center gap-2 rounded-md border border-border bg-muted px-3 py-2">
+			<code class="flex-1 break-all font-mono text-xs text-foreground">{createdKey?.token}</code>
+			<Button variant="outline" size="sm" onclick={copyToken}>
+				{tokenCopied ? 'Copied!' : 'Copy'}
+			</Button>
+		</div>
+	{/snippet}
+	{#snippet footer()}
+		<Button onclick={() => (tokenOpen = false)}>Done</Button>
+	{/snippet}
+</Dialog>
 
 <!-- Revoke confirm modal -->
 <Dialog
