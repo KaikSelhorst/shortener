@@ -25,6 +25,9 @@ func NewShortcodeService() (*ShortcodeService, error) {
 }
 
 func (svc *ShortcodeService) GenerateShortCode(id uint64) (string, error) {
+	if id == 0 {
+		return "", fmt.Errorf("shortcode: id must be greater than zero")
+	}
 	return svc.s.Encode(numberToDigits(id))
 }
 
