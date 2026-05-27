@@ -74,6 +74,7 @@ func main() {
 	linkHandler := handler.NewLinkHandler(linkRepository, projectRepository, shortcodeService, linkCache, cfg.BaseURL, cfg.CursorSecret)
 	authHandler := handler.NewAuthHandler(userRepository, refreshTokenRepository, authService)
 	apiKeyHandler := handler.NewAPIKeyHandler(apiKeyRepository, projectRepository, authService)
+	totpHandler := handler.NewTOTPHandler(userRepository, refreshTokenRepository, authService)
 
 	handlers := &router.Handlers{
 		HealthHandler:   healthHandler,
@@ -82,6 +83,7 @@ func main() {
 		LinkHandler:     linkHandler,
 		AuthHandler:     authHandler,
 		APIKeyHandler:   apiKeyHandler,
+		TOTPHandler:     totpHandler,
 	}
 
 	r := router.New(cfg, handlers, authService, apiKeyRepository)

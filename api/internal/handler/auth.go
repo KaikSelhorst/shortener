@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/KaikSelhorst/shortener/internal/dto"
+	"github.com/KaikSelhorst/shortener/internal/middleware"
 	"github.com/KaikSelhorst/shortener/internal/model"
 	"github.com/KaikSelhorst/shortener/internal/repository"
 	"github.com/KaikSelhorst/shortener/internal/service"
@@ -66,13 +67,20 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Issue tokens immediately so the client is logged in right after registration.
+	// New users never have TOTP enabled, so we go straight to "complete".
 	tokens, err := h.issueTokenPair(r.Context(), user.ID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to generate tokens")
 		return
 	}
 
-	writeJSON(w, http.StatusCreated, tokens)
+	writeJSON(w, http.StatusCreated, dto.AuthState{
+		Next:         "complete",
+		AccessToken:  tokens.AccessToken,
+		RefreshToken: tokens.RefreshToken,
+		TokenType:    tokens.TokenType,
+		ExpiresIn:    tokens.ExpiresIn,
+	})
 }
 
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
@@ -98,13 +106,29 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if user.TOTPEnabled {
+		session, err := h.authService.GenerateSessionToken(user.ID, "totp")
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, "failed to generate session token")
+			return
+		}
+		writeJSON(w, http.StatusOK, dto.AuthState{Next: "totp", Session: session})
+		return
+	}
+
 	tokens, err := h.issueTokenPair(r.Context(), user.ID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to generate tokens")
 		return
 	}
 
-	writeJSON(w, http.StatusOK, tokens)
+	writeJSON(w, http.StatusOK, dto.AuthState{
+		Next:         "complete",
+		AccessToken:  tokens.AccessToken,
+		RefreshToken: tokens.RefreshToken,
+		TokenType:    tokens.TokenType,
+		ExpiresIn:    tokens.ExpiresIn,
+	})
 }
 
 func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
@@ -131,7 +155,43 @@ func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeJSON(w, http.StatusOK, tokens)
+	writeJSON(w, http.StatusOK, dto.AuthState{
+		Next:         "complete",
+		AccessToken:  tokens.AccessToken,
+		RefreshToken: tokens.RefreshToken,
+		TokenType:    tokens.TokenType,
+		ExpiresIn:    tokens.ExpiresIn,
+	})
+}
+
+// Me handles GET /auth/me (requires auth).
+// Returns the current user's public profile including totp_enabled status.
+func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
+	// Block API keys: TOTP status is sensitive account information not needed
+	// by programmatic API clients, and exposing it widens the attack surface.
+	if _, isAPIKey := middleware.APIKeyFromContext(r.Context()); isAPIKey {
+		writeError(w, http.StatusForbidden, "API keys cannot access account profile")
+		return
+	}
+
+	userID, ok := middleware.UserIDFromContext(r.Context())
+	if !ok {
+		writeError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+
+	user, err := h.userRepository.FindByID(r.Context(), userID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to fetch user")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{
+		"id":           user.ID,
+		"email":        user.Email,
+		"totp_enabled": user.TOTPEnabled,
+		"created_at":   user.CreatedAt,
+	})
 }
 
 func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
@@ -151,7 +211,17 @@ func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AuthHandler) issueTokenPair(ctx context.Context, userID int64) (*dto.TokenResponse, error) {
-	raw, hash, err := h.authService.GenerateRefreshToken()
+	return issueTokenPairFor(ctx, h.refreshTokenRepository, h.authService, userID)
+}
+
+// issueTokenPairFor is a package-level helper shared by AuthHandler and TOTPHandler.
+func issueTokenPairFor(
+	ctx context.Context,
+	rtRepo *repository.RefreshTokenRepository,
+	authSvc *service.AuthService,
+	userID int64,
+) (*dto.TokenResponse, error) {
+	raw, hash, err := authSvc.GenerateRefreshToken()
 	if err != nil {
 		return nil, err
 	}
@@ -161,11 +231,11 @@ func (h *AuthHandler) issueTokenPair(ctx context.Context, userID int64) (*dto.To
 		TokenHash: hash,
 		ExpiresAt: time.Now().Add(service.RefreshTokenTTL),
 	}
-	if err := h.refreshTokenRepository.Create(ctx, rt); err != nil {
+	if err := rtRepo.Create(ctx, rt); err != nil {
 		return nil, err
 	}
 
-	accessToken, err := h.authService.GenerateAccessToken(userID)
+	accessToken, err := authSvc.GenerateAccessToken(userID)
 	if err != nil {
 		return nil, err
 	}

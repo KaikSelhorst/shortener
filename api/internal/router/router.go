@@ -21,6 +21,7 @@ type Handlers struct {
 	LinkHandler     *handler.LinkHandler
 	AuthHandler     *handler.AuthHandler
 	APIKeyHandler   *handler.APIKeyHandler
+	TOTPHandler     *handler.TOTPHandler
 }
 
 type Router struct {
@@ -48,6 +49,20 @@ func New(cfg *config.Config, handlers *Handlers, authService *service.AuthServic
 		r.Post("/login", handlers.AuthHandler.Login)
 		r.Post("/refresh", handlers.AuthHandler.Refresh)
 		r.Post("/logout", handlers.AuthHandler.Logout)
+		r.With(requireAuth).Get("/me", handlers.AuthHandler.Me)
+
+		// Step 2 of the login flow — no auth required (uses short-lived session token).
+		r.Route("/mfa", func(r chi.Router) {
+			r.Post("/totp", handlers.TOTPHandler.ValidateMFA)
+		})
+
+		// TOTP management — requires a valid access token.
+		r.Route("/totp", func(r chi.Router) {
+			r.Use(requireAuth)
+			r.Post("/setup",   handlers.TOTPHandler.Setup)
+			r.Post("/confirm", handlers.TOTPHandler.Confirm)
+			r.Delete("/",      handlers.TOTPHandler.Disable)
+		})
 	})
 
 	r.Route("/api-keys", func(r chi.Router) {
