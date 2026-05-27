@@ -2,13 +2,14 @@
 	import type { PageData, ActionData } from './$types'
 	import type { SubmitFunction } from '@sveltejs/kit'
 	import type { CreateApiKeyResponse, TOTPSetupResponse } from '$lib/types'
+	import { untrack } from 'svelte'
 	import { enhance } from '$app/forms'
 	import { Badge, Button, Input, Dialog, QRCode, Table, TableHead, TableBody, TableRow, TableHeader, TableCell } from '$lib'
 
 	let { data, form }: { data: PageData; form: ActionData } = $props()
 
 	// ── TOTP state ──────────────────────────────────────────────────────────────
-	let totpEnabled = $state(data.me.totp_enabled)
+	const totpEnabled = $derived(data.me.totp_enabled)
 	let totpSetupData = $state<TOTPSetupResponse | null>(null)
 	let totpSetupOpen = $state(false)
 	let totpDisableOpen = $state(false)
@@ -27,12 +28,10 @@
 			totpSetupData = form.totpSetup as TOTPSetupResponse
 		}
 		if (form && 'totpEnabled' in form && form.totpEnabled) {
-			totpEnabled = true
 			totpSetupOpen = false
 			totpSetupData = null
 		}
 		if (form && 'totpDisabled' in form && form.totpDisabled) {
-			totpEnabled = false
 			totpDisableOpen = false
 		}
 		if (form && 'totpError' in form) {

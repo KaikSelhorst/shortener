@@ -18,9 +18,9 @@
 		'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring ' +
 		'disabled:cursor-not-allowed disabled:opacity-50'
 
-	const state = $derived(error ? 'border-destructive focus-visible:ring-destructive' : 'border-input')
+	const borderState = $derived(error ? 'border-destructive focus-visible:ring-destructive' : 'border-input')
 
-	const cls = $derived([base, state, 'h-9', isPassword ? 'pr-9' : '', className].filter(Boolean).join(' '))
+	const cls = $derived([base, borderState, 'h-9', isPassword ? 'pr-9' : '', className].filter(Boolean).join(' '))
 </script>
 
 {#if label}
