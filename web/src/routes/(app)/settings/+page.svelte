@@ -1,11 +1,58 @@
 <script lang="ts">
 	import type { PageData, ActionData } from './$types'
 	import type { SubmitFunction } from '@sveltejs/kit'
-	import type { CreateApiKeyResponse } from '$lib/types'
+	import type { CreateApiKeyResponse, TOTPSetupResponse } from '$lib/types'
 	import { enhance } from '$app/forms'
-	import { Badge, Button, Input, Dialog, Table, TableHead, TableBody, TableRow, TableHeader, TableCell } from '$lib'
+	import { Badge, Button, Input, Dialog, QRCode, Table, TableHead, TableBody, TableRow, TableHeader, TableCell } from '$lib'
 
 	let { data, form }: { data: PageData; form: ActionData } = $props()
+
+	// ── TOTP state ──────────────────────────────────────────────────────────────
+	let totpEnabled = $state(data.me.totp_enabled)
+	let totpSetupData = $state<TOTPSetupResponse | null>(null)
+	let totpSetupOpen = $state(false)
+	let totpDisableOpen = $state(false)
+	let totpError = $state<string | null>(null)
+	let totpSecretCopied = $state(false)
+
+	async function copyTotpSecret() {
+		if (!totpSetupData) return
+		await navigator.clipboard.writeText(totpSetupData.secret)
+		totpSecretCopied = true
+		setTimeout(() => (totpSecretCopied = false), 2000)
+	}
+
+	$effect(() => {
+		if (form && 'totpSetup' in form && form.totpSetup) {
+			totpSetupData = form.totpSetup as TOTPSetupResponse
+		}
+		if (form && 'totpEnabled' in form && form.totpEnabled) {
+			totpEnabled = true
+			totpSetupOpen = false
+			totpSetupData = null
+		}
+		if (form && 'totpDisabled' in form && form.totpDisabled) {
+			totpEnabled = false
+			totpDisableOpen = false
+		}
+		if (form && 'totpError' in form) {
+			totpError = (form.totpError as string) ?? null
+		} else {
+			totpError = null
+		}
+	})
+
+	$effect(() => {
+		if (!totpSetupOpen) {
+			totpSetupData = null
+			totpError = null
+		}
+	})
+
+	$effect(() => {
+		if (!totpDisableOpen) totpError = null
+	})
+	// ────────────────────────────────────────────────────────────────────────────
 
 	const ALL_SCOPES = [
 		{ value: '*', label: 'Full access' },
@@ -149,6 +196,125 @@
 		</Table>
 	</div>
 </div>
+
+<!-- TOTP section -->
+<div class="mt-10 border-t border-border pt-8">
+	<div class="flex items-center justify-between">
+		<div>
+			<h2 class="text-sm font-semibold text-foreground">Two-factor authentication</h2>
+			<p class="mt-0.5 text-sm text-muted-foreground">
+				{#if totpEnabled}
+					TOTP is active. Your account requires an authenticator code at sign-in.
+				{:else}
+					Add an extra layer of security with a TOTP authenticator app.
+				{/if}
+			</p>
+		</div>
+		{#if totpEnabled}
+			<Button variant="outline" size="sm" onclick={() => (totpDisableOpen = true)}>Disable</Button>
+		{:else}
+			<form method="POST" action="?/totpSetup" use:enhance={() => {
+				return async ({ result, update }) => {
+					await update()
+					if (result.type === 'success') totpSetupOpen = true
+				}
+			}}>
+				<Button type="submit" size="sm">Enable</Button>
+			</form>
+		{/if}
+	</div>
+</div>
+
+<!-- TOTP setup modal -->
+<Dialog bind:open={totpSetupOpen} title="Enable two-factor authentication" size="md">
+	{#snippet children()}
+		<div class="flex flex-col gap-4">
+			{#if totpSetupData}
+				<p class="text-sm text-muted-foreground">
+					Scan the QR code below with your authenticator app (Google Authenticator, Authy, etc.),
+					then enter the 6-digit code to confirm.
+				</p>
+
+				<div class="flex justify-center">
+					<div class="rounded-md border border-border p-1">
+						<QRCode data={totpSetupData.uri} moduleSize={4} border={4} />
+					</div>
+				</div>
+
+				<details class="text-sm">
+					<summary class="cursor-pointer text-muted-foreground hover:text-foreground">
+						Can't scan? Enter the key manually
+					</summary>
+					<div class="mt-2 flex items-center gap-2 rounded-md border border-border bg-muted px-3 py-2">
+						<code class="flex-1 break-all font-mono text-xs text-foreground">
+							{totpSetupData.secret}
+						</code>
+						<Button variant="outline" size="sm" onclick={copyTotpSecret}>
+							{totpSecretCopied ? 'Copied!' : 'Copy'}
+						</Button>
+					</div>
+				</details>
+
+				{#if totpError}
+					<p class="text-sm text-destructive">{totpError}</p>
+				{/if}
+
+				<form
+					id="totp-confirm-form"
+					method="POST"
+					action="?/totpConfirm"
+					use:enhance={() => ({ update }) => update()}
+				>
+					<Input
+						name="code"
+						type="text"
+						label="Authenticator code"
+						inputmode="numeric"
+						pattern="[0-9]*"
+						maxlength={6}
+						autocomplete="one-time-code"
+						required
+					/>
+				</form>
+			{/if}
+		</div>
+	{/snippet}
+	{#snippet footer()}
+		<Button variant="outline" onclick={() => (totpSetupOpen = false)}>Cancel</Button>
+		<Button type="submit" form="totp-confirm-form">Confirm</Button>
+	{/snippet}
+</Dialog>
+
+<!-- TOTP disable modal -->
+<Dialog bind:open={totpDisableOpen} title="Disable two-factor authentication" description="Enter your current authenticator code to confirm.">
+	{#snippet children()}
+		<form
+			id="totp-disable-form"
+			method="POST"
+			action="?/totpDisable"
+			use:enhance={() => ({ update }) => update()}
+			class="flex flex-col gap-4"
+		>
+			{#if totpError}
+				<p class="text-sm text-destructive">{totpError}</p>
+			{/if}
+			<Input
+				name="code"
+				type="text"
+				label="Authenticator code"
+				inputmode="numeric"
+				pattern="[0-9]*"
+				maxlength={6}
+				autocomplete="one-time-code"
+				required
+			/>
+		</form>
+	{/snippet}
+	{#snippet footer()}
+		<Button variant="outline" onclick={() => (totpDisableOpen = false)}>Cancel</Button>
+		<Button type="submit" form="totp-disable-form" variant="destructive">Disable</Button>
+	{/snippet}
+</Dialog>
 
 <!-- Create API Key modal -->
 <Dialog bind:open={createOpen} title="New API Key" size="md">
