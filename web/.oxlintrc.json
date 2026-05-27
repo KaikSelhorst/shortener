@@ -17,5 +17,5 @@
       }
     }
   ],
-  "ignorePatterns": ["node_modules", ".svelte-kit", "build", "dist"]
+  "ignorePatterns": ["node_modules", ".svelte-kit", "build", "dist", "src/lib/qrcodegen.ts"]
 }
