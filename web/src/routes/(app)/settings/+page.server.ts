@@ -6,8 +6,12 @@ export const load: PageServerLoad = async ({ cookies, fetch }) => {
 	const token = cookies.get('access_token')
 	const api = createApi(fetch, token)
 	try {
-		const [apiKeys, projects] = await Promise.all([api.apiKeys.list(), api.projects.list()])
-		return { apiKeys, projects }
+		const [apiKeys, projects, me] = await Promise.all([
+			api.apiKeys.list(),
+			api.projects.list(),
+			api.auth.me(),
+		])
+		return { apiKeys, projects, me }
 	} catch (err) {
 		if (err instanceof ApiError) error(err.status, err.message)
 		error(500, 'Failed to load settings')
@@ -47,6 +51,51 @@ export const actions: Actions = {
 			await createApi(fetch, token).apiKeys.delete(id)
 		} catch (err) {
 			return fail(400, { deleteError: err instanceof Error ? err.message : 'Failed to delete key' })
+		}
+	},
+
+	// Initiates TOTP setup: generates a secret and returns the otpauth:// URI.
+	// Returns 409 (propagated from the backend) if TOTP is already enabled.
+	totpSetup: async ({ cookies, fetch }) => {
+		try {
+			const token = cookies.get('access_token')
+			const setup = await createApi(fetch, token).auth.totp.setup()
+			return { totpSetup: setup }
+		} catch (err) {
+			const status = err instanceof ApiError && err.status === 409 ? 409 : 400
+			return fail(status, { totpError: err instanceof Error ? err.message : 'Failed to start TOTP setup' })
+		}
+	},
+
+	// Confirms TOTP setup with a valid authenticator code, activating TOTP.
+	totpConfirm: async ({ request, cookies, fetch }) => {
+		const data = await request.formData()
+		const code = data.get('code') as string
+
+		if (!code?.trim()) return fail(400, { totpError: 'Code is required' })
+
+		try {
+			const token = cookies.get('access_token')
+			await createApi(fetch, token).auth.totp.confirm(code.trim())
+			return { totpEnabled: true }
+		} catch (err) {
+			return fail(400, { totpError: err instanceof Error ? err.message : 'Invalid code' })
+		}
+	},
+
+	// Disables TOTP by validating the current authenticator code.
+	totpDisable: async ({ request, cookies, fetch }) => {
+		const data = await request.formData()
+		const code = data.get('code') as string
+
+		if (!code?.trim()) return fail(400, { totpError: 'Code is required' })
+
+		try {
+			const token = cookies.get('access_token')
+			await createApi(fetch, token).auth.totp.disable(code.trim())
+			return { totpDisabled: true }
+		} catch (err) {
+			return fail(400, { totpError: err instanceof Error ? err.message : 'Invalid code' })
 		}
 	},
 }

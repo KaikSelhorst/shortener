@@ -1,7 +1,7 @@
 import { redirect, fail } from '@sveltejs/kit'
 import type { Actions, PageServerLoad } from './$types'
 import { createApi } from '$lib/api'
-import { setAuthCookies } from '$lib/server/cookies'
+import { setAuthCookies, assertComplete } from '$lib/server/cookies'
 
 export const load: PageServerLoad = ({ locals }) => {
 	if (locals.user) redirect(302, '/dashboard')
@@ -14,8 +14,9 @@ export const actions: Actions = {
 		const password = data.get('password') as string
 
 		try {
-			const tokens = await createApi(fetch).auth.register(email, password)
-			setAuthCookies(cookies, tokens)
+			// Register always returns next === 'complete' — new users never have TOTP enabled.
+			const state = await createApi(fetch).auth.register(email, password)
+			setAuthCookies(cookies, assertComplete(state))
 		} catch (err) {
 			return fail(400, { error: err instanceof Error ? err.message : 'Registration failed' })
 		}

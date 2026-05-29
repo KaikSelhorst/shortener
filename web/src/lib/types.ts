@@ -5,6 +5,30 @@ export interface TokenResponse {
 	expires_in: number
 }
 
+// AuthState is the unified state machine response returned by login and register.
+// next === 'complete' → tokens are present and the user is authenticated.
+// next === 'totp'     → a second factor is required; session must be passed to /auth/mfa/totp.
+export interface AuthState {
+	next: 'complete' | 'totp'
+	session?: string
+	access_token?: string
+	refresh_token?: string
+	token_type?: string
+	expires_in?: number
+}
+
+export interface TOTPSetupResponse {
+	uri: string
+	secret: string
+}
+
+export interface MeResponse {
+	id: number
+	email: string
+	totp_enabled: boolean
+	created_at: string
+}
+
 export interface Project {
 	id: number
 	name: string

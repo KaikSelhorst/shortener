@@ -70,7 +70,9 @@ func (r *LinkRepository) Create(ctx context.Context, link *model.Link, generateC
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback(ctx)
+	// Rollback is a no-op after a successful Commit; the error is intentionally
+	// ignored because it is always pgx.ErrTxClosed in that case.
+	defer func() { _ = tx.Rollback(ctx) }()
 
 	err = tx.QueryRow(ctx,
 		"INSERT INTO links (project_id, original_url, title, description, og_image, expires_at) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, created_at",

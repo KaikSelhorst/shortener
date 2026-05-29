@@ -18,12 +18,16 @@ type errorResponse struct {
 func WriteError(w http.ResponseWriter, status int, msg string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(errorResponse{Error: msg})
+	// Encoding errors are intentionally ignored: the status line is already
+	// sent and nothing useful can be done if the connection drops mid-write.
+	_ = json.NewEncoder(w).Encode(errorResponse{Error: msg})
 }
 
 // WriteJSON writes v as JSON with the given status code.
 func WriteJSON(w http.ResponseWriter, status int, v any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(v)
+	// Encoding errors are intentionally ignored: the status line is already
+	// sent and nothing useful can be done if the connection drops mid-write.
+	_ = json.NewEncoder(w).Encode(v)
 }
