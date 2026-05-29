@@ -46,12 +46,19 @@ func (h *RedirectHandler) HandleRedirect(w http.ResponseWriter, r *http.Request)
 
 	http.Redirect(w, r, link.OriginalURL, http.StatusFound)
 
-	click := model.Click{LinkID: link.ID}
+	ua := r.UserAgent()
+	ref := r.Referer()
 
-	if ua := r.UserAgent(); ua != "" {
+	click := model.Click{
+		LinkID:         link.ID,
+		DeviceType:     service.ParseDeviceType(ua),
+		ReferrerSource: service.ParseReferrerSource(ref),
+	}
+
+	if ua != "" {
 		click.UserAgent = &ua
 	}
-	if ref := r.Referer(); ref != "" {
+	if ref != "" {
 		click.Referer = &ref
 	}
 	if ip, _, err := net.SplitHostPort(r.RemoteAddr); err == nil && ip != "" {
