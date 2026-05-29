@@ -1,9 +1,22 @@
 package service
 
 import (
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"net/url"
 	"strings"
 )
+
+// HashIP pseudonymises an IP address using HMAC-SHA256 with a server-side
+// secret. The same IP always produces the same hash within a deployment,
+// so COUNT(DISTINCT ip_hash) works correctly for unique-visitor analytics.
+// The original IP is irrecoverable without the secret.
+func HashIP(ip, secret string) string {
+	mac := hmac.New(sha256.New, []byte(secret))
+	mac.Write([]byte(ip))
+	return hex.EncodeToString(mac.Sum(nil))
+}
 
 // ParseDeviceType classifies a User-Agent string into one of:
 // "bot", "tablet", "mobile", "desktop", or "unknown".

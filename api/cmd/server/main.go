@@ -69,7 +69,7 @@ func main() {
 	defer linkCache.Close()
 
 	healthHandler := handler.NewHealthHandler()
-	redirectHandler := handler.NewRedirectHandler(linkRepository, tracker, linkCache)
+	redirectHandler := handler.NewRedirectHandler(linkRepository, tracker, linkCache, cfg.IPHashSecret)
 	projectHandler := handler.NewProjectHandler(projectRepository)
 	linkHandler := handler.NewLinkHandler(linkRepository, projectRepository, shortcodeService, linkCache, cfg.BaseURL, cfg.CursorSecret)
 	authHandler := handler.NewAuthHandler(userRepository, refreshTokenRepository, authService)

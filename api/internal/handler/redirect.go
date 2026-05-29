@@ -15,10 +15,16 @@ type RedirectHandler struct {
 	linkRepository repository.LinkRepo
 	tracker        *service.TrackerService
 	cache          *cache.LinkCache
+	ipHashSecret   string
 }
 
-func NewRedirectHandler(linkRepository repository.LinkRepo, tracker *service.TrackerService, cache *cache.LinkCache) *RedirectHandler {
-	return &RedirectHandler{linkRepository: linkRepository, tracker: tracker, cache: cache}
+func NewRedirectHandler(linkRepository repository.LinkRepo, tracker *service.TrackerService, cache *cache.LinkCache, ipHashSecret string) *RedirectHandler {
+	return &RedirectHandler{
+		linkRepository: linkRepository,
+		tracker:        tracker,
+		cache:          cache,
+		ipHashSecret:   ipHashSecret,
+	}
 }
 
 func (h *RedirectHandler) HandleRedirect(w http.ResponseWriter, r *http.Request) {
@@ -62,7 +68,8 @@ func (h *RedirectHandler) HandleRedirect(w http.ResponseWriter, r *http.Request)
 		click.Referer = &ref
 	}
 	if ip, _, err := net.SplitHostPort(r.RemoteAddr); err == nil && ip != "" {
-		click.IPAddress = &ip
+		hash := service.HashIP(ip, h.ipHashSecret)
+		click.IPHash = &hash
 	}
 
 	h.tracker.Record(click)

@@ -21,11 +21,11 @@ func NewClickRepository(db *pgxpool.Pool) *ClickRepository {
 func (r *ClickRepository) BatchInsert(ctx context.Context, clicks []model.Click) error {
 	rows := make([][]any, len(clicks))
 	for i, c := range clicks {
-		rows[i] = []any{c.LinkID, c.UserAgent, c.IPAddress, c.Referer, c.DeviceType, c.ReferrerSource}
+		rows[i] = []any{c.LinkID, c.UserAgent, c.IPHash, c.Referer, c.DeviceType, c.ReferrerSource}
 	}
 	_, err := r.db.CopyFrom(ctx,
 		pgx.Identifier{"clicks"},
-		[]string{"link_id", "user_agent", "ip_address", "referer", "device_type", "referrer_source"},
+		[]string{"link_id", "user_agent", "ip_hash", "referer", "device_type", "referrer_source"},
 		pgx.CopyFromRows(rows),
 	)
 	return err
@@ -38,7 +38,7 @@ func (r *ClickRepository) GetLinkAnalytics(ctx context.Context, linkID int64, si
 
 	g.Go(func() error {
 		return r.db.QueryRow(gctx,
-			`SELECT COUNT(*), COUNT(DISTINCT ip_address)
+			`SELECT COUNT(*), COUNT(DISTINCT ip_hash)
 			 FROM clicks
 			 WHERE link_id = $1 AND created_at >= $2 AND created_at < $3`,
 			linkID, since, until,

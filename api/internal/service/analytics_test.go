@@ -1,6 +1,35 @@
 package service
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
+
+func TestHashIP(t *testing.T) {
+	t.Parallel()
+	secret := "test-secret"
+
+	h1 := HashIP("192.168.1.1", secret)
+	h2 := HashIP("192.168.1.1", secret)
+	h3 := HashIP("10.0.0.1", secret)
+	h4 := HashIP("192.168.1.1", "other-secret")
+
+	if h1 != h2 {
+		t.Error("same IP + same secret must produce same hash")
+	}
+	if h1 == h3 {
+		t.Error("different IPs must produce different hashes")
+	}
+	if h1 == h4 {
+		t.Error("same IP + different secret must produce different hash")
+	}
+	if len(h1) != 64 {
+		t.Errorf("expected 64-char hex hash, got %d: %q", len(h1), h1)
+	}
+	if strings.Contains(h1, "192.168") {
+		t.Error("hash must not contain the original IP")
+	}
+}
 
 func TestParseDeviceType(t *testing.T) {
 	t.Parallel()
