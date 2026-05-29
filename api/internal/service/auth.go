@@ -23,9 +23,10 @@ const (
 // AuthService handles JWT generation/validation and single-use enforcement for
 // both MFA session tokens (JTI) and TOTP codes (userID+code).
 type AuthService struct {
-	jwtSecret    []byte
-	usedSessions sync.Map // jti (string) → expiry (time.Time)
-	usedTOTPCodes sync.Map // "userID:code" (string) → expiry (time.Time)
+	jwtSecret      []byte
+	usedSessions   sync.Map // jti (string) → expiry (time.Time)
+	revokedTokens  sync.Map // jti (string) → expiry (time.Time) for revoked access tokens
+	usedTOTPCodes  sync.Map // "userID:code" (string) → expiry (time.Time)
 }
 
 func NewAuthService(jwtSecret string) *AuthService {
@@ -33,18 +34,26 @@ func NewAuthService(jwtSecret string) *AuthService {
 }
 
 // claims is the payload for regular access tokens.
-// The Purpose field prevents session tokens from being accepted as access tokens.
+// JTI enables individual token revocation (e.g. on logout).
+// Purpose prevents session tokens from being accepted as access tokens.
 type claims struct {
 	UserID  int64  `json:"user_id"`
 	Purpose string `json:"purpose"`
+	JTI     string `json:"jti"`
 	jwt.RegisteredClaims
 }
 
 func (s *AuthService) GenerateAccessToken(userID int64) (string, error) {
+	jtiBytes := make([]byte, 16)
+	if _, err := rand.Read(jtiBytes); err != nil {
+		return "", fmt.Errorf("generate access token jti: %w", err)
+	}
+
 	now := time.Now()
 	c := claims{
 		UserID:  userID,
 		Purpose: purposeAccess,
+		JTI:     hex.EncodeToString(jtiBytes),
 		RegisteredClaims: jwt.RegisteredClaims{
 			IssuedAt:  jwt.NewNumericDate(now),
 			ExpiresAt: jwt.NewNumericDate(now.Add(AccessTokenTTL)),
@@ -70,12 +79,51 @@ func (s *AuthService) ValidateAccessToken(tokenStr string) (int64, error) {
 		return 0, fmt.Errorf("invalid token")
 	}
 
-	// Reject session tokens presented as access tokens.
 	if c.Purpose != purposeAccess {
 		return 0, fmt.Errorf("invalid token purpose")
 	}
 
+	// Reject explicitly revoked tokens (e.g. tokens invalidated by logout).
+	if _, revoked := s.revokedTokens.Load(c.JTI); revoked {
+		return 0, fmt.Errorf("token revoked")
+	}
+
 	return c.UserID, nil
+}
+
+// RevokeAccessToken invalidates an access token before its natural TTL expires.
+// Called during logout so the token cannot be reused within the 15-minute window.
+// Silently ignores expired tokens since they are already invalid.
+func (s *AuthService) RevokeAccessToken(tokenStr string) error {
+	token, err := jwt.ParseWithClaims(tokenStr, &claims{}, func(t *jwt.Token) (interface{}, error) {
+		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
+		}
+		return s.jwtSecret, nil
+	})
+	if err != nil {
+		// Expired tokens are already invalid — nothing to revoke.
+		return nil
+	}
+
+	c, ok := token.Claims.(*claims)
+	if !ok || c.Purpose != purposeAccess || c.JTI == "" {
+		return nil
+	}
+
+	s.revokedTokens.Store(c.JTI, c.ExpiresAt.Time)
+	s.evictRevokedTokens()
+	return nil
+}
+
+func (s *AuthService) evictRevokedTokens() {
+	now := time.Now()
+	s.revokedTokens.Range(func(key, value any) bool {
+		if exp, ok := value.(time.Time); ok && now.After(exp) {
+			s.revokedTokens.Delete(key)
+		}
+		return true
+	})
 }
 
 func (s *AuthService) GenerateRefreshToken() (raw string, hash string, err error) {
@@ -140,43 +188,63 @@ func (s *AuthService) GenerateSessionToken(userID int64, next string) (string, e
 	return token.SignedString(s.jwtSecret)
 }
 
-// ValidateSessionToken parses, validates, and consumes a session token.
-// It returns the embedded userID and the next required step.
-// Each token may only be used once; a second call with the same token returns an error.
-func (s *AuthService) ValidateSessionToken(tokenStr string) (int64, string, error) {
-	token, err := jwt.ParseWithClaims(tokenStr, &sessionClaims{}, func(t *jwt.Token) (interface{}, error) {
+// ParseSessionToken parses and validates a session token without consuming its JTI.
+// Call ConsumeSession separately to mark the token as used.
+// This allows the caller to validate other conditions (e.g. TOTP code) before
+// committing the session as consumed, so a wrong TOTP code does not burn the token.
+func (s *AuthService) ParseSessionToken(tokenStr string) (userID int64, next string, jti string, expiry time.Time, err error) {
+	token, parseErr := jwt.ParseWithClaims(tokenStr, &sessionClaims{}, func(t *jwt.Token) (interface{}, error) {
 		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
 		}
 		return s.jwtSecret, nil
 	})
-	if err != nil {
-		return 0, "", err
+	if parseErr != nil {
+		return 0, "", "", time.Time{}, parseErr
 	}
 
 	c, ok := token.Claims.(*sessionClaims)
 	if !ok || !token.Valid {
-		return 0, "", fmt.Errorf("invalid session token")
+		return 0, "", "", time.Time{}, fmt.Errorf("invalid session token")
 	}
-
 	if c.Purpose != purposeSession {
-		return 0, "", fmt.Errorf("invalid token purpose")
+		return 0, "", "", time.Time{}, fmt.Errorf("invalid token purpose")
+	}
+	if _, loaded := s.usedSessions.Load(c.JTI); loaded {
+		return 0, "", "", time.Time{}, fmt.Errorf("session token already used")
 	}
 
-	// Enforce single-use: reject if this JTI was already consumed.
-	expiry := c.ExpiresAt.Time
-	if _, loaded := s.usedSessions.LoadOrStore(c.JTI, expiry); loaded {
-		return 0, "", fmt.Errorf("session token already used")
-	}
+	return c.UserID, c.Next, c.JTI, c.ExpiresAt.Time, nil
+}
 
-	// Lazily evict expired JTIs to prevent the map from growing unboundedly.
+// ConsumeSession marks a session JTI as used. Returns an error if the JTI was
+// already consumed by a concurrent request.
+func (s *AuthService) ConsumeSession(jti string, expiry time.Time) error {
+	// Evict stale entries on every consumption so the map does not grow
+	// unboundedly even when no successful sessions are validated.
 	s.evictExpiredSessions()
 
-	return c.UserID, c.Next, nil
+	if _, loaded := s.usedSessions.LoadOrStore(jti, expiry); loaded {
+		return fmt.Errorf("session token already used")
+	}
+	return nil
+}
+
+// ValidateSessionToken parses, validates, and atomically consumes a session token.
+// Use ParseSessionToken + ConsumeSession when you need to validate other conditions
+// between the two steps (e.g. the ValidateMFA flow).
+func (s *AuthService) ValidateSessionToken(tokenStr string) (int64, string, error) {
+	userID, next, jti, expiry, err := s.ParseSessionToken(tokenStr)
+	if err != nil {
+		return 0, "", err
+	}
+	if err := s.ConsumeSession(jti, expiry); err != nil {
+		return 0, "", err
+	}
+	return userID, next, nil
 }
 
 // evictExpiredSessions removes JTIs whose associated session has already expired.
-// Called lazily on each ValidateSessionToken to avoid a background goroutine.
 func (s *AuthService) evictExpiredSessions() {
 	now := time.Now()
 	s.usedSessions.Range(func(key, value any) bool {
@@ -195,6 +263,10 @@ const totpReplayWindow = 90 * time.Second
 // the acceptance window. Returns false if the code is invalid or was already
 // used by this user. An error is returned only for malformed secrets.
 func (s *AuthService) ValidateTOTPAndConsume(userID int64, secret, code string) (bool, error) {
+	// Evict stale entries on every call so the map does not grow unboundedly
+	// even when all TOTP attempts are invalid.
+	s.evictUsedTOTPCodes()
+
 	ok, err := ValidateTOTP(secret, code)
 	if err != nil || !ok {
 		return ok, err
@@ -207,9 +279,6 @@ func (s *AuthService) ValidateTOTPAndConsume(userID int64, secret, code string) 
 	if _, loaded := s.usedTOTPCodes.LoadOrStore(key, expiry); loaded {
 		return false, nil
 	}
-
-	// Lazily evict expired entries to bound memory usage.
-	s.evictUsedTOTPCodes()
 
 	return true, nil
 }
