@@ -13,6 +13,14 @@ lint:
 	cd api && golangci-lint run ./...
 
 
+test:
+	cd api && go test ./internal/service/... ./internal/handler/...
+
+test-integration:
+	cd api && DATABASE_URL="$(DATABASE_URL)" go test -tags integration ./internal/repository/...
+
+test-all: test test-integration
+
 docker-up:
 	docker compose up -d
 
