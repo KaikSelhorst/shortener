@@ -75,7 +75,8 @@ func main() {
 	authHandler := handler.NewAuthHandler(userRepository, refreshTokenRepository, authService)
 	apiKeyHandler := handler.NewAPIKeyHandler(apiKeyRepository, projectRepository, authService)
 	totpHandler := handler.NewTOTPHandler(userRepository, refreshTokenRepository, authService)
-	analyticsHandler := handler.NewAnalyticsHandler(clickRepository, projectRepository, linkRepository)
+	analyticsCache := cache.NewAnalyticsCache(5 * time.Minute)
+	analyticsHandler := handler.NewAnalyticsHandler(clickRepository, projectRepository, linkRepository, analyticsCache)
 
 	handlers := &router.Handlers{
 		HealthHandler:    healthHandler,

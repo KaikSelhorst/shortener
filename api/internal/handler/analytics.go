@@ -1,9 +1,11 @@
 package handler
 
 import (
+	"fmt"
 	"net/http"
 	"time"
 
+	"github.com/KaikSelhorst/shortener/internal/cache"
 	"github.com/KaikSelhorst/shortener/internal/middleware"
 	"github.com/KaikSelhorst/shortener/internal/repository"
 	"github.com/go-chi/chi/v5"
@@ -13,17 +15,20 @@ type AnalyticsHandler struct {
 	analytics repository.AnalyticsRepo
 	projects  repository.ProjectRepo
 	links     repository.LinkRepo
+	cache     *cache.AnalyticsCache
 }
 
 func NewAnalyticsHandler(
 	analytics repository.AnalyticsRepo,
 	projects repository.ProjectRepo,
 	links repository.LinkRepo,
+	analyticsCache *cache.AnalyticsCache,
 ) *AnalyticsHandler {
 	return &AnalyticsHandler{
 		analytics: analytics,
 		projects:  projects,
 		links:     links,
+		cache:     analyticsCache,
 	}
 }
 
@@ -50,7 +55,14 @@ func (h *AnalyticsHandler) GetProjectAnalytics(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	since, until := parsePeriod(r)
+	period := r.URL.Query().Get("period")
+	since, until := parsePeriod(period)
+	cacheKey := fmt.Sprintf("project:%d:%s", project.ID, period)
+
+	if cached, ok := h.cache.GetProject(cacheKey); ok {
+		writeJSON(w, http.StatusOK, cached)
+		return
+	}
 
 	data, err := h.analytics.GetProjectAnalytics(r.Context(), project.ID, since, until)
 	if err != nil {
@@ -58,6 +70,7 @@ func (h *AnalyticsHandler) GetProjectAnalytics(w http.ResponseWriter, r *http.Re
 		return
 	}
 
+	h.cache.SetProject(cacheKey, data)
 	writeJSON(w, http.StatusOK, data)
 }
 
@@ -95,7 +108,14 @@ func (h *AnalyticsHandler) GetLinkAnalytics(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	since, until := parsePeriod(r)
+	period := r.URL.Query().Get("period")
+	since, until := parsePeriod(period)
+	cacheKey := fmt.Sprintf("link:%d:%s", link.ID, period)
+
+	if cached, ok := h.cache.GetLink(cacheKey); ok {
+		writeJSON(w, http.StatusOK, cached)
+		return
+	}
 
 	data, err := h.analytics.GetLinkAnalytics(r.Context(), link.ID, since, until)
 	if err != nil {
@@ -104,14 +124,15 @@ func (h *AnalyticsHandler) GetLinkAnalytics(w http.ResponseWriter, r *http.Reque
 	}
 
 	data.ShortCode = link.ShortCode
+	h.cache.SetLink(cacheKey, data)
 	writeJSON(w, http.StatusOK, data)
 }
 
-// parsePeriod reads the ?period= query param and returns the since/until window.
+// parsePeriod reads the period string and returns the since/until window.
 // Accepted values: "7d", "30d" (default), "90d".
-func parsePeriod(r *http.Request) (since, until time.Time) {
+func parsePeriod(period string) (since, until time.Time) {
 	until = time.Now().UTC()
-	switch r.URL.Query().Get("period") {
+	switch period {
 	case "7d":
 		since = until.AddDate(0, 0, -7)
 	case "90d":
