@@ -28,7 +28,7 @@ type Router struct {
 	Server *http.Server
 }
 
-func New(cfg *config.Config, handlers *Handlers, authService *service.AuthService, apiKeyRepo *repository.APIKeyRepository) *Router {
+func New(cfg *config.Config, handlers *Handlers, authService *service.AuthService, apiKeyRepo repository.APIKeyRepo) *Router {
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Use(middleware.RequestID)

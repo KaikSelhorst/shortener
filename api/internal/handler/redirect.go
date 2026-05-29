@@ -12,12 +12,12 @@ import (
 )
 
 type RedirectHandler struct {
-	linkRepository *repository.LinkRepository
+	linkRepository repository.LinkRepo
 	tracker        *service.TrackerService
 	cache          *cache.LinkCache
 }
 
-func NewRedirectHandler(linkRepository *repository.LinkRepository, tracker *service.TrackerService, cache *cache.LinkCache) *RedirectHandler {
+func NewRedirectHandler(linkRepository repository.LinkRepo, tracker *service.TrackerService, cache *cache.LinkCache) *RedirectHandler {
 	return &RedirectHandler{linkRepository: linkRepository, tracker: tracker, cache: cache}
 }
 

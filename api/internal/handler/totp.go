@@ -13,15 +13,15 @@ import (
 const totpIssuer = "Shortener"
 
 type TOTPHandler struct {
-	userRepository *repository.UserRepository
+	userRepository repository.UserRepo
 	authService    *service.AuthService
 	// refreshTokenRepository is needed to issue the final token pair.
-	refreshTokenRepository *repository.RefreshTokenRepository
+	refreshTokenRepository repository.RefreshTokenRepo
 }
 
 func NewTOTPHandler(
-	userRepository *repository.UserRepository,
-	refreshTokenRepository *repository.RefreshTokenRepository,
+	userRepository repository.UserRepo,
+	refreshTokenRepository repository.RefreshTokenRepo,
 	authService *service.AuthService,
 ) *TOTPHandler {
 	return &TOTPHandler{
@@ -34,6 +34,10 @@ func NewTOTPHandler(
 // ValidateMFA handles POST /auth/mfa/totp.
 // It is the second step of the login flow when TOTP is enabled.
 // Expects { session, code }; issues real tokens on success.
+//
+// The session token is intentionally parsed without being consumed first so that
+// a mistyped TOTP code does not burn the session — the user can retry within the
+// 5-minute session window. The session is consumed only after TOTP succeeds.
 func (h *TOTPHandler) ValidateMFA(w http.ResponseWriter, r *http.Request) {
 	var req dto.TOTPValidateRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -45,7 +49,8 @@ func (h *TOTPHandler) ValidateMFA(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userID, next, err := h.authService.ValidateSessionToken(req.Session)
+	// Parse without consuming so a wrong TOTP code does not burn the session.
+	userID, next, jti, expiry, err := h.authService.ParseSessionToken(req.Session)
 	if err != nil || next != "totp" {
 		writeError(w, http.StatusUnauthorized, "invalid or expired session")
 		return
@@ -64,13 +69,19 @@ func (h *TOTPHandler) ValidateMFA(w http.ResponseWriter, r *http.Request) {
 
 	// ValidateTOTPAndConsume enforces single-use within the 90-second window,
 	// preventing replay of an intercepted code during the same time step.
-	ok2, err2 := h.authService.ValidateTOTPAndConsume(userID, *user.TOTPSecret, req.Code)
-	if err2 != nil {
+	ok, err := h.authService.ValidateTOTPAndConsume(userID, *user.TOTPSecret, req.Code)
+	if err != nil {
 		writeError(w, http.StatusInternalServerError, "totp validation error")
 		return
 	}
-	if !ok2 {
+	if !ok {
 		writeError(w, http.StatusUnauthorized, "invalid totp code")
+		return
+	}
+
+	// Consume the session only after successful TOTP validation.
+	if err := h.authService.ConsumeSession(jti, expiry); err != nil {
+		writeError(w, http.StatusUnauthorized, "invalid or expired session")
 		return
 	}
 

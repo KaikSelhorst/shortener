@@ -15,8 +15,8 @@ import (
 )
 
 type LinkHandler struct {
-	linkRepository    *repository.LinkRepository
-	projectRepository *repository.ProjectRepository
+	linkRepository    repository.LinkRepo
+	projectRepository repository.ProjectRepo
 	shortcodeService  *service.ShortcodeService
 	cache             *cache.LinkCache
 	baseURL           string
@@ -24,8 +24,8 @@ type LinkHandler struct {
 }
 
 func NewLinkHandler(
-	linkRepository *repository.LinkRepository,
-	projectRepository *repository.ProjectRepository,
+	linkRepository repository.LinkRepo,
+	projectRepository repository.ProjectRepo,
 	shortcodeService *service.ShortcodeService,
 	cache *cache.LinkCache,
 	baseURL, cursorSecret string,

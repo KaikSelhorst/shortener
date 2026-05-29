@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/KaikSelhorst/shortener/internal/dto"
@@ -18,14 +19,14 @@ import (
 )
 
 type AuthHandler struct {
-	userRepository         *repository.UserRepository
-	refreshTokenRepository *repository.RefreshTokenRepository
+	userRepository         repository.UserRepo
+	refreshTokenRepository repository.RefreshTokenRepo
 	authService            *service.AuthService
 }
 
 func NewAuthHandler(
-	userRepository *repository.UserRepository,
-	refreshTokenRepository *repository.RefreshTokenRepository,
+	userRepository repository.UserRepo,
+	refreshTokenRepository repository.RefreshTokenRepo,
 	authService *service.AuthService,
 ) *AuthHandler {
 	return &AuthHandler{
@@ -207,6 +208,17 @@ func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 
 	hash := service.HashToken(req.RefreshToken)
 	_, _ = h.refreshTokenRepository.RevokeIfActive(r.Context(), hash)
+
+	// Revoke the access token immediately so it cannot be reused within its
+	// remaining TTL window. The token is optional — clients that omit it just
+	// keep a short-lived window of access until natural expiry.
+	if authHeader := r.Header.Get("Authorization"); strings.HasPrefix(authHeader, "Bearer ") {
+		accessToken := strings.TrimPrefix(authHeader, "Bearer ")
+		if !strings.HasPrefix(accessToken, "sk_") {
+			_ = h.authService.RevokeAccessToken(accessToken)
+		}
+	}
+
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -217,7 +229,7 @@ func (h *AuthHandler) issueTokenPair(ctx context.Context, userID int64) (*dto.To
 // issueTokenPairFor is a package-level helper shared by AuthHandler and TOTPHandler.
 func issueTokenPairFor(
 	ctx context.Context,
-	rtRepo *repository.RefreshTokenRepository,
+	rtRepo repository.RefreshTokenRepo,
 	authSvc *service.AuthService,
 	userID int64,
 ) (*dto.TokenResponse, error) {
