@@ -60,3 +60,11 @@ func (c *AnalyticsCache) SetProject(key string, v *model.ProjectAnalytics) {
 	c.projects[key] = analyticsEntry[*model.ProjectAnalytics]{value: v, expiresAt: time.Now().Add(c.ttl)}
 	c.mu.Unlock()
 }
+
+// Close releases all cached entries. Consistent with LinkCache.Close().
+func (c *AnalyticsCache) Close() {
+	c.mu.Lock()
+	c.links = make(map[string]analyticsEntry[*model.LinkAnalytics])
+	c.projects = make(map[string]analyticsEntry[*model.ProjectAnalytics])
+	c.mu.Unlock()
+}

@@ -17,14 +17,14 @@ const (
 )
 
 type TrackerService struct {
-	repo   *repository.ClickRepository
+	repo   repository.ClickWriteRepo
 	logger *zap.SugaredLogger
 	queue  chan model.Click
 	done   chan struct{}
 	wg     sync.WaitGroup
 }
 
-func NewTrackerService(repo *repository.ClickRepository, logger *zap.SugaredLogger) *TrackerService {
+func NewTrackerService(repo repository.ClickWriteRepo, logger *zap.SugaredLogger) *TrackerService {
 	t := &TrackerService{
 		repo:   repo,
 		logger: logger,

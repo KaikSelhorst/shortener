@@ -97,7 +97,7 @@ func (r *ClickRepository) GetProjectAnalytics(ctx context.Context, projectID int
 
 	g.Go(func() error {
 		return r.db.QueryRow(gctx,
-			`SELECT COUNT(*), COUNT(DISTINCT c.ip_address)
+			`SELECT COUNT(*), COUNT(DISTINCT c.ip_hash)
 			 FROM clicks c
 			 JOIN links l ON c.link_id = l.id
 			 WHERE l.project_id = $1 AND c.created_at >= $2 AND c.created_at < $3`,
@@ -117,9 +117,8 @@ func (r *ClickRepository) GetProjectAnalytics(ctx context.Context, projectID int
 		if err != nil {
 			return err
 		}
-		var err2 error
-		result.OverTime, err2 = scanClicksOverTime(rows)
-		return err2
+		result.OverTime, err = scanClicksOverTime(rows)
+		return err
 	})
 
 	g.Go(func() error {
