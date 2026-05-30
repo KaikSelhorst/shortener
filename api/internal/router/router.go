@@ -15,13 +15,14 @@ import (
 )
 
 type Handlers struct {
-	HealthHandler   *handler.HealthHandler
-	RedirectHandler *handler.RedirectHandler
-	ProjectHandler  *handler.ProjectHandler
-	LinkHandler     *handler.LinkHandler
-	AuthHandler     *handler.AuthHandler
-	APIKeyHandler   *handler.APIKeyHandler
-	TOTPHandler     *handler.TOTPHandler
+	HealthHandler    *handler.HealthHandler
+	RedirectHandler  *handler.RedirectHandler
+	ProjectHandler   *handler.ProjectHandler
+	LinkHandler      *handler.LinkHandler
+	AuthHandler      *handler.AuthHandler
+	APIKeyHandler    *handler.APIKeyHandler
+	TOTPHandler      *handler.TOTPHandler
+	AnalyticsHandler *handler.AnalyticsHandler
 }
 
 type Router struct {
@@ -85,6 +86,10 @@ func New(cfg *config.Config, handlers *Handlers, authService *service.AuthServic
 		r.With(authmw.RequireScope("links:read")).Get("/{slug}/links/{code}", handlers.LinkHandler.GetLink)
 		r.With(authmw.RequireScope("links:update")).Put("/{slug}/links/{code}", handlers.LinkHandler.UpdateLink)
 		r.With(authmw.RequireScope("links:delete")).Delete("/{slug}/links/{code}", handlers.LinkHandler.DeleteLink)
+
+		// Analytics — JWT only (API key check is enforced inside the handler).
+		r.Get("/{slug}/analytics", handlers.AnalyticsHandler.GetProjectAnalytics)
+		r.Get("/{slug}/links/{code}/analytics", handlers.AnalyticsHandler.GetLinkAnalytics)
 	})
 
 	server := &http.Server{

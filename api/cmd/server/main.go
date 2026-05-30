@@ -66,24 +66,28 @@ func main() {
 	}
 
 	linkCache := cache.NewLinkCache(1000, 5*time.Minute)
+	analyticsCache := cache.NewAnalyticsCache(5 * time.Minute)
 	defer linkCache.Close()
+	defer analyticsCache.Close()
 
 	healthHandler := handler.NewHealthHandler()
-	redirectHandler := handler.NewRedirectHandler(linkRepository, tracker, linkCache)
+	redirectHandler := handler.NewRedirectHandler(linkRepository, tracker, linkCache, cfg.IPHashSecret)
 	projectHandler := handler.NewProjectHandler(projectRepository)
 	linkHandler := handler.NewLinkHandler(linkRepository, projectRepository, shortcodeService, linkCache, cfg.BaseURL, cfg.CursorSecret)
 	authHandler := handler.NewAuthHandler(userRepository, refreshTokenRepository, authService)
 	apiKeyHandler := handler.NewAPIKeyHandler(apiKeyRepository, projectRepository, authService)
 	totpHandler := handler.NewTOTPHandler(userRepository, refreshTokenRepository, authService)
+	analyticsHandler := handler.NewAnalyticsHandler(clickRepository, projectRepository, linkRepository, analyticsCache)
 
 	handlers := &router.Handlers{
-		HealthHandler:   healthHandler,
-		RedirectHandler: redirectHandler,
-		ProjectHandler:  projectHandler,
-		LinkHandler:     linkHandler,
-		AuthHandler:     authHandler,
-		APIKeyHandler:   apiKeyHandler,
-		TOTPHandler:     totpHandler,
+		HealthHandler:    healthHandler,
+		RedirectHandler:  redirectHandler,
+		ProjectHandler:   projectHandler,
+		LinkHandler:      linkHandler,
+		AuthHandler:      authHandler,
+		APIKeyHandler:    apiKeyHandler,
+		TOTPHandler:      totpHandler,
+		AnalyticsHandler: analyticsHandler,
 	}
 
 	r := router.New(cfg, handlers, authService, apiKeyRepository)

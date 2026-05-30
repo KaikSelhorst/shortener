@@ -10,6 +10,8 @@ import type {
 	ApiKeyResponse,
 	CreateApiKeyRequest,
 	CreateApiKeyResponse,
+	LinkAnalytics,
+	ProjectAnalytics,
 } from './types'
 
 const BASE = env.API_URL ?? 'http://localhost:8080'
@@ -97,6 +99,18 @@ export function createApi(fetch: Fetch, token?: string) {
 				req<Link>('PUT', `/projects/${slug}/links/${code}`, data),
 			delete: (slug: string, code: string) =>
 				req<void>('DELETE', `/projects/${slug}/links/${code}`),
+		},
+		analytics: {
+			project: (slug: string, period?: string) =>
+				req<ProjectAnalytics>(
+					'GET',
+					`/projects/${slug}/analytics${period ? `?period=${period}` : ''}`,
+				),
+			link: (slug: string, code: string, period?: string) =>
+				req<LinkAnalytics>(
+					'GET',
+					`/projects/${slug}/links/${code}/analytics${period ? `?period=${period}` : ''}`,
+				),
 		},
 	}
 }

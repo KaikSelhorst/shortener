@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"time"
 
 	"github.com/KaikSelhorst/shortener/internal/model"
 )
@@ -42,4 +43,13 @@ type APIKeyRepo interface {
 	GetByHash(ctx context.Context, hash string) (*model.APIKey, error)
 	Delete(ctx context.Context, id int64, userID int64) error
 	UpdateLastUsed(ctx context.Context, id int64) error
+}
+
+type ClickWriteRepo interface {
+	BatchInsert(ctx context.Context, clicks []model.Click) error
+}
+
+type AnalyticsRepo interface {
+	GetLinkAnalytics(ctx context.Context, linkID int64, since, until time.Time) (*model.LinkAnalytics, error)
+	GetProjectAnalytics(ctx context.Context, projectID int64, since, until time.Time) (*model.ProjectAnalytics, error)
 }

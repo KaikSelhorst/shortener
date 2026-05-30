@@ -11,6 +11,7 @@ type Config struct {
 	BaseURL      string
 	CursorSecret string
 	JWTSecret    string
+	IPHashSecret string
 }
 
 func Load() (*Config, error) {
@@ -19,6 +20,7 @@ func Load() (*Config, error) {
 	baseURL := os.Getenv("BASE_URL")
 	cursorSecret := os.Getenv("CURSOR_SECRET")
 	jwtSecret := os.Getenv("JWT_SECRET")
+	ipHashSecret := os.Getenv("IP_HASH_SECRET")
 
 	if port == "" {
 		port = "8080"
@@ -40,11 +42,16 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("JWT_SECRET is required")
 	}
 
+	if ipHashSecret == "" {
+		return nil, fmt.Errorf("IP_HASH_SECRET is required")
+	}
+
 	return &Config{
 		Port:         port,
 		DatabaseURL:  databaseURL,
 		BaseURL:      baseURL,
 		CursorSecret: cursorSecret,
 		JWTSecret:    jwtSecret,
+		IPHashSecret: ipHashSecret,
 	}, nil
 }

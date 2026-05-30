@@ -15,10 +15,16 @@ type RedirectHandler struct {
 	linkRepository repository.LinkRepo
 	tracker        *service.TrackerService
 	cache          *cache.LinkCache
+	ipHashSecret   string
 }
 
-func NewRedirectHandler(linkRepository repository.LinkRepo, tracker *service.TrackerService, cache *cache.LinkCache) *RedirectHandler {
-	return &RedirectHandler{linkRepository: linkRepository, tracker: tracker, cache: cache}
+func NewRedirectHandler(linkRepository repository.LinkRepo, tracker *service.TrackerService, cache *cache.LinkCache, ipHashSecret string) *RedirectHandler {
+	return &RedirectHandler{
+		linkRepository: linkRepository,
+		tracker:        tracker,
+		cache:          cache,
+		ipHashSecret:   ipHashSecret,
+	}
 }
 
 func (h *RedirectHandler) HandleRedirect(w http.ResponseWriter, r *http.Request) {
@@ -46,16 +52,25 @@ func (h *RedirectHandler) HandleRedirect(w http.ResponseWriter, r *http.Request)
 
 	http.Redirect(w, r, link.OriginalURL, http.StatusFound)
 
-	click := model.Click{LinkID: link.ID}
+	ua := r.UserAgent()
+	ref := r.Referer()
 
-	if ua := r.UserAgent(); ua != "" {
+	click := model.Click{
+		LinkID:         link.ID,
+		DeviceType:     service.ParseDeviceType(ua),
+		ReferrerSource: service.ParseReferrerSource(ref),
+		Browser:        service.ParseBrowserName(ua),
+	}
+
+	if ua != "" {
 		click.UserAgent = &ua
 	}
-	if ref := r.Referer(); ref != "" {
+	if ref != "" {
 		click.Referer = &ref
 	}
 	if ip, _, err := net.SplitHostPort(r.RemoteAddr); err == nil && ip != "" {
-		click.IPAddress = &ip
+		hash := service.HashIP(ip, h.ipHashSecret)
+		click.IPHash = &hash
 	}
 
 	h.tracker.Record(click)

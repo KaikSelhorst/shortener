@@ -63,9 +63,14 @@
 				</div>
 
 				<div class="flex items-center justify-between">
-					<a href="/{project.slug}" class="text-xs text-muted-foreground hover:text-foreground">
-						View links →
-					</a>
+					<div class="flex items-center gap-3">
+						<a href="/{project.slug}" class="text-xs text-muted-foreground hover:text-foreground">
+							Links →
+						</a>
+						<a href="/{project.slug}/analytics" class="text-xs text-muted-foreground hover:text-foreground">
+							Analytics →
+						</a>
+					</div>
 					<Button
 						variant="ghost-destructive"
 						size="sm"
