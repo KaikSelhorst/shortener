@@ -56,11 +56,7 @@
 </div>
 
 <!-- header + period selector -->
-<div class="mt-4 flex items-center justify-between gap-4">
-	<h1 class="text-lg font-semibold text-foreground">
-		Link Analytics
-		<span class="ml-1 font-mono text-sm font-normal text-muted-foreground">{data.code}</span>
-	</h1>
+<div class="mt-4 flex items-center justify-end gap-4">
 	<div class="flex rounded-md bg-muted p-1">
 		{#each periods as p (p.value)}
 			<a
