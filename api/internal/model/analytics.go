@@ -29,14 +29,27 @@ type ReferrerBreakdown struct {
 	Other     int64 `json:"other"`
 }
 
+type BrowserBreakdown struct {
+	Chrome  int64 `json:"chrome"`
+	Firefox int64 `json:"firefox"`
+	Safari  int64 `json:"safari"`
+	Edge    int64 `json:"edge"`
+	Opera   int64 `json:"opera"`
+	Samsung int64 `json:"samsung"`
+	IE      int64 `json:"ie"`
+	Other   int64 `json:"other"`
+	Unknown int64 `json:"unknown"`
+}
+
 type LinkAnalytics struct {
 	LinkID       int64             `json:"link_id"`
 	ShortCode    string            `json:"short_code"`
 	TotalClicks  int64             `json:"total_clicks"`
 	UniqueClicks int64             `json:"unique_clicks"`
-	OverTime     []ClicksOverTime  `json:"over_time"`
-	Devices      DeviceBreakdown   `json:"devices"`
-	Referrers    ReferrerBreakdown `json:"referrers"`
+	OverTime  []ClicksOverTime  `json:"over_time"`
+	Devices   DeviceBreakdown   `json:"devices"`
+	Referrers ReferrerBreakdown `json:"referrers"`
+	Browsers  BrowserBreakdown  `json:"browsers"`
 }
 
 type TopLink struct {
@@ -52,5 +65,6 @@ type ProjectAnalytics struct {
 	OverTime     []ClicksOverTime  `json:"over_time"`
 	Devices      DeviceBreakdown   `json:"devices"`
 	Referrers    ReferrerBreakdown `json:"referrers"`
+	Browsers     BrowserBreakdown  `json:"browsers"`
 	TopLinks     []TopLink         `json:"top_links"`
 }

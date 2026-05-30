@@ -59,6 +59,7 @@ func (h *RedirectHandler) HandleRedirect(w http.ResponseWriter, r *http.Request)
 		LinkID:         link.ID,
 		DeviceType:     service.ParseDeviceType(ua),
 		ReferrerSource: service.ParseReferrerSource(ref),
+		Browser:        service.ParseBrowserName(ua),
 	}
 
 	if ua != "" {

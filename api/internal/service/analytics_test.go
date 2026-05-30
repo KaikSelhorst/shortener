@@ -31,6 +31,53 @@ func TestHashIP(t *testing.T) {
 	}
 }
 
+func TestParseBrowserName(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		ua   string
+		want string
+	}{
+		// empty
+		{"", "unknown"},
+		// samsung must come before chrome
+		{"Mozilla/5.0 (Linux; Android 12) AppleWebKit/537.36 SamsungBrowser/19.0 Chrome/102.0 Mobile Safari/537.36", "samsung"},
+		// edge must come before chrome
+		{"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0 Safari/537.36 Edg/124.0", "edge"},
+		// opera must come before chrome
+		{"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0 Safari/537.36 OPR/110.0", "opera"},
+		// chrome
+		{"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36", "chrome"},
+		// chrome on iOS (CriOS)
+		{"Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 CriOS/124.0 Safari/604.1", "chrome"},
+		// firefox
+		{"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:125.0) Gecko/20100101 Firefox/125.0", "firefox"},
+		// firefox on iOS (FxiOS)
+		{"Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 FxiOS/125.0 Mobile/15E148 Safari/604.1", "firefox"},
+		// safari (no chrome in UA)
+		{"Mozilla/5.0 (Macintosh; Intel Mac OS X 14_4) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15", "safari"},
+		// IE
+		{"Mozilla/5.0 (compatible; MSIE 10.0; Windows NT 6.1; Trident/6.0)", "ie"},
+		{"Mozilla/5.0 (Windows NT 6.1; Trident/7.0; rv:11.0) like Gecko", "ie"},
+		// bot UA → "other" (no known browser keyword)
+		{"Googlebot/2.1 (+http://www.google.com/bot.html)", "other"},
+	}
+	for _, tc := range cases {
+		got := ParseBrowserName(tc.ua)
+		if got != tc.want {
+			t.Errorf("ParseBrowserName(%q) = %q, want %q", tc.ua, got, tc.want)
+		}
+	}
+}
+
+func TestParseBrowserName_ChromeBeforeSafari(t *testing.T) {
+	t.Parallel()
+	// Chrome UAs include "Safari/" — must return chrome, not safari.
+	ua := "Mozilla/5.0 (Windows NT 10.0) AppleWebKit/537.36 Chrome/124.0 Safari/537.36"
+	if got := ParseBrowserName(ua); got != "chrome" {
+		t.Errorf("expected chrome, got %q", got)
+	}
+}
+
 func TestParseDeviceType(t *testing.T) {
 	t.Parallel()
 	cases := []struct {

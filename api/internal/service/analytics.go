@@ -18,6 +18,35 @@ func HashIP(ip, secret string) string {
 	return hex.EncodeToString(mac.Sum(nil))
 }
 
+// ParseBrowserName classifies a User-Agent string into one of:
+// "chrome", "firefox", "safari", "edge", "opera", "samsung", "ie", "other", or "unknown".
+// Order matters: browsers that embed "Chrome" in their UA (Edge, Opera, Samsung) are checked first.
+func ParseBrowserName(ua string) string {
+	if ua == "" {
+		return "unknown"
+	}
+	lower := strings.ToLower(ua)
+
+	switch {
+	case strings.Contains(lower, "samsungbrowser"):
+		return "samsung"
+	case strings.Contains(lower, "edg/") || strings.Contains(lower, "edge/"):
+		return "edge"
+	case strings.Contains(lower, "opr/") || strings.Contains(lower, "opera"):
+		return "opera"
+	case strings.Contains(lower, "chrome/") || strings.Contains(lower, "crios/"):
+		return "chrome"
+	case strings.Contains(lower, "firefox/") || strings.Contains(lower, "fxios/"):
+		return "firefox"
+	case strings.Contains(lower, "safari/"):
+		return "safari"
+	case strings.Contains(lower, "trident/") || strings.Contains(lower, "msie"):
+		return "ie"
+	default:
+		return "other"
+	}
+}
+
 // ParseDeviceType classifies a User-Agent string into one of:
 // "bot", "tablet", "mobile", "desktop", or "unknown".
 // Order matters: bots are checked before mobile because many crawlers

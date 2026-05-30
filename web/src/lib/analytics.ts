@@ -1,4 +1,4 @@
-import type { DeviceBreakdown, ReferrerBreakdown } from './types'
+import type { DeviceBreakdown, ReferrerBreakdown, BrowserBreakdown } from './types'
 
 export const VALID_PERIODS = ['7d', '30d', '90d'] as const
 export type Period = (typeof VALID_PERIODS)[number]
@@ -22,6 +22,22 @@ export function deviceItems(d: DeviceBreakdown) {
 		{ label: 'Tablet', value: d.tablet },
 		{ label: 'Bot', value: d.bot },
 		{ label: 'Unknown', value: d.unknown },
+	]
+		.filter((i) => i.value > 0)
+		.sort((a, b) => b.value - a.value)
+}
+
+export function browserItems(b: BrowserBreakdown) {
+	return [
+		{ label: 'Chrome', value: b.chrome },
+		{ label: 'Safari', value: b.safari },
+		{ label: 'Firefox', value: b.firefox },
+		{ label: 'Edge', value: b.edge },
+		{ label: 'Opera', value: b.opera },
+		{ label: 'Samsung', value: b.samsung },
+		{ label: 'IE', value: b.ie },
+		{ label: 'Other', value: b.other },
+		{ label: 'Unknown', value: b.unknown },
 	]
 		.filter((i) => i.value > 0)
 		.sort((a, b) => b.value - a.value)

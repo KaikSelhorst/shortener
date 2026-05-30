@@ -99,6 +99,18 @@ export interface DeviceBreakdown {
 	unknown: number
 }
 
+export interface BrowserBreakdown {
+	chrome: number
+	firefox: number
+	safari: number
+	edge: number
+	opera: number
+	samsung: number
+	ie: number
+	other: number
+	unknown: number
+}
+
 export interface ReferrerBreakdown {
 	direct: number
 	instagram: number
@@ -128,6 +140,7 @@ export interface LinkAnalytics {
 	over_time: ClicksOverTime[]
 	devices: DeviceBreakdown
 	referrers: ReferrerBreakdown
+	browsers: BrowserBreakdown
 }
 
 export interface ProjectAnalytics {
@@ -136,5 +149,6 @@ export interface ProjectAnalytics {
 	over_time: ClicksOverTime[]
 	devices: DeviceBreakdown
 	referrers: ReferrerBreakdown
+	browsers: BrowserBreakdown
 	top_links: TopLink[]
 }

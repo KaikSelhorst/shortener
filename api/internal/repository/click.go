@@ -21,11 +21,11 @@ func NewClickRepository(db *pgxpool.Pool) *ClickRepository {
 func (r *ClickRepository) BatchInsert(ctx context.Context, clicks []model.Click) error {
 	rows := make([][]any, len(clicks))
 	for i, c := range clicks {
-		rows[i] = []any{c.LinkID, c.UserAgent, c.IPHash, c.Referer, c.DeviceType, c.ReferrerSource}
+		rows[i] = []any{c.LinkID, c.UserAgent, c.IPHash, c.Referer, c.DeviceType, c.ReferrerSource, c.Browser}
 	}
 	_, err := r.db.CopyFrom(ctx,
 		pgx.Identifier{"clicks"},
-		[]string{"link_id", "user_agent", "ip_hash", "referer", "device_type", "referrer_source"},
+		[]string{"link_id", "user_agent", "ip_hash", "referer", "device_type", "referrer_source", "browser"},
 		pgx.CopyFromRows(rows),
 	)
 	return err
@@ -79,6 +79,18 @@ func (r *ClickRepository) GetLinkAnalytics(ctx context.Context, linkID int64, si
 			 FROM clicks
 			 WHERE link_id = $1 AND created_at >= $2 AND created_at < $3
 			 GROUP BY referrer_source`,
+			linkID, since, until,
+		)
+		return err
+	})
+
+	g.Go(func() error {
+		var err error
+		result.Browsers, err = r.queryBrowsers(gctx,
+			`SELECT browser, COUNT(*)
+			 FROM clicks
+			 WHERE link_id = $1 AND created_at >= $2 AND created_at < $3
+			 GROUP BY browser`,
 			linkID, since, until,
 		)
 		return err
@@ -148,6 +160,18 @@ func (r *ClickRepository) GetProjectAnalytics(ctx context.Context, projectID int
 	})
 
 	g.Go(func() error {
+		var err error
+		result.Browsers, err = r.queryBrowsers(gctx,
+			`SELECT c.browser, COUNT(*)
+			 FROM clicks c JOIN links l ON c.link_id = l.id
+			 WHERE l.project_id = $1 AND c.created_at >= $2 AND c.created_at < $3
+			 GROUP BY c.browser`,
+			projectID, since, until,
+		)
+		return err
+	})
+
+	g.Go(func() error {
 		rows, err := r.db.Query(gctx,
 			`SELECT l.short_code, l.original_url, l.title, COUNT(*) AS clicks
 			 FROM clicks c
@@ -176,6 +200,44 @@ func (r *ClickRepository) GetProjectAnalytics(ctx context.Context, projectID int
 		return nil, err
 	}
 	return result, nil
+}
+
+func (r *ClickRepository) queryBrowsers(ctx context.Context, query string, args ...any) (model.BrowserBreakdown, error) {
+	rows, err := r.db.Query(ctx, query, args...)
+	if err != nil {
+		return model.BrowserBreakdown{}, err
+	}
+	defer rows.Close()
+
+	var b model.BrowserBreakdown
+	for rows.Next() {
+		var name string
+		var count int64
+		if err := rows.Scan(&name, &count); err != nil {
+			return b, err
+		}
+		switch name {
+		case "chrome":
+			b.Chrome = count
+		case "firefox":
+			b.Firefox = count
+		case "safari":
+			b.Safari = count
+		case "edge":
+			b.Edge = count
+		case "opera":
+			b.Opera = count
+		case "samsung":
+			b.Samsung = count
+		case "ie":
+			b.IE = count
+		case "other":
+			b.Other = count
+		default:
+			b.Unknown += count
+		}
+	}
+	return b, rows.Err()
 }
 
 func scanClicksOverTime(rows pgx.Rows) ([]model.ClicksOverTime, error) {

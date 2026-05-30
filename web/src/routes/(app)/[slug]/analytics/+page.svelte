@@ -1,12 +1,13 @@
 <script lang="ts">
 	import type { PageData } from './$types'
 	import { BarChart, LineChart, Table, TableHead, TableBody, TableRow, TableHeader, TableCell } from '$lib'
-	import { periods, deviceItems, referrerItems } from '$lib/analytics'
+	import { periods, deviceItems, referrerItems, browserItems } from '$lib/analytics'
 
 	let { data }: { data: PageData } = $props()
 
 	const devices = $derived(deviceItems(data.analytics.devices))
 	const referrers = $derived(referrerItems(data.analytics.referrers))
+	const browsers = $derived(browserItems(data.analytics.browsers))
 </script>
 
 <!-- breadcrumb -->
@@ -74,13 +75,17 @@
 	<LineChart data={data.analytics.over_time} />
 </div>
 
-<!-- device + referrer breakdowns -->
+<!-- device + referrer + browser breakdowns -->
 <div class="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
 	<div class="rounded-md bg-card p-4 shadow-sm">
 		<h2 class="mb-4 text-sm font-semibold text-foreground">Devices</h2>
 		<BarChart items={devices} />
 	</div>
 	<div class="rounded-md bg-card p-4 shadow-sm">
+		<h2 class="mb-4 text-sm font-semibold text-foreground">Browsers</h2>
+		<BarChart items={browsers} />
+	</div>
+	<div class="rounded-md bg-card p-4 shadow-sm lg:col-span-2">
 		<h2 class="mb-4 text-sm font-semibold text-foreground">Referrers</h2>
 		<BarChart items={referrers} />
 	</div>

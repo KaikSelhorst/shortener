@@ -1,0 +1,2 @@
+ALTER TABLE clicks
+  ADD COLUMN browser TEXT NOT NULL DEFAULT 'unknown';
