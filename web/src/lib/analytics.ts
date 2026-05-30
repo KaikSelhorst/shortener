@@ -37,7 +37,6 @@ export function browserItems(b: BrowserBreakdown) {
 		{ label: 'Samsung', value: b.samsung },
 		{ label: 'IE', value: b.ie },
 		{ label: 'Other', value: b.other },
-		{ label: 'Unknown', value: b.unknown },
 	]
 		.filter((i) => i.value > 0)
 		.sort((a, b) => b.value - a.value)

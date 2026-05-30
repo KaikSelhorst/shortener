@@ -37,8 +37,8 @@ func TestParseBrowserName(t *testing.T) {
 		ua   string
 		want string
 	}{
-		// empty
-		{"", "unknown"},
+		// empty UA → other (no distinction from unrecognised)
+		{"", "other"},
 		// samsung must come before chrome
 		{"Mozilla/5.0 (Linux; Android 12) AppleWebKit/537.36 SamsungBrowser/19.0 Chrome/102.0 Mobile Safari/537.36", "samsung"},
 		// edge must come before chrome

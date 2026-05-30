@@ -108,7 +108,6 @@ export interface BrowserBreakdown {
 	samsung: number
 	ie: number
 	other: number
-	unknown: number
 }
 
 export interface ReferrerBreakdown {

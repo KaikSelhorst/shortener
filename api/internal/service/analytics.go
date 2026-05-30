@@ -23,7 +23,7 @@ func HashIP(ip, secret string) string {
 // Order matters: browsers that embed "Chrome" in their UA (Edge, Opera, Samsung) are checked first.
 func ParseBrowserName(ua string) string {
 	if ua == "" {
-		return "unknown"
+		return "other"
 	}
 	lower := strings.ToLower(ua)
 

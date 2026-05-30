@@ -38,7 +38,6 @@ type BrowserBreakdown struct {
 	Samsung int64 `json:"samsung"`
 	IE      int64 `json:"ie"`
 	Other   int64 `json:"other"`
-	Unknown int64 `json:"unknown"`
 }
 
 type LinkAnalytics struct {

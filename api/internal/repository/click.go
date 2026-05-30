@@ -237,10 +237,8 @@ func (r *ClickRepository) queryBrowsers(ctx context.Context, query string, args 
 			b.Samsung = count
 		case "ie":
 			b.IE = count
-		case "other":
-			b.Other = count
 		default:
-			b.Unknown += count
+			b.Other += count
 		}
 	}
 	return b, rows.Err()
