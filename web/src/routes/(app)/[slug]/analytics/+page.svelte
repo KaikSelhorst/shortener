@@ -31,6 +31,7 @@
 			{ label: 'Facebook', value: r.facebook },
 			{ label: 'Twitter/X', value: r.twitter },
 			{ label: 'TikTok', value: r.tiktok },
+			{ label: 'Discord', value: r.discord },
 			{ label: 'LinkedIn', value: r.linkedin },
 			{ label: 'WhatsApp', value: r.whatsapp },
 			{ label: 'YouTube', value: r.youtube },

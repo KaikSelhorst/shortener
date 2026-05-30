@@ -63,9 +63,12 @@ var knownReferrers = map[string]string{
 	"lnkd.in":       "linkedin",
 	"whatsapp.com":  "whatsapp",
 	"wa.me":         "whatsapp",
-	"youtube.com":   "youtube",
-	"youtu.be":      "youtube",
-	"google.com":    "google",
+	"youtube.com":    "youtube",
+	"youtu.be":       "youtube",
+	"discord.com":    "discord",
+	"discord.gg":     "discord",
+	"discordapp.com": "discord",
+	"google.com":     "google",
 	"google.co":     "google", // google.co.uk, google.com.br, etc.
 	"bing.com":      "google", // group search engines under google label isn't ideal; keep separate
 }

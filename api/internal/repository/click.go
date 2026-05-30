@@ -254,6 +254,8 @@ func (r *ClickRepository) queryReferrers(ctx context.Context, query string, args
 			rb.YouTube = count
 		case "google":
 			rb.Google = count
+		case "discord":
+			rb.Discord = count
 		default:
 			rb.Other += count
 		}

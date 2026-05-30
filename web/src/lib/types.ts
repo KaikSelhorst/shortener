@@ -109,6 +109,7 @@ export interface ReferrerBreakdown {
 	whatsapp: number
 	youtube: number
 	google: number
+	discord: number
 	other: number
 }
 

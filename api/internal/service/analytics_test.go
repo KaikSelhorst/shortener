@@ -99,6 +99,10 @@ func TestParseReferrerSource(t *testing.T) {
 		{"https://www.google.com/search?q=test", "google"},
 		{"https://google.co.uk/search?q=test", "google"},
 		{"https://google.com.br/", "google"},
+		// discord
+		{"https://discord.com/channels/123/456", "discord"},
+		{"https://discord.gg/invite-code", "discord"},
+		{"https://discordapp.com/channels/123", "discord"},
 		// other
 		{"https://news.ycombinator.com/item?id=1", "other"},
 		{"https://reddit.com/r/golang", "other"},

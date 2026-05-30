@@ -25,6 +25,7 @@ type ReferrerBreakdown struct {
 	WhatsApp  int64 `json:"whatsapp"`
 	YouTube   int64 `json:"youtube"`
 	Google    int64 `json:"google"`
+	Discord   int64 `json:"discord"`
 	Other     int64 `json:"other"`
 }
 
