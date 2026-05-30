@@ -62,29 +62,29 @@
 	>
 		<defs>
 			<linearGradient id="lc-fill" x1="0" y1="0" x2="0" y2="1">
-				<stop offset="0%" stop-color="hsl(var(--primary))" stop-opacity="0.25" />
-				<stop offset="100%" stop-color="hsl(var(--primary))" stop-opacity="0" />
+				<stop offset="0%" style="stop-color: var(--primary); stop-opacity: 0.25" />
+				<stop offset="100%" style="stop-color: var(--primary); stop-opacity: 0" />
 			</linearGradient>
 		</defs>
 
 		<!-- area fill -->
 		<path d={areaPath} fill="url(#lc-fill)" />
 
-		<!-- line -->
-		<path
-			d={linePath}
-			fill="none"
-			stroke="hsl(var(--primary))"
-			stroke-width="1.5"
-			stroke-linejoin="round"
-		/>
+		<!-- line — currentColor inherits from the parent text-primary class -->
+		<g class="text-primary">
+			<path
+				d={linePath}
+				fill="none"
+				stroke="currentColor"
+				stroke-width="1.5"
+				stroke-linejoin="round"
+			/>
+			{#each pts as p (p.date)}
+				<circle cx={p.x} cy={p.y} r="2" fill="currentColor" />
+			{/each}
+		</g>
 
-		<!-- dots -->
-		{#each pts as p (p.date)}
-			<circle cx={p.x} cy={p.y} r="2" fill="hsl(var(--primary))" />
-		{/each}
-
-		<!-- x-axis labels -->
+		<!-- x-axis labels — style= so var() is resolved as a CSS property -->
 		{#each pts as p, i (p.date)}
 			{#if i % labelStep === 0 || i === pts.length - 1}
 				<text
@@ -92,7 +92,7 @@
 					y={height - 4}
 					text-anchor="middle"
 					font-size="9"
-					fill="hsl(var(--muted-foreground))"
+					style="fill: var(--muted-foreground)"
 				>
 					{fmtDate(p.date)}
 				</text>
