@@ -32,7 +32,11 @@ func (r *ClickRepository) BatchInsert(ctx context.Context, clicks []model.Click)
 }
 
 func (r *ClickRepository) GetLinkAnalytics(ctx context.Context, linkID int64, since, until time.Time) (*model.LinkAnalytics, error) {
-	result := &model.LinkAnalytics{LinkID: linkID}
+	result := &model.LinkAnalytics{
+		LinkID:   linkID,
+		OverTime: make([]model.ClicksOverTime, 0),
+		Browsers: model.BrowserBreakdown{},
+	}
 
 	g, gctx := errgroup.WithContext(ctx)
 
@@ -104,7 +108,9 @@ func (r *ClickRepository) GetLinkAnalytics(ctx context.Context, linkID int64, si
 
 func (r *ClickRepository) GetProjectAnalytics(ctx context.Context, projectID int64, since, until time.Time) (*model.ProjectAnalytics, error) {
 	result := &model.ProjectAnalytics{
+		OverTime: make([]model.ClicksOverTime, 0),
 		TopLinks: make([]model.TopLink, 0),
+		Browsers: model.BrowserBreakdown{},
 	}
 
 	g, gctx := errgroup.WithContext(ctx)
