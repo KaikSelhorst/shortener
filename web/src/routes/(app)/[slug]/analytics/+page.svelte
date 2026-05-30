@@ -52,8 +52,7 @@
 </div>
 
 <!-- period selector -->
-<div class="mt-4 flex items-center justify-between gap-4">
-	<h1 class="text-lg font-semibold text-foreground">Project Analytics</h1>
+<div class="mt-4 flex items-center justify-end gap-4">
 	<div class="flex rounded-md bg-muted p-1">
 		{#each periods as p (p.value)}
 			<a
