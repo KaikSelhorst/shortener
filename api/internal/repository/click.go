@@ -91,7 +91,9 @@ func (r *ClickRepository) GetLinkAnalytics(ctx context.Context, linkID int64, si
 }
 
 func (r *ClickRepository) GetProjectAnalytics(ctx context.Context, projectID int64, since, until time.Time) (*model.ProjectAnalytics, error) {
-	result := &model.ProjectAnalytics{}
+	result := &model.ProjectAnalytics{
+		TopLinks: make([]model.TopLink, 0),
+	}
 
 	g, gctx := errgroup.WithContext(ctx)
 
@@ -178,7 +180,7 @@ func (r *ClickRepository) GetProjectAnalytics(ctx context.Context, projectID int
 
 func scanClicksOverTime(rows pgx.Rows) ([]model.ClicksOverTime, error) {
 	defer rows.Close()
-	var out []model.ClicksOverTime
+	out := make([]model.ClicksOverTime, 0)
 	for rows.Next() {
 		var e model.ClicksOverTime
 		if err := rows.Scan(&e.Date, &e.Count); err != nil {
