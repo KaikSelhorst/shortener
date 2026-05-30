@@ -51,7 +51,10 @@
 		<span class="text-muted-foreground">/</span>
 		<h1 class="text-sm font-semibold text-foreground">{data.slug}</h1>
 	</div>
-	<Button size="sm" onclick={() => (createOpen = true)}>New link</Button>
+	<div class="flex items-center gap-2">
+		<Button variant="outline" size="sm" href="/{data.slug}/analytics">Analytics</Button>
+		<Button size="sm" onclick={() => (createOpen = true)}>New link</Button>
+	</div>
 </div>
 
 {#if form?.error}
@@ -66,6 +69,7 @@
 				<TableHeader>Short URL</TableHeader>
 				<TableHeader>Created</TableHeader>
 				<TableHeader>Expires at</TableHeader>
+				<TableHeader class="text-right"></TableHeader>
 				<TableHeader class="text-right"></TableHeader>
 			</TableRow>
 		</TableHead>
@@ -101,6 +105,15 @@
 					</TableCell>
 					<TableCell class="text-right">
 						<Button
+							variant="ghost"
+							size="sm"
+							href="/{data.slug}/{link.short_code}/analytics"
+						>
+							Analytics
+						</Button>
+					</TableCell>
+					<TableCell class="text-right">
+						<Button
 							variant="ghost-destructive"
 							size="sm"
 							onclick={() => { pendingCode = link.short_code; confirmOpen = true }}
@@ -111,7 +124,7 @@
 				</TableRow>
 			{:else}
 				<TableRow>
-					<TableCell colspan={5} class="py-10 text-center text-muted-foreground">
+					<TableCell colspan={6} class="py-10 text-center text-muted-foreground">
 						No links yet. Click "New link" to add one.
 					</TableCell>
 				</TableRow>

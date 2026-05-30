@@ -85,3 +85,55 @@ export interface CreateApiKeyRequest {
 export interface CreateApiKeyResponse extends ApiKeyResponse {
 	token: string
 }
+
+export interface ClicksOverTime {
+	date: string
+	count: number
+}
+
+export interface DeviceBreakdown {
+	mobile: number
+	desktop: number
+	tablet: number
+	bot: number
+	unknown: number
+}
+
+export interface ReferrerBreakdown {
+	direct: number
+	instagram: number
+	facebook: number
+	twitter: number
+	tiktok: number
+	linkedin: number
+	whatsapp: number
+	youtube: number
+	google: number
+	other: number
+}
+
+export interface TopLink {
+	short_code: string
+	original_url: string
+	title: string | null
+	total_clicks: number
+}
+
+export interface LinkAnalytics {
+	link_id: number
+	short_code: string
+	total_clicks: number
+	unique_clicks: number
+	over_time: ClicksOverTime[]
+	devices: DeviceBreakdown
+	referrers: ReferrerBreakdown
+}
+
+export interface ProjectAnalytics {
+	total_clicks: number
+	unique_clicks: number
+	over_time: ClicksOverTime[]
+	devices: DeviceBreakdown
+	referrers: ReferrerBreakdown
+	top_links: TopLink[]
+}
