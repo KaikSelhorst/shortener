@@ -21,9 +21,43 @@ jobs:
             web:
               - 'web/**'
 
+  test-api:
+    name: Test API
+    needs: changes
+    if: needs.changes.outputs.api == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: api
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: testdb
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: api/go.mod
+      - name: Unit and handler tests
+        run: go test ./internal/service/... ./internal/handler/...
+      - name: Integration tests
+        run: go test -tags integration ./internal/repository/...
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/testdb?sslmode=disable
+
   deploy-api:
     name: Deploy API
-    needs: changes
+    needs: [changes, test-api]
     if: needs.changes.outputs.api == 'true'
     runs-on: ubuntu-latest
     defaults:

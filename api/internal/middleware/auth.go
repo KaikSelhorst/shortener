@@ -40,7 +40,7 @@ func ProjectAllowed(ctx context.Context, projectID int64) bool {
 	return *key.ProjectID == projectID
 }
 
-func RequireAuth(authService *service.AuthService, apiKeyRepo *repository.APIKeyRepository) func(http.Handler) http.Handler {
+func RequireAuth(authService *service.AuthService, apiKeyRepo repository.APIKeyRepo) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			authHeader := r.Header.Get("Authorization")

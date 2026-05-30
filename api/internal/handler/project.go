@@ -16,10 +16,10 @@ import (
 )
 
 type ProjectHandler struct {
-	projectRepository *repository.ProjectRepository
+	projectRepository repository.ProjectRepo
 }
 
-func NewProjectHandler(projectRepository *repository.ProjectRepository) *ProjectHandler {
+func NewProjectHandler(projectRepository repository.ProjectRepo) *ProjectHandler {
 	return &ProjectHandler{projectRepository: projectRepository}
 }
 
