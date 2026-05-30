@@ -1,45 +1,12 @@
 <script lang="ts">
 	import type { PageData } from './$types'
-	import type { DeviceBreakdown, ReferrerBreakdown } from '$lib/types'
 	import { BarChart, LineChart, Table, TableHead, TableBody, TableRow, TableHeader, TableCell } from '$lib'
+	import { periods, deviceItems, referrerItems } from '$lib/analytics'
 
 	let { data }: { data: PageData } = $props()
 
-	const periods = [
-		{ value: '7d', label: '7 days' },
-		{ value: '30d', label: '30 days' },
-		{ value: '90d', label: '90 days' },
-	]
-
-	function deviceItems(d: DeviceBreakdown) {
-		return [
-			{ label: 'Mobile', value: d.mobile },
-			{ label: 'Desktop', value: d.desktop },
-			{ label: 'Tablet', value: d.tablet },
-			{ label: 'Bot', value: d.bot },
-			{ label: 'Unknown', value: d.unknown },
-		]
-			.filter((i) => i.value > 0)
-			.sort((a, b) => b.value - a.value)
-	}
-
-	function referrerItems(r: ReferrerBreakdown) {
-		return [
-			{ label: 'Direct', value: r.direct },
-			{ label: 'Google', value: r.google },
-			{ label: 'Instagram', value: r.instagram },
-			{ label: 'Facebook', value: r.facebook },
-			{ label: 'Twitter/X', value: r.twitter },
-			{ label: 'TikTok', value: r.tiktok },
-			{ label: 'Discord', value: r.discord },
-			{ label: 'LinkedIn', value: r.linkedin },
-			{ label: 'WhatsApp', value: r.whatsapp },
-			{ label: 'YouTube', value: r.youtube },
-			{ label: 'Other', value: r.other },
-		]
-			.filter((i) => i.value > 0)
-			.sort((a, b) => b.value - a.value)
-	}
+	const devices = $derived(deviceItems(data.analytics.devices))
+	const referrers = $derived(referrerItems(data.analytics.referrers))
 </script>
 
 <!-- breadcrumb -->
@@ -85,16 +52,16 @@
 	<div class="rounded-md bg-card p-4 shadow-sm">
 		<p class="text-xs text-muted-foreground">Links</p>
 		<p class="mt-1 text-2xl font-semibold text-foreground">
-			{data.analytics.top_links.length}
+			{(data.analytics.top_links ?? []).length}
 		</p>
 	</div>
 	<div class="rounded-md bg-card p-4 shadow-sm">
 		<p class="text-xs text-muted-foreground">Avg. per Day</p>
 		<p class="mt-1 text-2xl font-semibold text-foreground">
-			{data.analytics.over_time.length > 0
+			{(data.analytics.over_time ?? []).length > 0
 				? Math.round(
 						data.analytics.total_clicks /
-							Math.max(data.analytics.over_time.length, 1),
+							Math.max((data.analytics.over_time ?? []).length, 1),
 					).toLocaleString()
 				: '0'}
 		</p>
@@ -111,11 +78,11 @@
 <div class="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
 	<div class="rounded-md bg-card p-4 shadow-sm">
 		<h2 class="mb-4 text-sm font-semibold text-foreground">Devices</h2>
-		<BarChart items={deviceItems(data.analytics.devices)} />
+		<BarChart items={devices} />
 	</div>
 	<div class="rounded-md bg-card p-4 shadow-sm">
 		<h2 class="mb-4 text-sm font-semibold text-foreground">Referrers</h2>
-		<BarChart items={referrerItems(data.analytics.referrers)} />
+		<BarChart items={referrers} />
 	</div>
 </div>
 
