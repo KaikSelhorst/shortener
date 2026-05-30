@@ -6,6 +6,9 @@ endif
 dev:
 	cd api && go run cmd/server/main.go
 
+seed:
+	cd api && go run ./cmd/seed
+
 fmt:
 	cd api && gofmt -w .
 

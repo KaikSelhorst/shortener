@@ -65,10 +65,10 @@
 				<div class="flex items-center justify-between">
 					<div class="flex items-center gap-3">
 						<a href="/{project.slug}" class="text-xs text-muted-foreground hover:text-foreground">
-							Links →
+							Links
 						</a>
 						<a href="/{project.slug}/analytics" class="text-xs text-muted-foreground hover:text-foreground">
-							Analytics →
+							Analytics
 						</a>
 					</div>
 					<Button
