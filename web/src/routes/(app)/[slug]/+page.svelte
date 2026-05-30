@@ -5,7 +5,6 @@
 	import {
 		Button,
 		Input,
-		Textarea,
 		Dialog,
 		Table,
 		TableHead,
@@ -162,8 +161,6 @@
 		>
 			<Input name="url" type="url" label="URL" placeholder="https://example.com" required />
 			<Input name="title" type="text" label="Title" placeholder="Title (optional)" />
-			<Textarea name="description" label="Description" placeholder="Description (optional)" rows={3} />
-			<Input name="og_image" type="url" label="OG Image" placeholder="https://example.com/image.jpg" />
 			<Input name="expires_at" type="datetime-local" label="Expires at" />
 			{#if createError}
 				<p class="text-sm text-destructive">{createError}</p>
