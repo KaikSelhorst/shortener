@@ -1,14 +1,13 @@
 <script lang="ts">
 	import { dev } from '$app/environment'
-	import { onMount } from 'svelte'
 
 	let fps = $state(0)
-	let frames = 0
-	let lastTime = 0
 
-	onMount(() => {
+	$effect(() => {
 		if (!dev) return
 
+		let frames = 0
+		let lastTime = performance.now()
 		let raf: number
 
 		function tick(now: number) {
@@ -21,7 +20,6 @@
 			raf = requestAnimationFrame(tick)
 		}
 
-		lastTime = performance.now()
 		raf = requestAnimationFrame(tick)
 
 		return () => cancelAnimationFrame(raf)
