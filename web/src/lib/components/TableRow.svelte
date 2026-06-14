@@ -9,6 +9,6 @@
 	let { children, class: className, ...rest }: Props = $props()
 </script>
 
-<tr class={['hover:bg-muted/50 transition-colors', className].filter(Boolean).join(' ')} {...rest}>
+<tr class={['transition-colors hover:bg-primary/5', className].filter(Boolean).join(' ')} {...rest}>
 	{@render children()}
 </tr>

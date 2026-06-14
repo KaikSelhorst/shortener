@@ -10,7 +10,10 @@
 </script>
 
 <th
-	class={['px-4 py-3 text-left font-medium text-muted-foreground', className]
+	class={[
+		'px-4 py-2.5 text-left text-[10px] font-normal uppercase tracking-[0.15em] text-muted-foreground',
+		className,
+	]
 		.filter(Boolean)
 		.join(' ')}
 	{...rest}

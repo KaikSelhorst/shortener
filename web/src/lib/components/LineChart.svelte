@@ -9,8 +9,8 @@
 	let { data, height = 140 }: Props = $props()
 
 	const W = 600
-	const padTop = 8
-	const padBottom = 24
+	const padTop = 10
+	const padBottom = 26
 	const padLeft = 4
 	const padRight = 4
 
@@ -44,14 +44,34 @@
 	function fmtDate(iso: string) {
 		return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
 	}
+
+	// tooltip state
+	type Pt = (typeof pts)[number]
+	let hovered = $state<Pt | null>(null)
+
+	const TW = 110  // tooltip width in SVG units
+	const TH = 36   // tooltip height in SVG units
+	const PAD = 8   // gap between point and tooltip
+
+	const tooltipX = $derived(
+		hovered
+			? hovered.x + TW + PAD > W
+				? hovered.x - TW - PAD
+				: hovered.x + PAD
+			: 0,
+	)
+	const tooltipY = $derived(
+		hovered
+			? hovered.y - TH - PAD < padTop
+				? hovered.y + PAD
+				: hovered.y - TH - PAD
+			: 0,
+	)
 </script>
 
 {#if data.length === 0}
-	<div
-		class="flex items-center justify-center text-sm text-muted-foreground"
-		style="height: {height}px"
-	>
-		No data for this period
+	<div class="flex items-center justify-center font-mono text-xs text-muted-foreground" style="height:{height}px">
+		-- no data for this period --
 	</div>
 {:else}
 	<svg
@@ -59,44 +79,94 @@
 		class="w-full overflow-visible"
 		preserveAspectRatio="none"
 		aria-hidden="true"
+		onmouseleave={() => (hovered = null)}
 	>
 		<defs>
-			<linearGradient id="lc-fill" x1="0" y1="0" x2="0" y2="1">
-				<stop offset="0%" style="stop-color: var(--primary); stop-opacity: 0.25" />
-				<stop offset="100%" style="stop-color: var(--primary); stop-opacity: 0" />
+			<linearGradient id="tui-area" x1="0" y1="0" x2="0" y2="1">
+				<stop offset="0%"   stop-color="var(--tui-green)" stop-opacity="0.18" />
+				<stop offset="100%" stop-color="var(--tui-green)" stop-opacity="0"    />
 			</linearGradient>
 		</defs>
 
-		<!-- area fill -->
-		<path d={areaPath} fill="url(#lc-fill)" />
-
-		<!-- line — currentColor inherits from the parent text-primary class -->
-		<g class="text-primary">
-			<path
-				d={linePath}
-				fill="none"
-				stroke="currentColor"
-				stroke-width="1.5"
-				stroke-linejoin="round"
+		<!-- horizontal grid lines -->
+		{#each [0, 0.25, 0.5, 0.75, 1] as frac}
+			<line
+				x1={padLeft} y1={padTop + frac * chartH}
+				x2={W - padRight} y2={padTop + frac * chartH}
+				stroke="var(--border)" stroke-width="1"
 			/>
-			{#each pts as p (p.date)}
-				<circle cx={p.x} cy={p.y} r="2" fill="currentColor" />
-			{/each}
-		</g>
+		{/each}
 
-		<!-- x-axis labels — style= so var() is resolved as a CSS property -->
+		<path d={areaPath} fill="url(#tui-area)" />
+
+		<path d={linePath} fill="none" stroke="var(--tui-green)" stroke-width="1.5" stroke-linejoin="round" />
+
+		<!-- invisible wider hit area + visible dot per point -->
+		{#each pts as p (p.date)}
+			<!-- svelte-ignore a11y_no_static_element_interactions -->
+			<g
+				onmouseenter={() => (hovered = p)}
+				style="cursor: crosshair"
+			>
+				<!-- large invisible hit area -->
+				<circle cx={p.x} cy={p.y} r="10" fill="transparent" />
+				<!-- visible dot, grows on hover -->
+				<circle
+					cx={p.x} cy={p.y}
+					r={hovered?.date === p.date ? 4 : 2.5}
+					fill="var(--tui-green)"
+					stroke={hovered?.date === p.date ? 'var(--background)' : 'none'}
+					stroke-width="1.5"
+					style="transition: r 0.1s"
+				/>
+			</g>
+		{/each}
+
+		<!-- x-axis labels -->
 		{#each pts as p, i (p.date)}
 			{#if i % labelStep === 0 || i === pts.length - 1}
 				<text
-					x={p.x}
-					y={height - 4}
-					text-anchor="middle"
+					x={p.x} y={height - 5}
+					text-anchor={i === 0 ? 'start' : i === pts.length - 1 ? 'end' : 'middle'}
 					font-size="9"
-					style="fill: var(--muted-foreground)"
+					font-family="JetBrains Mono, monospace"
+					fill={hovered?.date === p.date ? 'var(--tui-cyan)' : 'var(--tui-muted)'}
 				>
 					{fmtDate(p.date)}
 				</text>
 			{/if}
 		{/each}
+
+		<!-- tooltip -->
+		{#if hovered}
+			<g pointer-events="none">
+				<rect
+					x={tooltipX} y={tooltipY}
+					width={TW} height={TH}
+					fill="var(--card)"
+					stroke="var(--border)"
+					stroke-width="1"
+				/>
+				<!-- top line: date -->
+				<text
+					x={tooltipX + 8} y={tooltipY + 13}
+					font-size="9"
+					font-family="JetBrains Mono, monospace"
+					fill="var(--muted-foreground)"
+				>
+					{fmtDate(hovered.date)}
+				</text>
+				<!-- bottom line: count -->
+				<text
+					x={tooltipX + 8} y={tooltipY + 27}
+					font-size="10"
+					font-family="JetBrains Mono, monospace"
+					fill="var(--tui-green)"
+					font-weight="700"
+				>
+					{hovered.count.toLocaleString()} clicks
+				</text>
+			</g>
+		{/if}
 	</svg>
 {/if}

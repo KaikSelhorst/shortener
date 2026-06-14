@@ -12,30 +12,32 @@
 
 	const max = $derived(Math.max(...items.map((i) => i.value), 1))
 	const total = $derived(items.reduce((s, i) => s + i.value, 0))
+	const BAR_WIDTH = 24
+
+	function bar(pct: number): string {
+		const filled = Math.round(pct * BAR_WIDTH)
+		return '█'.repeat(filled) + '░'.repeat(BAR_WIDTH - filled)
+	}
 </script>
 
-<div class="flex flex-col gap-2.5">
+<div class="flex flex-col gap-2">
 	{#each items as item (item.label)}
-		<div class="flex items-center gap-3 text-sm">
-			<span class="w-24 shrink-0 truncate text-right text-xs text-muted-foreground"
-				>{item.label}</span
-			>
-			<div class="relative h-5 flex-1 overflow-hidden rounded-sm bg-muted">
-				<div
-					class="h-full rounded-sm bg-primary/70 transition-all duration-500"
-					style="width: {(item.value / max) * 100}%"
-				></div>
-			</div>
-			<div class="flex w-20 shrink-0 justify-end gap-1.5">
-				<span class="font-mono text-xs text-foreground">{item.value.toLocaleString()}</span>
+		{@const pct = item.value / max}
+		<div class="flex items-baseline gap-3 font-mono text-xs">
+			<span class="w-20 shrink-0 truncate text-right text-muted-foreground" title={item.label}>
+				{item.label}
+			</span>
+			<span class="shrink-0 text-[11px] tracking-tighter" style="color: color-mix(in srgb, var(--tui-green) {Math.round(40 + pct * 60)}%, var(--tui-muted))">
+				{bar(pct)}
+			</span>
+			<div class="flex gap-2 shrink-0 text-muted-foreground">
+				<span class="text-foreground">{item.value.toLocaleString()}</span>
 				{#if total > 0}
-					<span class="text-xs text-muted-foreground"
-						>({Math.round((item.value / total) * 100)}%)</span
-					>
+					<span>({Math.round((item.value / total) * 100)}%)</span>
 				{/if}
 			</div>
 		</div>
 	{:else}
-		<p class="py-4 text-center text-sm text-muted-foreground">No data</p>
+		<p class="py-6 text-center font-mono text-xs text-muted-foreground">-- no data --</p>
 	{/each}
 </div>

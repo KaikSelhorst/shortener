@@ -9,8 +9,8 @@
 	let { children, class: className, ...rest }: Props = $props()
 </script>
 
-<div class="w-full overflow-auto rounded-md border border-border">
-	<table class={['w-full text-sm', className].filter(Boolean).join(' ')} {...rest}>
+<div class="w-full overflow-auto border-t border-border">
+	<table class={['w-full', className].filter(Boolean).join(' ')} {...rest}>
 		{@render children()}
 	</table>
 </div>

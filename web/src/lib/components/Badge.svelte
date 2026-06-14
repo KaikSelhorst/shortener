@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte'
 
-	type Variant = 'default' | 'solid'
+	type Variant = 'default' | 'solid' | 'success' | 'error'
 
 	interface Props {
 		variant?: Variant
@@ -12,13 +12,15 @@
 	let { variant = 'default', class: className, children }: Props = $props()
 
 	const variants: Record<Variant, string> = {
-		default: 'bg-secondary text-secondary-foreground ring-1 ring-inset ring-border',
-		solid:   'bg-primary text-primary-foreground',
+		default: 'border border-border text-muted-foreground',
+		solid:   'border border-primary text-primary bg-primary/10',
+		success: 'border border-tui-green/30 text-tui-green bg-tui-green/10',
+		error:   'border border-destructive/30 text-destructive bg-destructive/10',
 	}
 
 	const cls = $derived(
 		[
-			'inline-flex items-center rounded-sm px-1.5 py-1 font-mono text-xs font-medium leading-none',
+			'inline-flex items-center rounded-[2px] px-[0.45rem] py-[0.2rem] font-mono text-[10px] leading-none',
 			variants[variant],
 			className,
 		]

@@ -2,19 +2,46 @@
 	import UserMenu from '$lib/components/UserMenu.svelte'
 
 	let { children } = $props()
+
+	let time = $state('')
+
+	$effect(() => {
+		function tick() {
+			const now = new Date()
+			time =
+				String(now.getHours()).padStart(2, '0') +
+				':' +
+				String(now.getMinutes()).padStart(2, '0') +
+				':' +
+				String(now.getSeconds()).padStart(2, '0')
+		}
+		tick()
+		const id = setInterval(tick, 1000)
+		return () => clearInterval(id)
+	})
 </script>
 
-<div class="flex min-h-screen flex-col">
-	<header class="border-b border-border bg-background">
-		<div class="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
-			<a href="/dashboard" class="text-sm font-semibold text-foreground hover:text-muted-foreground transition-colors">
-				Shortener
-			</a>
-			<UserMenu />
+<div class="flex min-h-screen flex-col bg-background">
+	<header class="border-b border-border bg-card">
+		<div class="flex items-center px-4 py-2.5">
+			<div class="ml-auto flex items-center gap-4">
+				<span class="font-mono text-[11px] tabular-nums text-accent">{time}</span>
+				<div class="h-3 w-px bg-border"></div>
+				<UserMenu />
+			</div>
 		</div>
 	</header>
 
-	<main class="mx-auto w-full max-w-5xl flex-1 px-4 py-8">
+	<main class="flex-1 px-4 py-6">
 		{@render children()}
 	</main>
+
+	<footer class="border-t border-border px-4 py-1.5">
+		<div class="flex items-center justify-between">
+			<span class="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">
+				shortener — url management system
+			</span>
+			<span class="font-mono text-[9px] text-muted-foreground">sys:ok</span>
+		</div>
+	</footer>
 </div>

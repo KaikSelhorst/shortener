@@ -9,6 +9,6 @@
 	let { children, class: className, ...rest }: Props = $props()
 </script>
 
-<thead class={['border-b border-border bg-muted', className].filter(Boolean).join(' ')} {...rest}>
+<thead class={['border-b border-border bg-card', className].filter(Boolean).join(' ')} {...rest}>
 	{@render children()}
 </thead>

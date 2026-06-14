@@ -23,22 +23,23 @@
 	}: Props = $props()
 
 	const base =
-		'inline-flex cursor-pointer items-center justify-center font-medium transition-colors ' +
+		'inline-flex cursor-pointer items-center justify-center font-mono uppercase tracking-wider ' +
+		'border transition-colors ' +
 		'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring ' +
-		'disabled:pointer-events-none disabled:opacity-50'
+		'disabled:pointer-events-none disabled:opacity-30'
 
 	const variants: Record<Variant, string> = {
-		primary: 'bg-primary text-primary-foreground hover:opacity-90',
-		secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
-		destructive: 'bg-destructive text-destructive-foreground hover:opacity-90',
-		ghost: 'text-foreground hover:bg-muted hover:text-foreground',
-		'ghost-destructive': 'text-destructive hover:bg-destructive/10 hover:text-destructive',
-		outline: 'border border-input bg-background text-foreground hover:bg-muted',
+		primary:             'border-primary text-primary bg-transparent hover:bg-primary/10',
+		secondary:           'border-border text-muted-foreground hover:border-accent hover:text-accent',
+		destructive:         'border-destructive text-destructive bg-transparent hover:bg-destructive/10',
+		ghost:               'border-transparent text-muted-foreground hover:text-foreground hover:border-border',
+		'ghost-destructive': 'border-transparent text-destructive hover:border-destructive/40',
+		outline:             'border-border text-muted-foreground hover:border-accent hover:text-accent',
 	}
 
 	const sizes: Record<Size, string> = {
-		sm: 'h-8 gap-1.5 px-3 text-xs rounded-sm',
-		md: 'h-9 gap-2 px-4 text-sm rounded-md',
+		sm: 'h-7 gap-1 px-2.5 text-[10px]',
+		md: 'h-8 gap-1.5 px-3 text-xs',
 	}
 
 	const cls = $derived([base, variants[variant], sizes[size], className].filter(Boolean).join(' '))
