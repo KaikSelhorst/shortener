@@ -2,13 +2,24 @@
 	import type { PageData, ActionData } from './$types'
 	import type { SubmitFunction } from '@sveltejs/kit'
 	import type { CreateApiKeyResponse, TOTPSetupResponse } from '$lib/types'
-	import { untrack } from 'svelte'
 	import { enhance } from '$app/forms'
-	import { Badge, Button, Input, Dialog, QRCode, Table, TableHead, TableBody, TableRow, TableHeader, TableCell } from '$lib'
+	import {
+		Badge,
+		Button,
+		Input,
+		Dialog,
+		QRCode,
+		Table,
+		TableHead,
+		TableBody,
+		TableRow,
+		TableHeader,
+		TableCell,
+	} from '$lib'
 
 	let { data, form }: { data: PageData; form: ActionData } = $props()
 
-	// ── TOTP state ──────────────────────────────────────────────────────────────
+	// ── TOTP ──────────────────────────────────────────────────────────────────
 	const totpEnabled = $derived(data.me.totp_enabled)
 	let totpSetupData = $state<TOTPSetupResponse | null>(null)
 	let totpSetupOpen = $state(false)
@@ -51,7 +62,7 @@
 	$effect(() => {
 		if (!totpDisableOpen) totpError = null
 	})
-	// ────────────────────────────────────────────────────────────────────────────
+	// ─────────────────────────────────────────────────────────────────────────
 
 	const ALL_SCOPES = [
 		{ value: '*', label: 'Full access' },
@@ -75,8 +86,6 @@
 		if (!createOpen) createError = null
 	})
 
-	// When the token dialog closes (Done button or Escape), clear the key so
-	// it cannot be recovered from state and the dialog does not reopen.
 	$effect(() => {
 		if (!tokenOpen) {
 			createdKey = null
@@ -114,27 +123,22 @@
 	$effect(() => {
 		if (!confirmOpen) pendingDeleteId = null
 	})
-
 </script>
 
-<div class="flex items-center justify-between">
-	<h1 class="text-lg font-semibold text-foreground">Settings</h1>
-</div>
-
-<div class="mt-8">
-	<div class="flex items-center justify-between">
-		<div>
-			<h2 class="text-sm font-semibold text-foreground">API Keys</h2>
-			<p class="mt-0.5 text-sm text-muted-foreground">Manage programmatic access to your account.</p>
+<div class="mx-auto max-w-4xl space-y-6">
+	<!-- API Keys -->
+	<div class="tui-panel">
+		<div class="tui-panel-header justify-between">
+			<span>▌ api keys</span>
+			<Button size="sm" onclick={() => (createOpen = true)}>+ new key</Button>
 		</div>
-		<Button size="sm" onclick={() => (createOpen = true)}>New API Key</Button>
-	</div>
 
-	{#if form?.deleteError}
-		<p class="mt-4 rounded-md bg-destructive/10 px-4 py-2 text-sm text-destructive">{form.deleteError}</p>
-	{/if}
+		{#if form?.deleteError}
+			<div class="border-b border-border px-4 py-2">
+				<p class="font-mono text-xs text-destructive">{form.deleteError}</p>
+			</div>
+		{/if}
 
-	<div class="mt-4">
 		<Table>
 			<TableHead>
 				<TableRow>
@@ -151,7 +155,7 @@
 					<TableRow>
 						<TableCell class="font-medium">{key.name}</TableCell>
 						<TableCell>
-							<span class="font-mono text-xs text-muted-foreground">{key.key_prefix}...</span>
+							<span class="text-muted-foreground">{key.key_prefix}...</span>
 						</TableCell>
 						<TableCell>
 							<div class="flex flex-wrap gap-1">
@@ -166,9 +170,9 @@
 						</TableCell>
 						<TableCell class="text-muted-foreground">
 							{#if key.project_id}
-								{data.projects.find(p => p.id === key.project_id)?.name ?? `#${key.project_id}`}
+								{data.projects.find((p) => p.id === key.project_id)?.name ?? `#${key.project_id}`}
 							{:else}
-								<span class="text-xs">Global</span>
+								<span>global</span>
 							{/if}
 						</TableCell>
 						<TableCell class="text-muted-foreground">
@@ -178,49 +182,61 @@
 							<Button
 								variant="ghost-destructive"
 								size="sm"
-								onclick={() => { pendingDeleteId = key.id; confirmOpen = true }}
+								onclick={() => {
+									pendingDeleteId = key.id
+									confirmOpen = true
+								}}
 							>
-								Revoke
+								revoke
 							</Button>
 						</TableCell>
 					</TableRow>
 				{:else}
 					<TableRow>
-						<TableCell colspan={6} class="py-10 text-center text-muted-foreground">
-							No API keys yet. Click "New API Key" to create one.
+						<TableCell colspan={6} class="py-12 text-center text-muted-foreground">
+							-- no api keys yet --
 						</TableCell>
 					</TableRow>
 				{/each}
 			</TableBody>
 		</Table>
 	</div>
-</div>
 
-<!-- TOTP section -->
-<div class="mt-10 border-t border-border pt-8">
-	<div class="flex items-center justify-between">
-		<div>
-			<h2 class="text-sm font-semibold text-foreground">Two-factor authentication</h2>
-			<p class="mt-0.5 text-sm text-muted-foreground">
+	<!-- Two-factor auth -->
+	<div class="tui-panel">
+		<div class="tui-panel-header justify-between">
+			<span>▌ two-factor auth</span>
+			{#if totpEnabled}
+				<div class="flex items-center gap-3">
+					<span class="font-mono text-[10px] text-primary">● active</span>
+					<Button variant="outline" size="sm" onclick={() => (totpDisableOpen = true)}>
+						disable
+					</Button>
+				</div>
+			{:else}
+				<form
+					method="POST"
+					action="?/totpSetup"
+					use:enhance={() => {
+						return async ({ result, update }) => {
+							await update()
+							if (result.type === 'success') totpSetupOpen = true
+						}
+					}}
+				>
+					<Button type="submit" size="sm">enable</Button>
+				</form>
+			{/if}
+		</div>
+		<div class="px-4 py-3">
+			<p class="font-mono text-xs text-muted-foreground">
 				{#if totpEnabled}
-					TOTP is active. Your account requires an authenticator code at sign-in.
+					totp is active — your account requires an authenticator code at sign-in.
 				{:else}
-					Add an extra layer of security with a TOTP authenticator app.
+					add an extra layer of security with a totp authenticator app.
 				{/if}
 			</p>
 		</div>
-		{#if totpEnabled}
-			<Button variant="outline" size="sm" onclick={() => (totpDisableOpen = true)}>Disable</Button>
-		{:else}
-			<form method="POST" action="?/totpSetup" use:enhance={() => {
-				return async ({ result, update }) => {
-					await update()
-					if (result.type === 'success') totpSetupOpen = true
-				}
-			}}>
-				<Button type="submit" size="sm">Enable</Button>
-			</form>
-		{/if}
 	</div>
 </div>
 
@@ -229,33 +245,34 @@
 	{#snippet children()}
 		<div class="flex flex-col gap-4">
 			{#if totpSetupData}
-				<p class="text-sm text-muted-foreground">
-					Scan the QR code below with your authenticator app (Google Authenticator, Authy, etc.),
-					then enter the 6-digit code to confirm.
+				<p class="font-mono text-xs text-muted-foreground">
+					Scan the QR code with your authenticator app, then enter the 6-digit code to confirm.
 				</p>
 
 				<div class="flex justify-center">
-					<div class="rounded-md border border-border p-1">
+					<div class="border border-border bg-white p-2">
 						<QRCode data={totpSetupData.uri} moduleSize={4} border={4} />
 					</div>
 				</div>
 
-				<details class="text-sm">
-					<summary class="cursor-pointer text-muted-foreground hover:text-foreground">
-						Can't scan? Enter the key manually
+				<details class="font-mono text-xs">
+					<summary
+						class="cursor-pointer text-muted-foreground hover:text-foreground transition-colors"
+					>
+						[expand] can't scan? enter key manually
 					</summary>
-					<div class="mt-2 flex items-center gap-2 rounded-md border border-border bg-muted px-3 py-2">
-						<code class="flex-1 break-all font-mono text-xs text-foreground">
+					<div class="mt-2 flex items-center gap-2 border border-border bg-card px-3 py-2">
+						<code class="flex-1 break-all text-[10px] text-foreground">
 							{totpSetupData.secret}
 						</code>
 						<Button variant="outline" size="sm" onclick={copyTotpSecret}>
-							{totpSecretCopied ? 'Copied!' : 'Copy'}
+							{totpSecretCopied ? 'copied!' : 'copy'}
 						</Button>
 					</div>
 				</details>
 
 				{#if totpError}
-					<p class="text-sm text-destructive">{totpError}</p>
+					<p class="font-mono text-xs text-destructive">{totpError}</p>
 				{/if}
 
 				<form
@@ -279,13 +296,17 @@
 		</div>
 	{/snippet}
 	{#snippet footer()}
-		<Button variant="outline" onclick={() => (totpSetupOpen = false)}>Cancel</Button>
-		<Button type="submit" form="totp-confirm-form">Confirm</Button>
+		<Button variant="outline" onclick={() => (totpSetupOpen = false)}>cancel</Button>
+		<Button type="submit" form="totp-confirm-form">confirm</Button>
 	{/snippet}
 </Dialog>
 
 <!-- TOTP disable modal -->
-<Dialog bind:open={totpDisableOpen} title="Disable two-factor authentication" description="Enter your current authenticator code to confirm.">
+<Dialog
+	bind:open={totpDisableOpen}
+	title="Disable two-factor authentication"
+	description="Enter your current authenticator code to confirm."
+>
 	{#snippet children()}
 		<form
 			id="totp-disable-form"
@@ -295,7 +316,7 @@
 			class="flex flex-col gap-4"
 		>
 			{#if totpError}
-				<p class="text-sm text-destructive">{totpError}</p>
+				<p class="font-mono text-xs text-destructive">{totpError}</p>
 			{/if}
 			<Input
 				name="code"
@@ -310,8 +331,8 @@
 		</form>
 	{/snippet}
 	{#snippet footer()}
-		<Button variant="outline" onclick={() => (totpDisableOpen = false)}>Cancel</Button>
-		<Button type="submit" form="totp-disable-form" variant="destructive">Disable</Button>
+		<Button variant="outline" onclick={() => (totpDisableOpen = false)}>cancel</Button>
+		<Button type="submit" form="totp-disable-form" variant="destructive">disable</Button>
 	{/snippet}
 </Dialog>
 
@@ -328,11 +349,13 @@
 			<Input name="name" type="text" label="Name" placeholder="e.g. CI/CD pipeline" required />
 
 			<div>
-				<p class="mb-2 text-sm font-medium text-foreground">Scopes</p>
-				<div class="grid grid-cols-2 gap-1.5">
+				<p class="tui-label mb-2">Scopes</p>
+				<div class="grid grid-cols-2 gap-1">
 					{#each ALL_SCOPES as scope}
-						<label class="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm text-foreground hover:bg-muted">
-							<input type="checkbox" name="scopes" value={scope.value} class="accent-primary" />
+						<label
+							class="flex cursor-pointer items-center gap-2 px-2 py-1.5 font-mono text-xs text-foreground hover:bg-card transition-colors"
+						>
+							<input type="checkbox" name="scopes" value={scope.value} />
 							{scope.label}
 						</label>
 					{/each}
@@ -341,15 +364,11 @@
 
 			{#if data.projects.length > 0}
 				<div>
-					<label for="project_id" class="mb-1 block text-sm font-medium text-foreground">
-						Restrict to project <span class="font-normal text-muted-foreground">(optional)</span>
+					<label for="project_id" class="tui-label mb-1.5 block">
+						Restrict to project <span class="normal-case text-muted-foreground">(optional)</span>
 					</label>
-					<select
-						id="project_id"
-						name="project_id"
-						class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-					>
-						<option value="">All projects (global)</option>
+					<select id="project_id" name="project_id" class="w-full">
+						<option value="">all projects (global)</option>
 						{#each data.projects as project}
 							<option value={project.id}>{project.name}</option>
 						{/each}
@@ -358,13 +377,13 @@
 			{/if}
 
 			{#if createError}
-				<p class="text-sm text-destructive">{createError}</p>
+				<p class="font-mono text-xs text-destructive">{createError}</p>
 			{/if}
 		</form>
 	{/snippet}
 	{#snippet footer()}
-		<Button variant="outline" onclick={() => (createOpen = false)}>Cancel</Button>
-		<Button type="submit" form="create-key-form">Create</Button>
+		<Button variant="outline" onclick={() => (createOpen = false)}>cancel</Button>
+		<Button type="submit" form="create-key-form">create</Button>
 	{/snippet}
 </Dialog>
 
@@ -375,15 +394,15 @@
 	description="This key will only be shown once. Copy it now and store it somewhere safe."
 >
 	{#snippet children()}
-		<div class="mt-2 flex items-center gap-2 rounded-md border border-border bg-muted px-3 py-2">
-			<code class="flex-1 break-all font-mono text-xs text-foreground">{createdKey?.token}</code>
+		<div class="flex items-center gap-2 border border-border bg-card px-3 py-2">
+			<code class="flex-1 break-all font-mono text-[10px] text-foreground">{createdKey?.token}</code>
 			<Button variant="outline" size="sm" onclick={copyToken}>
-				{tokenCopied ? 'Copied!' : 'Copy'}
+				{tokenCopied ? 'copied!' : 'copy'}
 			</Button>
 		</div>
 	{/snippet}
 	{#snippet footer()}
-		<Button onclick={() => (tokenOpen = false)}>Done</Button>
+		<Button onclick={() => (tokenOpen = false)}>done</Button>
 	{/snippet}
 </Dialog>
 
@@ -394,10 +413,10 @@
 	description="This will permanently revoke the key. Any integrations using it will stop working immediately."
 >
 	{#snippet footer()}
-		<Button variant="outline" onclick={() => (confirmOpen = false)}>Cancel</Button>
+		<Button variant="outline" onclick={() => (confirmOpen = false)}>cancel</Button>
 		<form method="POST" action="?/delete">
 			<input type="hidden" name="id" value={pendingDeleteId} />
-			<Button type="submit" variant="destructive">Revoke</Button>
+			<Button type="submit" variant="destructive">revoke</Button>
 		</form>
 	{/snippet}
 </Dialog>

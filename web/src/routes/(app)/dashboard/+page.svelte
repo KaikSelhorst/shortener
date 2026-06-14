@@ -10,79 +10,86 @@
 	$effect(() => {
 		if (!confirmOpen) pendingSlug = null
 	})
-
-	function avatarHue(str: string) {
-		let hash = 0
-		for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash)
-		return Math.abs(hash) % 360
-	}
-
-	function initials(name: string) {
-		return name.slice(0, 2).toUpperCase()
-	}
 </script>
 
-<h1 class="text-lg font-semibold text-foreground">Projects</h1>
+<div class="mx-auto max-w-4xl">
+	<div class="tui-panel">
+		<div class="tui-panel-header justify-between">
+			<span>▌ projects</span>
+			<span class="text-muted-foreground">{data.projects.length} total</span>
+		</div>
 
-{#if form?.error}
-	<p class="mt-4 rounded-md bg-destructive/10 px-4 py-2 text-sm text-destructive">{form.error}</p>
-{/if}
-
-<form method="POST" action="?/create" class="mt-4 grid grid-cols-[1fr_auto] gap-2">
-	<Input name="name" type="text" placeholder="New project name" required />
-	<Button type="submit">Create</Button>
-</form>
-
-{#if data.projects.length === 0}
-	<p class="mt-10 text-center text-sm text-muted-foreground">No projects yet. Create one above.</p>
-{:else}
-	<ul class="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-		{#each data.projects as project (project.id)}
-			<li class="group flex flex-col gap-3 rounded-md bg-card p-4 shadow-sm">
-				<div class="flex items-start justify-between gap-3">
-					<div class="flex items-center gap-2.5">
-						<div
-							class="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-xs font-semibold text-white"
-							style="background-color: oklch(55% 0.15 {avatarHue(project.name)})"
-						>
-							{initials(project.name)}
-						</div>
-						<div>
-							<a
-								href="/{project.slug}"
-								class="block text-sm font-semibold text-card-foreground hover:underline"
-							>
-								{project.name}
-							</a>
-							<p class="font-mono text-xs text-muted-foreground">{project.slug}</p>
-						</div>
-					</div>
-					<span class="whitespace-nowrap text-xs text-muted-foreground">
-						{new Date(project.created_at).toLocaleDateString()}
-					</span>
+		<div class="border-b border-border bg-background px-4 py-3">
+			<form method="POST" action="?/create" class="flex items-end gap-3">
+				<div class="flex-1">
+					<Input name="name" type="text" placeholder="new project name..." required />
 				</div>
+				<Button type="submit" size="sm">+ create</Button>
+			</form>
+			{#if form?.error}
+				<p class="mt-2 font-mono text-xs text-destructive">{form.error}</p>
+			{/if}
+		</div>
 
-				<div class="flex items-center justify-between">
-					<div class="flex items-center gap-3">
-						<a href="/{project.slug}" class="text-xs text-muted-foreground hover:text-foreground">
-							Links
-						</a>
-						<a href="/{project.slug}/analytics" class="text-xs text-muted-foreground hover:text-foreground">
-							Analytics
-						</a>
-					</div>
-					<Button
-						variant="ghost-destructive"
-						size="sm"
-						onclick={() => { pendingSlug = project.slug; confirmOpen = true }}
-					>
-						Delete
-					</Button>
-				</div>
-			</li>
-		{/each}
-	</ul>
-{/if}
+		{#if data.projects.length === 0}
+			<div class="px-4 py-14 text-center font-mono text-xs text-muted-foreground">
+				-- no projects yet --
+			</div>
+		{:else}
+			<table class="w-full">
+				<thead class="border-b border-border">
+					<tr>
+						<th class="px-4 py-2.5 text-left font-normal tui-label">Name</th>
+						<th class="px-4 py-2.5 text-left font-normal tui-label">Slug</th>
+						<th class="px-4 py-2.5 text-left font-normal tui-label">Created</th>
+						<th class="px-4 py-2.5 text-right font-normal tui-label"></th>
+					</tr>
+				</thead>
+				<tbody class="divide-y divide-border">
+					{#each data.projects as project (project.id)}
+						<tr class="group transition-colors hover:bg-primary/5">
+							<td class="px-4 py-3">
+								<a href="/{project.slug}" class="font-mono text-xs text-primary hover:underline">
+									{project.name}
+								</a>
+							</td>
+							<td class="px-4 py-3">
+								<span class="font-mono text-xs text-muted-foreground">{project.slug}</span>
+							</td>
+							<td class="px-4 py-3">
+								<span class="font-mono text-xs text-muted-foreground">
+									{new Date(project.created_at).toLocaleDateString()}
+								</span>
+							</td>
+							<td class="px-4 py-3 text-right">
+								<div
+									class="flex items-center justify-end gap-3 opacity-0 transition-opacity group-hover:opacity-100"
+								>
+									<a
+										href="/{project.slug}/analytics"
+										class="font-mono text-[10px] uppercase tracking-wider text-accent hover:underline"
+									>
+										analytics
+									</a>
+									<span class="text-border">|</span>
+									<button
+										onclick={() => {
+											pendingSlug = project.slug
+											confirmOpen = true
+										}}
+										class="font-mono text-[10px] uppercase tracking-wider text-destructive hover:underline"
+									>
+										delete
+									</button>
+								</div>
+							</td>
+						</tr>
+					{/each}
+				</tbody>
+			</table>
+		{/if}
+	</div>
+</div>
 
 <Dialog
 	bind:open={confirmOpen}
@@ -90,10 +97,10 @@
 	description="This will permanently delete the project and all its links. This action cannot be undone."
 >
 	{#snippet footer()}
-		<Button variant="outline" onclick={() => (confirmOpen = false)}>Cancel</Button>
+		<Button variant="outline" onclick={() => (confirmOpen = false)}>cancel</Button>
 		<form method="POST" action="?/delete">
 			<input type="hidden" name="slug" value={pendingSlug} />
-			<Button type="submit" variant="destructive">Delete</Button>
+			<Button type="submit" variant="destructive">confirm delete</Button>
 		</form>
 	{/snippet}
 </Dialog>
