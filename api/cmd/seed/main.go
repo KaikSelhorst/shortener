@@ -9,6 +9,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"math/rand/v2"
@@ -37,6 +38,10 @@ func main() {
 	if ipSecret == "" {
 		log.Fatal("IP_HASH_SECRET is required")
 	}
+	webhookKey := os.Getenv("WEBHOOK_SECRET_KEY")
+	if webhookKey == "" {
+		log.Fatal("WEBHOOK_SECRET_KEY is required")
+	}
 
 	if err := migrations.Run(dbURL); err != nil {
 		log.Fatalf("migrations: %v", err)
@@ -54,10 +59,14 @@ func main() {
 		log.Fatalf("shortcode service: %v", err)
 	}
 
+	webhookSvc := service.NewWebhookService(nil, []byte(webhookKey))
+
 	userID := ensureUser(ctx, db.Pool)
 	projectIDs := ensureProjects(ctx, db.Pool, userID)
 	links := ensureLinks(ctx, db.Pool, shortcodes, projectIDs)
 	ensureClicks(ctx, db.Pool, links, ipSecret)
+	webhookIDs := ensureWebhooks(ctx, db.Pool, projectIDs, webhookSvc)
+	ensureWebhookDeliveries(ctx, db.Pool, webhookIDs)
 
 	fmt.Println()
 	fmt.Println("  Ready. Start the server and log in:")
@@ -216,6 +225,115 @@ var sampleIPs = []string{
 	"198.51.100.77", "192.0.2.15", "192.0.2.88",
 	"185.220.101.1", "104.16.100.1", "45.33.32.156",
 	"151.101.1.195", "8.8.8.8", "1.1.1.1",
+}
+
+// --- Webhooks ------------------------------------------------------------
+
+var webhookSeeds = []struct {
+	project string
+	url     string
+	events  []string
+}{
+	{"marketing", "https://hooks.example.com/marketing", []string{"link.created", "link.deleted"}},
+	{"tech-blog", "https://hooks.example.com/tech-blog", []string{"link.clicked", "link.created", "link.updated", "link.deleted"}},
+	{"social-media", "https://hooks.example.com/social", []string{"link.clicked"}},
+}
+
+func ensureWebhooks(ctx context.Context, pool *pgxpool.Pool, projectIDs map[string]int64, svc *service.WebhookService) map[string]int64 {
+	ids := make(map[string]int64, len(webhookSeeds))
+	for _, w := range webhookSeeds {
+		pid := projectIDs[w.project]
+		var id int64
+		err := pool.QueryRow(ctx,
+			`SELECT id FROM webhooks WHERE project_id = $1 AND url = $2`, pid, w.url,
+		).Scan(&id)
+		if err != nil {
+			plain, err := service.GenerateWebhookSecret()
+			if err != nil {
+				log.Fatalf("generate webhook secret: %v", err)
+			}
+			encrypted, err := svc.EncryptSecret(plain)
+			if err != nil {
+				log.Fatalf("encrypt webhook secret: %v", err)
+			}
+			if err = pool.QueryRow(ctx,
+				`INSERT INTO webhooks (project_id, url, secret, events) VALUES ($1, $2, $3, $4) RETURNING id`,
+				pid, w.url, encrypted, w.events,
+			).Scan(&id); err != nil {
+				log.Fatalf("insert webhook %q: %v", w.url, err)
+			}
+			fmt.Printf("✓ webhook     %s  [%s]\n", w.url, w.project)
+		} else {
+			fmt.Printf("· webhook     %s\n", w.url)
+		}
+		ids[w.project] = id
+	}
+	return ids
+}
+
+// --- Webhook deliveries --------------------------------------------------
+
+func ensureWebhookDeliveries(ctx context.Context, pool *pgxpool.Pool, webhookIDs map[string]int64) {
+	type deliverySeed struct {
+		project        string
+		event          string
+		status         string
+		attempts       int
+		responseStatus *int
+		daysAgo        int
+	}
+
+	ok200 := 200
+	err500 := 500
+	err404 := 404
+
+	seeds := []deliverySeed{
+		{"marketing", "link.created", "delivered", 1, &ok200, 1},
+		{"marketing", "link.created", "delivered", 1, &ok200, 3},
+		{"marketing", "link.deleted", "delivered", 1, &ok200, 5},
+		{"marketing", "link.deleted", "failed", 4, &err500, 7},
+		{"tech-blog", "link.clicked", "delivered", 1, &ok200, 0},
+		{"tech-blog", "link.clicked", "delivered", 1, &ok200, 1},
+		{"tech-blog", "link.clicked", "delivered", 2, &ok200, 2},
+		{"tech-blog", "link.created", "delivered", 1, &ok200, 3},
+		{"tech-blog", "link.updated", "failed", 4, &err404, 4},
+		{"tech-blog", "link.deleted", "pending", 1, nil, 0},
+		{"social-media", "link.clicked", "delivered", 1, &ok200, 0},
+		{"social-media", "link.clicked", "delivered", 1, &ok200, 2},
+		{"social-media", "link.clicked", "failed", 4, &err500, 6},
+	}
+
+	for project, webhookID := range webhookIDs {
+		var count int64
+		_ = pool.QueryRow(ctx,
+			`SELECT COUNT(*) FROM webhook_deliveries WHERE webhook_id = $1`, webhookID,
+		).Scan(&count)
+		if count > 0 {
+			fmt.Printf("· deliveries  webhook#%d already present\n", webhookID)
+			continue
+		}
+
+		inserted := 0
+		for _, s := range seeds {
+			if s.project != project {
+				continue
+			}
+			payload, _ := json.Marshal(map[string]any{
+				"event":      s.event,
+				"project_id": webhookIDs[s.project],
+			})
+			createdAt := time.Now().AddDate(0, 0, -s.daysAgo)
+			if _, err := pool.Exec(ctx,
+				`INSERT INTO webhook_deliveries (webhook_id, event, payload, status, attempts, response_status, created_at)
+				 VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+				webhookID, s.event, payload, s.status, s.attempts, s.responseStatus, createdAt,
+			); err != nil {
+				log.Fatalf("insert delivery for webhook#%d: %v", webhookID, err)
+			}
+			inserted++
+		}
+		fmt.Printf("✓ deliveries  %d inserted for webhook#%d\n", inserted, webhookID)
+	}
 }
 
 func ensureClicks(ctx context.Context, pool *pgxpool.Pool, links []seededLink, ipHashSecret string) {
