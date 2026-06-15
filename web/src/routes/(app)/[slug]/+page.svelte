@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { onMount } from 'svelte'
 	import type { PageData, ActionData } from './$types'
 	import type { SubmitFunction } from '@sveltejs/kit'
 	import { enhance } from '$app/forms'
@@ -43,9 +44,29 @@
 	$effect(() => {
 		if (!confirmOpen) pendingCode = null
 	})
+
+	let sessionClicks = $state<Record<string, number>>({})
+	let connected = $state(false)
+
+	const linkClicks = $derived(
+		Object.fromEntries(
+			data.links.data.map((l) => [l.short_code, l.total_clicks + (sessionClicks[l.short_code] ?? 0)]),
+		),
+	)
+
+	onMount(() => {
+		const es = new EventSource(`/api/${data.slug}/stream`)
+		es.onopen = () => (connected = true)
+		es.onmessage = (e) => {
+			const evt = JSON.parse(e.data) as { short_code: string }
+			sessionClicks[evt.short_code] = (sessionClicks[evt.short_code] ?? 0) + 1
+		}
+		es.onerror = () => (connected = false)
+		return () => es.close()
+	})
 </script>
 
-<div class="mx-auto max-w-5xl">
+<div class="mx-auto max-w-6xl">
 	<div class="tui-panel">
 		<div class="tui-panel-header justify-between">
 			<div class="flex items-center gap-2">
@@ -59,6 +80,9 @@
 				<span>▌ {data.slug}</span>
 			</div>
 			<div class="flex items-center gap-3">
+				{#if connected}
+					<span class="font-mono text-[10px] uppercase tracking-wider text-tui-green">● live</span>
+				{/if}
 				<a
 					href="/{data.slug}/analytics"
 					class="font-mono text-[10px] uppercase tracking-wider text-muted-foreground hover:text-accent transition-colors"
@@ -81,6 +105,7 @@
 					<TableHeader>Original URL</TableHeader>
 					<TableHeader>Short URL</TableHeader>
 					<TableHeader>Status</TableHeader>
+					<TableHeader>Clicks</TableHeader>
 					<TableHeader>Created</TableHeader>
 					<TableHeader>Expires</TableHeader>
 					<TableHeader class="text-right"></TableHeader>
@@ -118,6 +143,11 @@
 								<Badge variant="success">active</Badge>
 							{/if}
 						</TableCell>
+						<TableCell>
+							<span class="font-mono text-xs tabular-nums {sessionClicks[link.short_code] ? 'text-tui-green' : 'text-muted-foreground'}">
+								{linkClicks[link.short_code].toLocaleString()}
+							</span>
+						</TableCell>
 						<TableCell class="text-muted-foreground">
 							{new Date(link.created_at).toLocaleDateString()}
 						</TableCell>
@@ -148,7 +178,7 @@
 					</TableRow>
 				{:else}
 					<TableRow>
-						<TableCell colspan={6} class="py-14 text-center text-muted-foreground">
+						<TableCell colspan={7} class="py-14 text-center text-muted-foreground">
 							-- no links yet --
 						</TableCell>
 					</TableRow>

@@ -12,6 +12,7 @@ type Link struct {
 	OgImage     *string    `json:"og_image"`
 	ExpiresAt   *time.Time `json:"expires_at"`
 	CreatedAt   time.Time  `json:"created_at"`
+	TotalClicks int64      `json:"total_clicks"`
 }
 
 func (l *Link) IsExpired() bool {

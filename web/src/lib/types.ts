@@ -47,6 +47,7 @@ export interface Link {
 	expires_at: string | null
 	created_at: string
 	short_url: string
+	total_clicks: number
 }
 
 export interface ListLinksResponse {

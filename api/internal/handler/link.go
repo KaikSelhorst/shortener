@@ -52,6 +52,7 @@ func (h *LinkHandler) toLinkResponse(link *model.Link) dto.LinkResponse {
 		ExpiresAt:   link.ExpiresAt,
 		CreatedAt:   link.CreatedAt,
 		ShortURL:    h.baseURL + "/" + link.ShortCode,
+		TotalClicks: link.TotalClicks,
 	}
 }
 
@@ -228,7 +229,7 @@ func (h *LinkHandler) GetLink(w http.ResponseWriter, r *http.Request) {
 
 	code := chi.URLParam(r, "code")
 
-	link, err := h.linkRepository.GetByCode(r.Context(), code)
+	link, err := h.linkRepository.GetByCodeWithStats(r.Context(), code)
 	if err != nil {
 		repoError(w, err, "link not found")
 		return

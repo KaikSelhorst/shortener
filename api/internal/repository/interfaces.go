@@ -18,6 +18,7 @@ type UserRepo interface {
 type LinkRepo interface {
 	Create(ctx context.Context, link *model.Link, generateCode func(uint64) (string, error)) error
 	GetByCode(ctx context.Context, code string) (*model.Link, error)
+	GetByCodeWithStats(ctx context.Context, code string) (*model.Link, error)
 	List(ctx context.Context, projectID int64, cursor uint64, direction string, limit int) ([]*model.Link, error)
 	Update(ctx context.Context, link *model.Link) error
 	DeleteByCode(ctx context.Context, code string) error

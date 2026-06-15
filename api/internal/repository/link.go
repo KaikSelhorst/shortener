@@ -31,6 +31,23 @@ func (r *LinkRepository) GetByCode(ctx context.Context, code string) (*model.Lin
 	return &link, nil
 }
 
+func (r *LinkRepository) GetByCodeWithStats(ctx context.Context, code string) (*model.Link, error) {
+	var link model.Link
+	err := r.db.QueryRow(ctx,
+		`SELECT l.id, l.project_id, l.short_code, l.original_url, l.title, l.description, l.og_image, l.expires_at, l.created_at, COUNT(c.id) AS total_clicks
+FROM links l LEFT JOIN clicks c ON c.link_id = l.id
+WHERE l.short_code = $1
+GROUP BY l.id`, code,
+	).Scan(&link.ID, &link.ProjectID, &link.ShortCode, &link.OriginalURL, &link.Title, &link.Description, &link.OgImage, &link.ExpiresAt, &link.CreatedAt, &link.TotalClicks)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	return &link, nil
+}
+
 func (r *LinkRepository) List(ctx context.Context, projectID int64, cursor uint64, direction string, limit int) ([]*model.Link, error) {
 	const cols = "SELECT id, project_id, short_code, original_url, title, description, og_image, expires_at, created_at FROM links"
 
@@ -51,7 +68,6 @@ func (r *LinkRepository) List(ctx context.Context, projectID int64, cursor uint6
 	if err != nil {
 		return nil, err
 	}
-
 	defer rows.Close()
 
 	var links []*model.Link
@@ -62,7 +78,48 @@ func (r *LinkRepository) List(ctx context.Context, projectID int64, cursor uint6
 		}
 		links = append(links, &link)
 	}
-	return links, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	if len(links) == 0 {
+		return links, nil
+	}
+
+	// Batch-fetch click counts for the returned links in a single targeted query.
+	// Splitting from the main query avoids a GROUP BY aggregation over the full
+	// clicks table on every list request.
+	ids := make([]int64, len(links))
+	for i, l := range links {
+		ids[i] = l.ID
+	}
+
+	countRows, err := r.db.Query(ctx,
+		"SELECT link_id, COUNT(*) FROM clicks WHERE link_id = ANY($1) GROUP BY link_id",
+		ids,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer countRows.Close()
+
+	counts := make(map[int64]int64, len(links))
+	for countRows.Next() {
+		var linkID, n int64
+		if err := countRows.Scan(&linkID, &n); err != nil {
+			return nil, err
+		}
+		counts[linkID] = n
+	}
+	if err := countRows.Err(); err != nil {
+		return nil, err
+	}
+
+	for _, l := range links {
+		l.TotalClicks = counts[l.ID]
+	}
+
+	return links, nil
 }
 
 func (r *LinkRepository) Create(ctx context.Context, link *model.Link, generateCode func(uint64) (string, error)) error {

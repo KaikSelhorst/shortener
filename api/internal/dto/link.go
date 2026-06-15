@@ -50,6 +50,7 @@ type LinkResponse struct {
 	ExpiresAt   *time.Time `json:"expires_at"`
 	CreatedAt   time.Time  `json:"created_at"`
 	ShortURL    string     `json:"short_url"`
+	TotalClicks int64      `json:"total_clicks"`
 }
 
 type ListLinksResponse struct {

@@ -51,6 +51,10 @@ func (r *LinkRepo) GetByCode(_ context.Context, code string) (*model.Link, error
 	return &copy, nil
 }
 
+func (r *LinkRepo) GetByCodeWithStats(_ context.Context, code string) (*model.Link, error) {
+	return r.GetByCode(context.Background(), code)
+}
+
 func (r *LinkRepo) List(_ context.Context, projectID int64, _ uint64, _ string, limit int) ([]*model.Link, error) {
 	if r.ReturnError != nil {
 		return nil, r.ReturnError
