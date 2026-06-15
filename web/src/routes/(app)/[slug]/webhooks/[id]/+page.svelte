@@ -2,7 +2,6 @@
 	import type { PageData } from './$types'
 	import {
 		Badge,
-		Button,
 		Table,
 		TableHead,
 		TableBody,
@@ -39,7 +38,7 @@
 					webhooks
 				</a>
 				<span class="text-muted-foreground">/</span>
-				<span class="truncate max-w-[200px]" title={data.webhook.url}>▌ {data.webhook.url}</span>
+				<span class="min-w-0 truncate max-w-[40%] md:max-w-none" title={data.webhook.url}>▌ {data.webhook.url}</span>
 			</div>
 		</div>
 
@@ -92,23 +91,27 @@
 
 		{#if data.page > 1 || data.hasMore}
 			<div class="flex items-center justify-between border-t border-border px-4 py-2">
-				<a
-					href="?page={data.page - 1}"
-					class="font-mono text-[10px] uppercase tracking-wider {data.page > 1
-						? 'text-muted-foreground hover:text-foreground'
-						: 'pointer-events-none opacity-30'} transition-colors"
-				>
-					← prev
-				</a>
+				{#if data.page > 1}
+					<a
+						href="?page={data.page - 1}"
+						class="font-mono text-[10px] uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors"
+					>
+						← prev
+					</a>
+				{:else}
+					<span class="font-mono text-[10px] uppercase tracking-wider opacity-30">← prev</span>
+				{/if}
 				<span class="font-mono text-[10px] text-muted-foreground">page {data.page}</span>
-				<a
-					href="?page={data.page + 1}"
-					class="font-mono text-[10px] uppercase tracking-wider {data.hasMore
-						? 'text-muted-foreground hover:text-foreground'
-						: 'pointer-events-none opacity-30'} transition-colors"
-				>
-					next →
-				</a>
+				{#if data.hasMore}
+					<a
+						href="?page={data.page + 1}"
+						class="font-mono text-[10px] uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors"
+					>
+						next →
+					</a>
+				{:else}
+					<span class="font-mono text-[10px] uppercase tracking-wider opacity-30">next →</span>
+				{/if}
 			</div>
 		{/if}
 	</div>

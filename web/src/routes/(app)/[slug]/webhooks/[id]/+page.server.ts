@@ -7,6 +7,7 @@ export const load: PageServerLoad = async ({ params, cookies, fetch, url }) => {
 	const token = cookies.get('access_token')
 	const api = createApi(fetch, token)
 	const webhookId = Number(params.id)
+	if (!Number.isInteger(webhookId) || webhookId < 1) error(404, 'Webhook not found')
 	const page = Math.max(1, Number(url.searchParams.get('page')) || 1)
 
 	const [webhooks, deliveriesRes] = await Promise.all([
