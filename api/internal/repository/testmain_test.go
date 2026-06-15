@@ -40,7 +40,7 @@ func TestMain(m *testing.M) {
 func truncate(t *testing.T) {
 	t.Helper()
 	_, err := testDB.Exec(context.Background(),
-		"TRUNCATE TABLE api_keys, refresh_tokens, links, projects, users RESTART IDENTITY CASCADE",
+		"TRUNCATE TABLE webhook_deliveries, webhooks, api_keys, refresh_tokens, links, projects, users RESTART IDENTITY CASCADE",
 	)
 	if err != nil {
 		t.Fatalf("truncate tables: %v", err)

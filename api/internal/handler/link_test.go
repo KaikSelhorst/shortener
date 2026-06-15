@@ -22,7 +22,8 @@ func newLinkHandler() (*handler.LinkHandler, *fakes.LinkRepo, *fakes.ProjectRepo
 	projects := fakes.NewProjectRepo()
 	svc, _ := service.NewShortcodeService()
 	lc := cache.NewLinkCache(100, time.Minute)
-	return handler.NewLinkHandler(links, projects, svc, lc, "http://short.test", "cursor-secret"), links, projects
+	webhookSvc := service.NewWebhookService(fakes.NewWebhookRepo(), []byte("test-key"))
+	return handler.NewLinkHandler(links, projects, svc, webhookSvc, lc, "http://short.test", "cursor-secret"), links, projects
 }
 
 // withChiParams injects chi URL parameters into the request context.
