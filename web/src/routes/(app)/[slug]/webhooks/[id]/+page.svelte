@@ -66,11 +66,12 @@
 							<span class="font-mono text-xs">{d.event}</span>
 						</TableCell>
 						<TableCell>
-							{#if extractShortCode(d)}
+							{@const code = extractShortCode(d)}
+							{#if code}
 								<a
-									href="/{data.slug}/{extractShortCode(d)}/analytics"
+									href="/{data.slug}/{code}/analytics"
 									class="font-mono text-xs text-muted-foreground hover:text-foreground transition-colors"
-								>/{extractShortCode(d)}</a>
+								>/{code}</a>
 							{:else}
 								<span class="text-muted-foreground">—</span>
 							{/if}

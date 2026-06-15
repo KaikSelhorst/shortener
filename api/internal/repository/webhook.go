@@ -22,6 +22,7 @@ type WebhookRepo interface {
 	ListDeliveries(ctx context.Context, webhookID string, limit int, offset int) ([]*model.WebhookDelivery, error)
 	ClaimPendingDeliveries(ctx context.Context, limit int) ([]*PendingDelivery, error)
 	UpdateDeliveryStatus(ctx context.Context, id string, status string, responseStatus *int, nextRetryAt *time.Time) error
+	ResetStuckDeliveries(ctx context.Context) error
 }
 
 // PendingDelivery carries everything the worker needs without an extra fetch.
@@ -224,6 +225,16 @@ func (r *WebhookRepository) ClaimPendingDeliveries(ctx context.Context, limit in
 	}
 
 	return pending, tx.Commit(ctx)
+}
+
+// ResetStuckDeliveries moves deliveries that were left in "processing" (e.g.
+// after a crash) back to "pending" so they will be retried by the worker.
+func (r *WebhookRepository) ResetStuckDeliveries(ctx context.Context) error {
+	_, err := r.db.Exec(ctx,
+		`UPDATE webhook_deliveries SET status = 'pending', next_retry_at = NOW()
+		 WHERE status = 'processing'`,
+	)
+	return err
 }
 
 func (r *WebhookRepository) UpdateDeliveryStatus(ctx context.Context, id string, status string, responseStatus *int, nextRetryAt *time.Time) error {

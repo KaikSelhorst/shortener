@@ -12,6 +12,9 @@ import (
 )
 
 func Start(ctx context.Context, repo repository.WebhookRepo, svc *service.WebhookService, client *http.Client, logger *zap.SugaredLogger) {
+	if err := repo.ResetStuckDeliveries(ctx); err != nil {
+		logger.Errorw("webhook: reset stuck deliveries", "error", err)
+	}
 	ticker := time.NewTicker(5 * time.Second)
 	defer ticker.Stop()
 	for {
@@ -54,6 +57,9 @@ func deliver(ctx context.Context, repo repository.WebhookRepo, svc *service.Webh
 	req.Header.Set("X-Webhook-Signature", service.Sign(p.Payload, secret))
 
 	resp, err := client.Do(req)
+	if resp != nil {
+		defer resp.Body.Close()
+	}
 	if err != nil || resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		var code *int
 		if resp != nil {
@@ -63,7 +69,6 @@ func deliver(ctx context.Context, repo repository.WebhookRepo, svc *service.Webh
 		scheduleRetry(ctx, repo, logger, p.ID, p.Attempts, code)
 		return
 	}
-	defer resp.Body.Close()
 
 	code := resp.StatusCode
 	if err := repo.UpdateDeliveryStatus(ctx, p.ID, "delivered", &code, nil); err != nil {
