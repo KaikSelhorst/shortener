@@ -11,6 +11,12 @@
 	} from '$lib'
 
 	let { data }: { data: PageData } = $props()
+
+	function extractShortCode(d: { event: string; payload: Record<string, unknown> }): string | null {
+		if (d.event === 'link.clicked') return (d.payload.short_code as string) ?? null
+		const link = d.payload.link as Record<string, unknown> | undefined
+		return (link?.short_code as string) ?? null
+	}
 </script>
 
 <div class="mx-auto max-w-6xl">
@@ -46,6 +52,7 @@
 			<TableHead>
 				<TableRow>
 					<TableHeader>Event</TableHeader>
+					<TableHeader>Link</TableHeader>
 					<TableHeader>Status</TableHeader>
 					<TableHeader>HTTP</TableHeader>
 					<TableHeader>Attempts</TableHeader>
@@ -57,6 +64,16 @@
 					<TableRow>
 						<TableCell>
 							<span class="font-mono text-xs">{d.event}</span>
+						</TableCell>
+						<TableCell>
+							{#if extractShortCode(d)}
+								<a
+									href="/{data.slug}/{extractShortCode(d)}"
+									class="font-mono text-xs text-muted-foreground hover:text-foreground transition-colors"
+								>/{extractShortCode(d)}</a>
+							{:else}
+								<span class="text-muted-foreground">—</span>
+							{/if}
 						</TableCell>
 						<TableCell>
 							{#if d.status === 'delivered'}
@@ -81,7 +98,7 @@
 					</TableRow>
 				{:else}
 					<TableRow>
-						<TableCell colspan={5} class="py-14 text-center text-muted-foreground">
+						<TableCell colspan={6} class="py-14 text-center text-muted-foreground">
 							-- no deliveries yet --
 						</TableCell>
 					</TableRow>

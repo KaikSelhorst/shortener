@@ -1,6 +1,7 @@
 package dto
 
 import (
+	"encoding/json"
 	"errors"
 	"net/url"
 	"time"
@@ -53,14 +54,15 @@ type CreateWebhookResponse struct {
 }
 
 type WebhookDeliveryResponse struct {
-	ID             string    `json:"id"`
-	WebhookID      string    `json:"webhook_id"`
-	Event          string    `json:"event"`
-	Status         string    `json:"status"`
-	Attempts       int       `json:"attempts"`
-	ResponseStatus *int      `json:"response_status"`
-	NextRetryAt    time.Time `json:"next_retry_at"`
-	CreatedAt      time.Time `json:"created_at"`
+	ID             string          `json:"id"`
+	WebhookID      string          `json:"webhook_id"`
+	Event          string          `json:"event"`
+	Payload        json.RawMessage `json:"payload"`
+	Status         string          `json:"status"`
+	Attempts       int             `json:"attempts"`
+	ResponseStatus *int            `json:"response_status"`
+	NextRetryAt    time.Time       `json:"next_retry_at"`
+	CreatedAt      time.Time       `json:"created_at"`
 }
 
 type ListDeliveriesResponse struct {

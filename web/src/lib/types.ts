@@ -165,6 +165,7 @@ export interface WebhookDelivery {
 	id: string
 	webhook_id: string
 	event: string
+	payload: Record<string, unknown>
 	status: string
 	attempts: number
 	response_status: number | null

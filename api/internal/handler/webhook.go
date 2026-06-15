@@ -49,6 +49,7 @@ func (h *WebhookHandler) toDeliveryResponse(d *model.WebhookDelivery) dto.Webhoo
 		ID:             d.ID,
 		WebhookID:      d.WebhookID,
 		Event:          d.Event,
+		Payload:        d.Payload,
 		Status:         d.Status,
 		Attempts:       d.Attempts,
 		ResponseStatus: d.ResponseStatus,
