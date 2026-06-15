@@ -12,6 +12,9 @@ web/build
 web/.output
 node_modules
 
+# Go build artifacts
+*.exe
+
 # OS
 .DS_Store
 Thumbs.db
