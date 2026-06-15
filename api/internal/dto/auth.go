@@ -2,6 +2,7 @@ package dto
 
 import (
 	"errors"
+	"net/mail"
 	"strings"
 	"time"
 )
@@ -16,7 +17,7 @@ func (r *RegisterRequest) Validate() error {
 	if r.Email == "" {
 		return errors.New("email is required")
 	}
-	if !strings.Contains(r.Email, "@") || !strings.Contains(r.Email, ".") {
+	if _, err := mail.ParseAddress(r.Email); err != nil {
 		return errors.New("invalid email")
 	}
 	if len(r.Password) < 8 {

@@ -34,16 +34,16 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("BASE_URL is required")
 	}
 
-	if cursorSecret == "" {
-		return nil, fmt.Errorf("CURSOR_SECRET is required")
+	if len(cursorSecret) < 16 {
+		return nil, fmt.Errorf("CURSOR_SECRET must be at least 16 characters")
 	}
 
-	if jwtSecret == "" {
-		return nil, fmt.Errorf("JWT_SECRET is required")
+	if len(jwtSecret) < 32 {
+		return nil, fmt.Errorf("JWT_SECRET must be at least 32 characters")
 	}
 
-	if ipHashSecret == "" {
-		return nil, fmt.Errorf("IP_HASH_SECRET is required")
+	if len(ipHashSecret) < 32 {
+		return nil, fmt.Errorf("IP_HASH_SECRET must be at least 32 characters")
 	}
 
 	return &Config{
