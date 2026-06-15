@@ -143,6 +143,35 @@ export interface LinkAnalytics {
 	browsers: BrowserBreakdown
 }
 
+export interface Webhook {
+	id: number
+	project_id: number
+	url: string
+	events: string[]
+	enabled: boolean
+	created_at: string
+}
+
+export interface CreateWebhookRequest {
+	url: string
+	events: string[]
+}
+
+export interface CreateWebhookResponse extends Webhook {
+	secret: string
+}
+
+export interface WebhookDelivery {
+	id: string
+	webhook_id: number
+	event: string
+	status: string
+	attempts: number
+	response_status: number | null
+	next_retry_at: string
+	created_at: string
+}
+
 export interface ProjectAnalytics {
 	total_clicks: number
 	unique_clicks: number

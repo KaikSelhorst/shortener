@@ -24,6 +24,7 @@ type Handlers struct {
 	TOTPHandler      *handler.TOTPHandler
 	AnalyticsHandler *handler.AnalyticsHandler
 	SSEHandler       *handler.SSEHandler
+	WebhookHandler   *handler.WebhookHandler
 }
 
 type Router struct {
@@ -99,6 +100,14 @@ func New(cfg *config.Config, handlers *Handlers, authService *service.AuthServic
 		r.Get("/stream", handlers.SSEHandler.HandleUserStream)
 		r.Get("/{slug}/stream", handlers.SSEHandler.HandleProjectStream)
 		r.Get("/{slug}/links/{code}/stream", handlers.SSEHandler.HandleLinkStream)
+
+		// Webhooks.
+		r.Route("/{slug}/webhooks", func(r chi.Router) {
+			r.With(authmw.RequireScope("webhooks:read")).Get("/", handlers.WebhookHandler.ListWebhooks)
+			r.With(authmw.RequireScope("webhooks:create")).Post("/", handlers.WebhookHandler.CreateWebhook)
+			r.With(authmw.RequireScope("webhooks:delete")).Delete("/{id}", handlers.WebhookHandler.DeleteWebhook)
+			r.With(authmw.RequireScope("webhooks:read")).Get("/{id}/deliveries", handlers.WebhookHandler.ListDeliveries)
+		})
 	})
 
 	server := &http.Server{

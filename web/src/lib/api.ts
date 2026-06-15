@@ -10,6 +10,10 @@ import type {
 	ApiKeyResponse,
 	CreateApiKeyRequest,
 	CreateApiKeyResponse,
+	Webhook,
+	CreateWebhookRequest,
+	CreateWebhookResponse,
+	WebhookDelivery,
 	LinkAnalytics,
 	ProjectAnalytics,
 } from './types'
@@ -98,6 +102,14 @@ export function createApi(fetch: Fetch, token?: string) {
 				req<Link>('PUT', `/projects/${slug}/links/${code}`, data),
 			delete: (slug: string, code: string) =>
 				req<void>('DELETE', `/projects/${slug}/links/${code}`),
+		},
+		webhooks: {
+			list: (slug: string) => req<Webhook[]>('GET', `/projects/${slug}/webhooks`),
+			create: (slug: string, data: CreateWebhookRequest) =>
+				req<CreateWebhookResponse>('POST', `/projects/${slug}/webhooks`, data),
+			delete: (slug: string, id: number) => req<void>('DELETE', `/projects/${slug}/webhooks/${id}`),
+			deliveries: (slug: string, webhookId: number, limit = 20) =>
+				req<WebhookDelivery[]>('GET', `/projects/${slug}/webhooks/${webhookId}/deliveries?limit=${limit}`),
 		},
 		analytics: {
 			project: (slug: string, period?: string) =>

@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/url"
@@ -16,10 +17,24 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
+type linkClickedPayload struct {
+	Event     string `json:"event"`
+	ProjectID int64  `json:"project_id"`
+	LinkID    int64  `json:"link_id"`
+	ShortCode string `json:"short_code"`
+}
+
+type linkEventPayload struct {
+	Event     string        `json:"event"`
+	ProjectID int64         `json:"project_id"`
+	Link      dto.LinkResponse `json:"link"`
+}
+
 type LinkHandler struct {
 	linkRepository    repository.LinkRepo
 	projectRepository repository.ProjectRepo
 	shortcodeService  *service.ShortcodeService
+	webhookService    *service.WebhookService
 	cache             *cache.LinkCache
 	baseURL           string
 	cursorSecret      string
@@ -29,6 +44,7 @@ func NewLinkHandler(
 	linkRepository repository.LinkRepo,
 	projectRepository repository.ProjectRepo,
 	shortcodeService *service.ShortcodeService,
+	webhookService *service.WebhookService,
 	cache *cache.LinkCache,
 	baseURL, cursorSecret string,
 ) *LinkHandler {
@@ -36,6 +52,7 @@ func NewLinkHandler(
 		linkRepository:    linkRepository,
 		projectRepository: projectRepository,
 		shortcodeService:  shortcodeService,
+		webhookService:    webhookService,
 		cache:             cache,
 		baseURL:           baseURL,
 		cursorSecret:      cursorSecret,
@@ -155,7 +172,14 @@ func (h *LinkHandler) CreateLink(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeJSON(w, http.StatusCreated, h.toLinkResponse(newLink))
+	resp := h.toLinkResponse(newLink)
+	writeJSON(w, http.StatusCreated, resp)
+
+	go h.webhookService.Dispatch(context.Background(), project.ID, "link.created", linkEventPayload{
+		Event:     "link.created",
+		ProjectID: project.ID,
+		Link:      resp,
+	})
 }
 
 func (h *LinkHandler) ListLinks(w http.ResponseWriter, r *http.Request) {
@@ -306,7 +330,14 @@ func (h *LinkHandler) UpdateLink(w http.ResponseWriter, r *http.Request) {
 
 	h.cache.Delete(code)
 
-	writeJSON(w, http.StatusOK, h.toLinkResponse(link))
+	resp := h.toLinkResponse(link)
+	writeJSON(w, http.StatusOK, resp)
+
+	go h.webhookService.Dispatch(context.Background(), link.ProjectID, "link.updated", linkEventPayload{
+		Event:     "link.updated",
+		ProjectID: link.ProjectID,
+		Link:      resp,
+	})
 }
 
 func (h *LinkHandler) DeleteLink(w http.ResponseWriter, r *http.Request) {
@@ -334,6 +365,11 @@ func (h *LinkHandler) DeleteLink(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.cache.Delete(code)
-
 	w.WriteHeader(http.StatusNoContent)
+
+	go h.webhookService.Dispatch(context.Background(), link.ProjectID, "link.deleted", linkEventPayload{
+		Event:     "link.deleted",
+		ProjectID: link.ProjectID,
+		Link:      h.toLinkResponse(link),
+	})
 }

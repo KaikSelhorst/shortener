@@ -6,15 +6,18 @@ import (
 )
 
 var ValidScopes = map[string]bool{
-	"links:create":    true,
-	"links:read":      true,
-	"links:update":    true,
-	"links:delete":    true,
-	"projects:create": true,
-	"projects:read":   true,
-	"projects:update": true,
-	"projects:delete": true,
-	"*":               true,
+	"links:create":      true,
+	"links:read":        true,
+	"links:update":      true,
+	"links:delete":      true,
+	"projects:create":   true,
+	"projects:read":     true,
+	"projects:update":   true,
+	"projects:delete":   true,
+	"webhooks:read":     true,
+	"webhooks:create":   true,
+	"webhooks:delete":   true,
+	"*":                 true,
 }
 
 type CreateAPIKeyRequest struct {

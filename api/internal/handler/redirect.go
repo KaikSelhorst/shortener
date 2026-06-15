@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"net"
 	"net/http"
 
@@ -12,9 +13,17 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
+type clickedPayload struct {
+	Event     string `json:"event"`
+	ProjectID int64  `json:"project_id"`
+	LinkID    int64  `json:"link_id"`
+	ShortCode string `json:"short_code"`
+}
+
 type RedirectHandler struct {
 	linkRepository repository.LinkRepo
 	tracker        *service.TrackerService
+	webhookService *service.WebhookService
 	linkCache      *cache.LinkCache
 	analyticsCache *cache.AnalyticsCache
 	hub            *sse.Hub
@@ -24,6 +33,7 @@ type RedirectHandler struct {
 func NewRedirectHandler(
 	linkRepository repository.LinkRepo,
 	tracker *service.TrackerService,
+	webhookService *service.WebhookService,
 	linkCache *cache.LinkCache,
 	analyticsCache *cache.AnalyticsCache,
 	hub *sse.Hub,
@@ -32,6 +42,7 @@ func NewRedirectHandler(
 	return &RedirectHandler{
 		linkRepository: linkRepository,
 		tracker:        tracker,
+		webhookService: webhookService,
 		linkCache:      linkCache,
 		analyticsCache: analyticsCache,
 		hub:            hub,
@@ -89,4 +100,11 @@ func (h *RedirectHandler) HandleRedirect(w http.ResponseWriter, r *http.Request)
 	h.hub.Notify(link.ProjectID, link.ID, link.ShortCode)
 	h.analyticsCache.InvalidateProject(link.ProjectID)
 	h.analyticsCache.InvalidateLink(link.ID)
+
+	go h.webhookService.Dispatch(context.Background(), link.ProjectID, "link.clicked", clickedPayload{
+		Event:     "link.clicked",
+		ProjectID: link.ProjectID,
+		LinkID:    link.ID,
+		ShortCode: link.ShortCode,
+	})
 }

@@ -77,6 +77,12 @@
 					<span class="font-mono text-[10px] uppercase tracking-wider text-tui-green">● live</span>
 				{/if}
 				<a
+					href="/{data.slug}/webhooks"
+					class="font-mono text-[10px] uppercase tracking-wider text-muted-foreground hover:text-accent transition-colors"
+				>
+					webhooks
+				</a>
+				<a
 					href="/{data.slug}/analytics"
 					class="font-mono text-[10px] uppercase tracking-wider text-muted-foreground hover:text-accent transition-colors"
 				>

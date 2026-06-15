@@ -18,6 +18,7 @@ import (
 	"github.com/KaikSelhorst/shortener/internal/router"
 	"github.com/KaikSelhorst/shortener/internal/service"
 	"github.com/KaikSelhorst/shortener/internal/sse"
+	"github.com/KaikSelhorst/shortener/internal/webhook"
 	"github.com/KaikSelhorst/shortener/migrations"
 )
 
@@ -57,11 +58,13 @@ func main() {
 	userRepository := repository.NewUserRepository(db.Pool)
 	refreshTokenRepository := repository.NewRefreshTokenRepository(db.Pool)
 	apiKeyRepository := repository.NewAPIKeyRepository(db.Pool)
+	webhookRepository := repository.NewWebhookRepository(db.Pool)
 
 	hub := sse.NewHub()
 
 	tracker := service.NewTrackerService(clickRepository, logger)
 	authService := service.NewAuthService(cfg.JWTSecret)
+	webhookService := service.NewWebhookService(webhookRepository, []byte(cfg.WebhookSecretKey))
 
 	shortcodeService, err := service.NewShortcodeService()
 	if err != nil {
@@ -74,9 +77,10 @@ func main() {
 	defer analyticsCache.Close()
 
 	healthHandler := handler.NewHealthHandler()
-	redirectHandler := handler.NewRedirectHandler(linkRepository, tracker, linkCache, analyticsCache, hub, cfg.IPHashSecret)
+	redirectHandler := handler.NewRedirectHandler(linkRepository, tracker, webhookService, linkCache, analyticsCache, hub, cfg.IPHashSecret)
 	projectHandler := handler.NewProjectHandler(projectRepository, hub)
-	linkHandler := handler.NewLinkHandler(linkRepository, projectRepository, shortcodeService, linkCache, cfg.BaseURL, cfg.CursorSecret)
+	linkHandler := handler.NewLinkHandler(linkRepository, projectRepository, shortcodeService, webhookService, linkCache, cfg.BaseURL, cfg.CursorSecret)
+	webhookHandler := handler.NewWebhookHandler(webhookService, webhookRepository, projectRepository)
 	authHandler := handler.NewAuthHandler(userRepository, refreshTokenRepository, authService)
 	apiKeyHandler := handler.NewAPIKeyHandler(apiKeyRepository, projectRepository, authService)
 	totpHandler := handler.NewTOTPHandler(userRepository, refreshTokenRepository, authService)
@@ -93,7 +97,10 @@ func main() {
 		TOTPHandler:      totpHandler,
 		AnalyticsHandler: analyticsHandler,
 		SSEHandler:       sseHandler,
+		WebhookHandler:   webhookHandler,
 	}
+
+	go webhook.Start(ctx, webhookRepository, webhookService, &http.Client{Timeout: 10 * time.Second}, logger)
 
 	r := router.New(cfg, handlers, authService, apiKeyRepository)
 
