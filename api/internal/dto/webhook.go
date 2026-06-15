@@ -62,3 +62,9 @@ type WebhookDeliveryResponse struct {
 	NextRetryAt    time.Time `json:"next_retry_at"`
 	CreatedAt      time.Time `json:"created_at"`
 }
+
+type ListDeliveriesResponse struct {
+	Data    []WebhookDeliveryResponse `json:"data"`
+	HasMore bool                      `json:"has_more"`
+	Page    int                       `json:"page"`
+}

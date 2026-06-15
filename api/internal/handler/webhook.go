@@ -192,28 +192,14 @@ func (h *WebhookHandler) ListDeliveries(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	idStr := chi.URLParam(r, "id")
-	webhookID, err := strconv.ParseInt(idStr, 10, 64)
+	webhookID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "invalid id")
 		return
 	}
 
-	// Verify the webhook belongs to this project before listing deliveries.
-	webhooks, err := h.webhookRepository.List(r.Context(), project.ID)
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to verify webhook")
-		return
-	}
-	found := false
-	for _, wh := range webhooks {
-		if wh.ID == webhookID {
-			found = true
-			break
-		}
-	}
-	if !found {
-		writeError(w, http.StatusNotFound, "webhook not found")
+	if _, err := h.webhookRepository.GetByID(r.Context(), webhookID, project.ID); err != nil {
+		repoError(w, err, "webhook not found")
 		return
 	}
 
@@ -221,11 +207,21 @@ func (h *WebhookHandler) ListDeliveries(w http.ResponseWriter, r *http.Request) 
 	if limit < 1 || limit > 100 {
 		limit = 20
 	}
+	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+	if page < 1 {
+		page = 1
+	}
+	offset := (page - 1) * limit
 
-	deliveries, err := h.webhookRepository.ListDeliveries(r.Context(), webhookID, limit)
+	deliveries, err := h.webhookRepository.ListDeliveries(r.Context(), webhookID, limit+1, offset)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to list deliveries")
 		return
+	}
+
+	hasMore := len(deliveries) > limit
+	if hasMore {
+		deliveries = deliveries[:limit]
 	}
 
 	data := make([]dto.WebhookDeliveryResponse, len(deliveries))
@@ -233,5 +229,9 @@ func (h *WebhookHandler) ListDeliveries(w http.ResponseWriter, r *http.Request) 
 		data[i] = h.toDeliveryResponse(d)
 	}
 
-	writeJSON(w, http.StatusOK, data)
+	writeJSON(w, http.StatusOK, dto.ListDeliveriesResponse{
+		Data:    data,
+		HasMore: hasMore,
+		Page:    page,
+	})
 }

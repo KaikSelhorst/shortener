@@ -14,10 +14,11 @@ import (
 type WebhookRepo interface {
 	Create(ctx context.Context, w *model.Webhook) error
 	List(ctx context.Context, projectID int64) ([]*model.Webhook, error)
+	GetByID(ctx context.Context, id int64, projectID int64) (*model.Webhook, error)
 	Delete(ctx context.Context, id int64, projectID int64) error
 	ListByProjectAndEvent(ctx context.Context, projectID int64, event string) ([]*model.Webhook, error)
 	CreateDelivery(ctx context.Context, d *model.WebhookDelivery) error
-	ListDeliveries(ctx context.Context, webhookID int64, limit int) ([]*model.WebhookDelivery, error)
+	ListDeliveries(ctx context.Context, webhookID int64, limit int, offset int) ([]*model.WebhookDelivery, error)
 	ClaimPendingDeliveries(ctx context.Context, limit int) ([]*PendingDelivery, error)
 	UpdateDeliveryStatus(ctx context.Context, id string, status string, responseStatus *int, nextRetryAt *time.Time) error
 }
@@ -86,6 +87,22 @@ func (r *WebhookRepository) Delete(ctx context.Context, id int64, projectID int6
 	return nil
 }
 
+func (r *WebhookRepository) GetByID(ctx context.Context, id int64, projectID int64) (*model.Webhook, error) {
+	var w model.Webhook
+	err := r.db.QueryRow(ctx,
+		`SELECT id, project_id, url, events, enabled, created_at
+		 FROM webhooks WHERE id = $1 AND project_id = $2`,
+		id, projectID,
+	).Scan(&w.ID, &w.ProjectID, &w.URL, &w.Events, &w.Enabled, &w.CreatedAt)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	return &w, nil
+}
+
 func (r *WebhookRepository) ListByProjectAndEvent(ctx context.Context, projectID int64, event string) ([]*model.Webhook, error) {
 	rows, err := r.db.Query(ctx,
 		`SELECT id, project_id, url, secret, events, enabled, created_at
@@ -118,14 +135,14 @@ func (r *WebhookRepository) CreateDelivery(ctx context.Context, d *model.Webhook
 	).Scan(&d.ID, &d.CreatedAt, &d.NextRetryAt)
 }
 
-func (r *WebhookRepository) ListDeliveries(ctx context.Context, webhookID int64, limit int) ([]*model.WebhookDelivery, error) {
+func (r *WebhookRepository) ListDeliveries(ctx context.Context, webhookID int64, limit int, offset int) ([]*model.WebhookDelivery, error) {
 	rows, err := r.db.Query(ctx,
 		`SELECT id, webhook_id, event, payload, status, attempts, response_status, next_retry_at, created_at
 		 FROM webhook_deliveries
 		 WHERE webhook_id = $1
 		 ORDER BY created_at DESC
-		 LIMIT $2`,
-		webhookID, limit,
+		 LIMIT $2 OFFSET $3`,
+		webhookID, limit, offset,
 	)
 	if err != nil {
 		return nil, err

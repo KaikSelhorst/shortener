@@ -172,6 +172,12 @@ export interface WebhookDelivery {
 	created_at: string
 }
 
+export interface WebhookDeliveriesResponse {
+	data: WebhookDelivery[]
+	has_more: boolean
+	page: number
+}
+
 export interface ProjectAnalytics {
 	total_clicks: number
 	unique_clicks: number

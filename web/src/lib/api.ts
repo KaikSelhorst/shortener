@@ -13,7 +13,7 @@ import type {
 	Webhook,
 	CreateWebhookRequest,
 	CreateWebhookResponse,
-	WebhookDelivery,
+	WebhookDeliveriesResponse,
 	LinkAnalytics,
 	ProjectAnalytics,
 } from './types'
@@ -108,8 +108,8 @@ export function createApi(fetch: Fetch, token?: string) {
 			create: (slug: string, data: CreateWebhookRequest) =>
 				req<CreateWebhookResponse>('POST', `/projects/${slug}/webhooks`, data),
 			delete: (slug: string, id: number) => req<void>('DELETE', `/projects/${slug}/webhooks/${id}`),
-			deliveries: (slug: string, webhookId: number, limit = 20) =>
-				req<WebhookDelivery[]>('GET', `/projects/${slug}/webhooks/${webhookId}/deliveries?limit=${limit}`),
+			deliveries: (slug: string, webhookId: number, page = 1, limit = 20) =>
+				req<WebhookDeliveriesResponse>('GET', `/projects/${slug}/webhooks/${webhookId}/deliveries?limit=${limit}&page=${page}`),
 		},
 		analytics: {
 			project: (slug: string, period?: string) =>

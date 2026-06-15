@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { PageData, ActionData } from './$types'
 	import type { SubmitFunction } from '@sveltejs/kit'
-	import type { WebhookDelivery, CreateWebhookResponse } from '$lib/types'
+	import type { CreateWebhookResponse } from '$lib/types'
 	import { enhance } from '$app/forms'
 	import {
 		Badge,
@@ -49,28 +49,6 @@
 
 	$effect(() => {
 		if (!confirmOpen) pendingDeleteId = null
-	})
-
-	// Deliveries dialog
-	let deliveriesOpen = $state(false)
-	let deliveries = $state<WebhookDelivery[]>([])
-	let deliveriesLoading = $state(false)
-
-	async function openDeliveries(webhookId: number) {
-		deliveriesOpen = true
-		deliveriesLoading = true
-		try {
-			const res = await fetch(`/api/${data.slug}/webhooks/${webhookId}/deliveries`)
-			deliveries = res.ok ? await res.json() : []
-		} catch {
-			deliveries = []
-		} finally {
-			deliveriesLoading = false
-		}
-	}
-
-	$effect(() => {
-		if (!deliveriesOpen) deliveries = []
 	})
 
 	const ALL_EVENTS = ['link.clicked', 'link.created', 'link.updated', 'link.deleted']
@@ -145,12 +123,7 @@
 						</TableCell>
 						<TableCell class="text-right">
 							<div class="flex items-center justify-end gap-2">
-								<Button
-									variant="ghost"
-									size="sm"
-									aria-label="View deliveries for {wh.url}"
-									onclick={() => openDeliveries(wh.id)}
-								>
+								<Button variant="ghost" size="sm" href="/{data.slug}/webhooks/{wh.id}">
 									deliveries
 								</Button>
 								<Button
@@ -246,46 +219,5 @@
 			<input type="hidden" name="id" value={pendingDeleteId} />
 			<Button type="submit" variant="destructive">confirm delete</Button>
 		</form>
-	{/snippet}
-</Dialog>
-
-<!-- Deliveries dialog -->
-<Dialog bind:open={deliveriesOpen} title="Delivery log" size="md">
-	{#snippet children()}
-		{#if deliveriesLoading}
-			<p class="font-mono text-xs text-muted-foreground py-4 text-center" aria-live="polite">loading...</p>
-		{:else if deliveries.length === 0}
-			<p class="font-mono text-xs text-muted-foreground py-4 text-center">-- no deliveries yet --</p>
-		{:else}
-			<div class="flex flex-col divide-y divide-border">
-				{#each deliveries as d (d.id)}
-					<div class="flex items-center justify-between gap-3 py-2.5">
-						<div class="flex flex-col gap-0.5 min-w-0">
-							<span class="font-mono text-xs">{d.event}</span>
-							<span class="font-mono text-[10px] text-muted-foreground">
-								{new Date(d.created_at).toLocaleString()} · attempt {d.attempts}
-							</span>
-						</div>
-						<div class="flex items-center gap-2 shrink-0">
-							{#if d.response_status != null}
-								<span class="font-mono text-[10px] text-muted-foreground">{d.response_status}</span>
-							{/if}
-							{#if d.status === 'delivered'}
-								<Badge variant="success">delivered</Badge>
-							{:else if d.status === 'failed'}
-								<Badge variant="error">failed</Badge>
-							{:else if d.status === 'processing'}
-								<Badge variant="solid">processing</Badge>
-							{:else}
-								<Badge>pending</Badge>
-							{/if}
-						</div>
-					</div>
-				{/each}
-			</div>
-		{/if}
-	{/snippet}
-	{#snippet footer()}
-		<Button variant="outline" onclick={() => (deliveriesOpen = false)}>close</Button>
 	{/snippet}
 </Dialog>
