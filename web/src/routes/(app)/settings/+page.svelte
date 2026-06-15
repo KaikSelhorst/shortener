@@ -125,7 +125,7 @@
 	})
 </script>
 
-<div class="mx-auto max-w-4xl space-y-6">
+<div class="mx-auto max-w-6xl space-y-6">
 	<!-- API Keys -->
 	<div class="tui-panel">
 		<div class="tui-panel-header justify-between">

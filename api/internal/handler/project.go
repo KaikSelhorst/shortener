@@ -10,6 +10,7 @@ import (
 	"github.com/KaikSelhorst/shortener/internal/model"
 	"github.com/KaikSelhorst/shortener/internal/repository"
 	"github.com/KaikSelhorst/shortener/internal/service"
+	"github.com/KaikSelhorst/shortener/internal/sse"
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgerrcode"
@@ -17,10 +18,11 @@ import (
 
 type ProjectHandler struct {
 	projectRepository repository.ProjectRepo
+	hub               *sse.Hub
 }
 
-func NewProjectHandler(projectRepository repository.ProjectRepo) *ProjectHandler {
-	return &ProjectHandler{projectRepository: projectRepository}
+func NewProjectHandler(projectRepository repository.ProjectRepo, hub *sse.Hub) *ProjectHandler {
+	return &ProjectHandler{projectRepository: projectRepository, hub: hub}
 }
 
 func toProjectResponse(p *model.Project) dto.ProjectResponse {
@@ -85,6 +87,7 @@ func (h *ProjectHandler) CreateProject(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	h.hub.InvalidateUserBootstrap(userID)
 	writeJSON(w, http.StatusCreated, toProjectResponse(newProject))
 }
 
@@ -165,5 +168,6 @@ func (h *ProjectHandler) DeleteProject(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	h.hub.UnregisterProject(project.ID)
 	w.WriteHeader(http.StatusNoContent)
 }
