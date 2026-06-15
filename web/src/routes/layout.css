@@ -115,6 +115,11 @@
 
   ::selection { background: rgba(167, 139, 250, 0.18); color: var(--foreground); }
 
+  input:not([type='checkbox']) {
+    box-shadow: 0 0 0 1000px var(--background) inset;
+    -webkit-text-fill-color: var(--foreground);
+  }
+
   /* native select TUI style */
   select {
     appearance: none;
@@ -136,9 +141,39 @@
 
   /* checkbox TUI style */
   input[type='checkbox'] {
-    accent-color: var(--primary);
+    appearance: none;
+    -webkit-appearance: none;
     width: 13px;
     height: 13px;
+    border: 1px solid var(--border);
+    background: transparent;
+    cursor: pointer;
+    position: relative;
+    flex-shrink: 0;
+    transition: border-color 0.15s, background-color 0.15s;
+  }
+
+  input[type='checkbox']:checked {
+    border-color: var(--primary);
+    background-color: color-mix(in srgb, var(--primary) 15%, transparent);
+  }
+
+  input[type='checkbox']:checked::after {
+    content: '';
+    position: absolute;
+    inset: 2px;
+    background-color: var(--primary);
+    clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+  }
+
+  input[type='checkbox']:focus-visible {
+    outline: 1px solid var(--ring);
+    outline-offset: 2px;
+  }
+
+  input[type='checkbox']:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
   }
 }
 

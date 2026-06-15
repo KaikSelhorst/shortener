@@ -6,6 +6,7 @@
 	import {
 		Badge,
 		Button,
+		CopyInput,
 		Input,
 		Dialog,
 		QRCode,
@@ -25,15 +26,6 @@
 	let totpSetupOpen = $state(false)
 	let totpDisableOpen = $state(false)
 	let totpError = $state<string | null>(null)
-	let totpSecretCopied = $state(false)
-
-	async function copyTotpSecret() {
-		if (!totpSetupData) return
-		await navigator.clipboard.writeText(totpSetupData.secret)
-		totpSecretCopied = true
-		setTimeout(() => (totpSecretCopied = false), 2000)
-	}
-
 	$effect(() => {
 		if (form && 'totpSetup' in form && form.totpSetup) {
 			totpSetupData = form.totpSetup as TOTPSetupResponse
@@ -74,23 +66,21 @@
 		{ value: 'projects:read', label: 'Projects — Read' },
 		{ value: 'projects:update', label: 'Projects — Update' },
 		{ value: 'projects:delete', label: 'Projects — Delete' },
+		{ value: 'webhooks:read', label: 'Webhooks — Read' },
+		{ value: 'webhooks:create', label: 'Webhooks — Create' },
+		{ value: 'webhooks:delete', label: 'Webhooks — Delete' },
 	]
 
 	let createOpen = $state(false)
 	let createError = $state<string | null>(null)
 	let createdKey = $state<CreateApiKeyResponse | null>(null)
 	let tokenOpen = $state(false)
-	let tokenCopied = $state(false)
-
 	$effect(() => {
 		if (!createOpen) createError = null
 	})
 
 	$effect(() => {
-		if (!tokenOpen) {
-			createdKey = null
-			tokenCopied = false
-		}
+		if (!tokenOpen) createdKey = null
 	})
 
 	const handleCreate: SubmitFunction = () => {
@@ -109,12 +99,6 @@
 				await update()
 			}
 		}
-	}
-
-	async function copyToken() {
-		if (!createdKey) return
-		await navigator.clipboard.writeText(createdKey.token)
-		tokenCopied = true
 	}
 
 	let pendingDeleteId = $state<number | null>(null)
@@ -261,13 +245,8 @@
 					>
 						[expand] can't scan? enter key manually
 					</summary>
-					<div class="mt-2 flex items-center gap-2 border border-border bg-card px-3 py-2">
-						<code class="flex-1 break-all text-[10px] text-foreground">
-							{totpSetupData.secret}
-						</code>
-						<Button variant="outline" size="sm" onclick={copyTotpSecret}>
-							{totpSecretCopied ? 'copied!' : 'copy'}
-						</Button>
+					<div class="mt-2">
+						<CopyInput value={totpSetupData.secret} />
 					</div>
 				</details>
 
@@ -394,12 +373,7 @@
 	description="This key will only be shown once. Copy it now and store it somewhere safe."
 >
 	{#snippet children()}
-		<div class="flex items-center gap-2 border border-border bg-card px-3 py-2">
-			<code class="flex-1 break-all font-mono text-[10px] text-foreground">{createdKey?.token}</code>
-			<Button variant="outline" size="sm" onclick={copyToken}>
-				{tokenCopied ? 'copied!' : 'copy'}
-			</Button>
-		</div>
+		<CopyInput value={createdKey?.token ?? ''} />
 	{/snippet}
 	{#snippet footer()}
 		<Button onclick={() => (tokenOpen = false)}>done</Button>
