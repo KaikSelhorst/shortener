@@ -3,6 +3,8 @@
 package repository_test
 
 import (
+	"fmt"
+	"sync/atomic"
 	"testing"
 
 	"github.com/KaikSelhorst/shortener/internal/model"
@@ -10,13 +12,16 @@ import (
 	"github.com/KaikSelhorst/shortener/internal/service"
 )
 
+var projectSeq atomic.Int64
+
 func newLinkRepo() *repository.LinkRepository {
 	return repository.NewLinkRepository(testDB)
 }
 
 func makeProject(t *testing.T, userID int64) *model.Project {
 	t.Helper()
-	p := &model.Project{UserID: userID, Name: t.Name(), Slug: t.Name() + "-slug"}
+	slug := fmt.Sprintf("%s-%d", t.Name(), projectSeq.Add(1))
+	p := &model.Project{UserID: userID, Name: slug, Slug: slug}
 	if err := newProjectRepo().Create(t.Context(), p); err != nil {
 		t.Fatalf("makeProject: %v", err)
 	}
