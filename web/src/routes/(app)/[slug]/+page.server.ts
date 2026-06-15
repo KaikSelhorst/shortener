@@ -1,18 +1,16 @@
-import { fail, error } from '@sveltejs/kit'
+import { fail } from '@sveltejs/kit'
 import type { Actions, PageServerLoad } from './$types'
-import { createApi, ApiError } from '$lib/api'
+import { createApi } from '$lib/api'
+import { loadOrError } from '$lib/server/load'
 
 export const load: PageServerLoad = async ({ params, cookies, fetch, url }) => {
 	const token = cookies.get('access_token')
 	const cursor = url.searchParams.get('cursor') ?? undefined
-
-	try {
-		const links = await createApi(fetch, token).links.list(params.slug, cursor)
-		return { slug: params.slug, links }
-	} catch (err) {
-		if (err instanceof ApiError) error(err.status, err.message)
-		error(500, 'Failed to load links')
-	}
+	const links = await loadOrError(
+		() => createApi(fetch, token).links.list(params.slug, cursor),
+		'Failed to load links',
+	)
+	return { slug: params.slug, links }
 }
 
 export const actions: Actions = {

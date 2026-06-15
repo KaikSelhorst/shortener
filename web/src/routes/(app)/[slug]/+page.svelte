@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { onMount } from 'svelte'
 	import type { PageData, ActionData } from './$types'
 	import type { SubmitFunction } from '@sveltejs/kit'
 	import { enhance } from '$app/forms'
+	import { useSSE } from '$lib/sse.svelte'
 	import {
 		Badge,
 		Button,
@@ -46,7 +46,6 @@
 	})
 
 	let sessionClicks = $state<Record<string, number>>({})
-	let connected = $state(false)
 
 	const linkClicks = $derived(
 		Object.fromEntries(
@@ -54,15 +53,9 @@
 		),
 	)
 
-	onMount(() => {
-		const es = new EventSource(`/api/${data.slug}/stream`)
-		es.onopen = () => (connected = true)
-		es.onmessage = (e) => {
-			const evt = JSON.parse(e.data) as { short_code: string }
-			sessionClicks[evt.short_code] = (sessionClicks[evt.short_code] ?? 0) + 1
-		}
-		es.onerror = () => (connected = false)
-		return () => es.close()
+	const sse = useSSE(() => `/api/${data.slug}/stream`, (e) => {
+		const evt = JSON.parse(e.data) as { short_code: string }
+		sessionClicks[evt.short_code] = (sessionClicks[evt.short_code] ?? 0) + 1
 	})
 </script>
 
@@ -80,7 +73,7 @@
 				<span>▌ {data.slug}</span>
 			</div>
 			<div class="flex items-center gap-3">
-				{#if connected}
+				{#if sse.connected}
 					<span class="font-mono text-[10px] uppercase tracking-wider text-tui-green">● live</span>
 				{/if}
 				<a

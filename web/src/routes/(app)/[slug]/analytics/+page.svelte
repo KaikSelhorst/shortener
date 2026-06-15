@@ -1,8 +1,9 @@
 <script lang="ts">
-	import { onMount, untrack } from 'svelte'
+	import { untrack } from 'svelte'
 	import type { PageData } from './$types'
 	import { LineChart, StatBox, PeriodSelector, AnalyticsBreakdowns } from '$lib'
 	import { deviceItems, referrerItems, browserItems } from '$lib/analytics'
+	import { useSSE } from '$lib/sse.svelte'
 
 	let { data }: { data: PageData } = $props()
 
@@ -11,7 +12,6 @@
 	const browsers = $derived(browserItems(data.analytics.browsers))
 
 	let liveClicks = $state(untrack(() => data.analytics.total_clicks))
-	let connected = $state(false)
 
 	$effect(() => {
 		liveClicks = data.analytics.total_clicks
@@ -23,13 +23,7 @@
 			: 0,
 	)
 
-	onMount(() => {
-		const es = new EventSource(`/api/${data.slug}/stream`)
-		es.onopen = () => (connected = true)
-		es.onmessage = () => { liveClicks++ }
-		es.onerror = () => { connected = false }
-		return () => es.close()
-	})
+	const sse = useSSE(() => `/api/${data.slug}/stream`, () => { liveClicks++ })
 </script>
 
 <div class="mx-auto max-w-6xl space-y-4">
@@ -53,7 +47,7 @@
 				<span>▌ analytics</span>
 			</div>
 			<div class="flex items-center gap-3">
-				{#if connected}
+				{#if sse.connected}
 					<span class="font-mono text-[10px] uppercase tracking-wider text-tui-green">● live</span>
 				{/if}
 				<PeriodSelector current={data.period} />

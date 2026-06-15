@@ -1,21 +1,16 @@
-import { fail, error } from '@sveltejs/kit'
+import { fail } from '@sveltejs/kit'
 import type { Actions, PageServerLoad } from './$types'
 import { createApi, ApiError } from '$lib/api'
+import { loadOrError } from '$lib/server/load'
 
 export const load: PageServerLoad = async ({ cookies, fetch }) => {
 	const token = cookies.get('access_token')
 	const api = createApi(fetch, token)
-	try {
-		const [apiKeys, projects, me] = await Promise.all([
-			api.apiKeys.list(),
-			api.projects.list(),
-			api.auth.me(),
-		])
-		return { apiKeys, projects, me }
-	} catch (err) {
-		if (err instanceof ApiError) error(err.status, err.message)
-		error(500, 'Failed to load settings')
-	}
+	const [apiKeys, projects, me] = await loadOrError(
+		() => Promise.all([api.apiKeys.list(), api.projects.list(), api.auth.me()]),
+		'Failed to load settings',
+	)
+	return { apiKeys, projects, me }
 }
 
 export const actions: Actions = {
@@ -54,8 +49,6 @@ export const actions: Actions = {
 		}
 	},
 
-	// Initiates TOTP setup: generates a secret and returns the otpauth:// URI.
-	// Returns 409 (propagated from the backend) if TOTP is already enabled.
 	totpSetup: async ({ cookies, fetch }) => {
 		try {
 			const token = cookies.get('access_token')
@@ -67,7 +60,6 @@ export const actions: Actions = {
 		}
 	},
 
-	// Confirms TOTP setup with a valid authenticator code, activating TOTP.
 	totpConfirm: async ({ request, cookies, fetch }) => {
 		const data = await request.formData()
 		const code = data.get('code') as string
@@ -83,7 +75,6 @@ export const actions: Actions = {
 		}
 	},
 
-	// Disables TOTP by validating the current authenticator code.
 	totpDisable: async ({ request, cookies, fetch }) => {
 		const data = await request.formData()
 		const code = data.get('code') as string

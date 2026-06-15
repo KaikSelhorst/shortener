@@ -1,5 +1,5 @@
-import { env } from '$env/dynamic/private'
 import type { Handle } from '@sveltejs/kit'
+import { API_URL } from '$lib/server/config'
 import { setAuthCookies, deleteAuthCookies } from '$lib/server/cookies'
 
 function decodeJwtPayload(token: string): { user_id: number; exp: number } | null {
@@ -26,8 +26,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 	if (!refreshToken) return resolve(event)
 
 	try {
-		const base = env.API_URL ?? 'http://localhost:8080'
-		const res = await fetch(`${base}/auth/refresh`, {
+		const res = await fetch(`${API_URL}/auth/refresh`, {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({ refresh_token: refreshToken }),

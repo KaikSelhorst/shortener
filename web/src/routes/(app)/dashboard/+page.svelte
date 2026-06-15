@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { onMount } from 'svelte'
 	import type { PageData, ActionData } from './$types'
 	import { Button, Input, Dialog } from '$lib'
+	import { useSSE } from '$lib/sse.svelte'
 
 	let { data, form }: { data: PageData; form: ActionData } = $props()
 
@@ -13,17 +13,10 @@
 	})
 
 	let sessionClicks = $state<Record<number, number>>({})
-	let connected = $state(false)
 
-	onMount(() => {
-		const es = new EventSource('/api/stream')
-		es.onopen = () => (connected = true)
-		es.onmessage = (e) => {
-			const evt = JSON.parse(e.data) as { project_id: number }
-			sessionClicks[evt.project_id] = (sessionClicks[evt.project_id] ?? 0) + 1
-		}
-		es.onerror = () => (connected = false)
-		return () => es.close()
+	const sse = useSSE(() => '/api/stream', (e) => {
+		const evt = JSON.parse(e.data) as { project_id: number }
+		sessionClicks[evt.project_id] = (sessionClicks[evt.project_id] ?? 0) + 1
 	})
 </script>
 
@@ -32,7 +25,7 @@
 		<div class="tui-panel-header justify-between">
 			<span>▌ projects</span>
 			<div class="flex items-center gap-3">
-				{#if connected}
+				{#if sse.connected}
 					<span class="font-mono text-[10px] uppercase tracking-wider text-tui-green">● live</span>
 				{/if}
 				<span class="text-muted-foreground">{data.projects.length} total</span>

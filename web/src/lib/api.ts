@@ -1,4 +1,4 @@
-import { env } from '$env/dynamic/private'
+import { API_URL as BASE } from '$lib/server/config'
 import type {
 	AuthState,
 	TOTPSetupResponse,
@@ -14,7 +14,6 @@ import type {
 	ProjectAnalytics,
 } from './types'
 
-const BASE = env.API_URL ?? 'http://localhost:8080'
 
 type Fetch = typeof globalThis.fetch
 
