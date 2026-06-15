@@ -38,7 +38,7 @@ func (r *CreateWebhookRequest) Validate() error {
 }
 
 type WebhookResponse struct {
-	ID        int64     `json:"id"`
+	ID        string    `json:"id"`
 	ProjectID int64     `json:"project_id"`
 	URL       string    `json:"url"`
 	Events    []string  `json:"events"`
@@ -54,7 +54,7 @@ type CreateWebhookResponse struct {
 
 type WebhookDeliveryResponse struct {
 	ID             string    `json:"id"`
-	WebhookID      int64     `json:"webhook_id"`
+	WebhookID      string    `json:"webhook_id"`
 	Event          string    `json:"event"`
 	Status         string    `json:"status"`
 	Attempts       int       `json:"attempts"`

@@ -144,7 +144,7 @@ export interface LinkAnalytics {
 }
 
 export interface Webhook {
-	id: number
+	id: string
 	project_id: number
 	url: string
 	events: string[]
@@ -163,7 +163,7 @@ export interface CreateWebhookResponse extends Webhook {
 
 export interface WebhookDelivery {
 	id: string
-	webhook_id: number
+	webhook_id: string
 	event: string
 	status: string
 	attempts: number

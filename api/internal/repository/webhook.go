@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/KaikSelhorst/shortener/internal/model"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -14,23 +15,23 @@ import (
 type WebhookRepo interface {
 	Create(ctx context.Context, w *model.Webhook) error
 	List(ctx context.Context, projectID int64) ([]*model.Webhook, error)
-	GetByID(ctx context.Context, id int64, projectID int64) (*model.Webhook, error)
-	Delete(ctx context.Context, id int64, projectID int64) error
+	GetByID(ctx context.Context, id string, projectID int64) (*model.Webhook, error)
+	Delete(ctx context.Context, id string, projectID int64) error
 	ListByProjectAndEvent(ctx context.Context, projectID int64, event string) ([]*model.Webhook, error)
 	CreateDelivery(ctx context.Context, d *model.WebhookDelivery) error
-	ListDeliveries(ctx context.Context, webhookID int64, limit int, offset int) ([]*model.WebhookDelivery, error)
+	ListDeliveries(ctx context.Context, webhookID string, limit int, offset int) ([]*model.WebhookDelivery, error)
 	ClaimPendingDeliveries(ctx context.Context, limit int) ([]*PendingDelivery, error)
 	UpdateDeliveryStatus(ctx context.Context, id string, status string, responseStatus *int, nextRetryAt *time.Time) error
 }
 
 // PendingDelivery carries everything the worker needs without an extra fetch.
 type PendingDelivery struct {
-	ID             string
-	WebhookID      int64
-	Event          string
-	Payload        json.RawMessage
-	Attempts       int
-	TargetURL      string
+	ID              string
+	WebhookID       string
+	Event           string
+	Payload         json.RawMessage
+	Attempts        int
+	TargetURL       string
 	EncryptedSecret string
 }
 
@@ -43,12 +44,17 @@ func NewWebhookRepository(db *pgxpool.Pool) *WebhookRepository {
 }
 
 func (r *WebhookRepository) Create(ctx context.Context, w *model.Webhook) error {
+	id, err := uuid.NewV7()
+	if err != nil {
+		return err
+	}
+	w.ID = id.String()
 	return r.db.QueryRow(ctx,
-		`INSERT INTO webhooks (project_id, url, secret, events, enabled)
-		 VALUES ($1, $2, $3, $4, $5)
-		 RETURNING id, created_at`,
-		w.ProjectID, w.URL, w.Secret, w.Events, w.Enabled,
-	).Scan(&w.ID, &w.CreatedAt)
+		`INSERT INTO webhooks (id, project_id, url, secret, events, enabled)
+		 VALUES ($1, $2, $3, $4, $5, $6)
+		 RETURNING created_at`,
+		w.ID, w.ProjectID, w.URL, w.Secret, w.Events, w.Enabled,
+	).Scan(&w.CreatedAt)
 }
 
 func (r *WebhookRepository) List(ctx context.Context, projectID int64) ([]*model.Webhook, error) {
@@ -73,7 +79,7 @@ func (r *WebhookRepository) List(ctx context.Context, projectID int64) ([]*model
 	return webhooks, rows.Err()
 }
 
-func (r *WebhookRepository) Delete(ctx context.Context, id int64, projectID int64) error {
+func (r *WebhookRepository) Delete(ctx context.Context, id string, projectID int64) error {
 	result, err := r.db.Exec(ctx,
 		`DELETE FROM webhooks WHERE id = $1 AND project_id = $2`,
 		id, projectID,
@@ -87,7 +93,7 @@ func (r *WebhookRepository) Delete(ctx context.Context, id int64, projectID int6
 	return nil
 }
 
-func (r *WebhookRepository) GetByID(ctx context.Context, id int64, projectID int64) (*model.Webhook, error) {
+func (r *WebhookRepository) GetByID(ctx context.Context, id string, projectID int64) (*model.Webhook, error) {
 	var w model.Webhook
 	err := r.db.QueryRow(ctx,
 		`SELECT id, project_id, url, events, enabled, created_at
@@ -135,7 +141,7 @@ func (r *WebhookRepository) CreateDelivery(ctx context.Context, d *model.Webhook
 	).Scan(&d.ID, &d.CreatedAt, &d.NextRetryAt)
 }
 
-func (r *WebhookRepository) ListDeliveries(ctx context.Context, webhookID int64, limit int, offset int) ([]*model.WebhookDelivery, error) {
+func (r *WebhookRepository) ListDeliveries(ctx context.Context, webhookID string, limit int, offset int) ([]*model.WebhookDelivery, error) {
 	rows, err := r.db.Query(ctx,
 		`SELECT id, webhook_id, event, payload, status, attempts, response_status, next_retry_at, created_at
 		 FROM webhook_deliveries

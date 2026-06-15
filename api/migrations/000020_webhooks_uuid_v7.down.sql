@@ -1,0 +1,2 @@
+-- Not reversible: UUID PKs cannot be mapped back to the original BIGINT identities.
+-- To revert, restore from a backup taken before migration 000020.

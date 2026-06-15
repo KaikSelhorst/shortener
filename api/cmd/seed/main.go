@@ -239,11 +239,11 @@ var webhookSeeds = []struct {
 	{"social-media", "https://hooks.example.com/social", []string{"link.clicked"}},
 }
 
-func ensureWebhooks(ctx context.Context, pool *pgxpool.Pool, projectIDs map[string]int64, svc *service.WebhookService) map[string]int64 {
-	ids := make(map[string]int64, len(webhookSeeds))
+func ensureWebhooks(ctx context.Context, pool *pgxpool.Pool, projectIDs map[string]int64, svc *service.WebhookService) map[string]string {
+	ids := make(map[string]string, len(webhookSeeds))
 	for _, w := range webhookSeeds {
 		pid := projectIDs[w.project]
-		var id int64
+		var id string
 		err := pool.QueryRow(ctx,
 			`SELECT id FROM webhooks WHERE project_id = $1 AND url = $2`, pid, w.url,
 		).Scan(&id)
@@ -273,7 +273,7 @@ func ensureWebhooks(ctx context.Context, pool *pgxpool.Pool, projectIDs map[stri
 
 // --- Webhook deliveries --------------------------------------------------
 
-func ensureWebhookDeliveries(ctx context.Context, pool *pgxpool.Pool, webhookIDs map[string]int64) {
+func ensureWebhookDeliveries(ctx context.Context, pool *pgxpool.Pool, webhookIDs map[string]string) {
 	type deliverySeed struct {
 		project        string
 		event          string
@@ -309,7 +309,7 @@ func ensureWebhookDeliveries(ctx context.Context, pool *pgxpool.Pool, webhookIDs
 			`SELECT COUNT(*) FROM webhook_deliveries WHERE webhook_id = $1`, webhookID,
 		).Scan(&count)
 		if count > 0 {
-			fmt.Printf("· deliveries  webhook#%d already present\n", webhookID)
+			fmt.Printf("· deliveries  webhook#%s already present\n", webhookID)
 			continue
 		}
 
@@ -332,7 +332,7 @@ func ensureWebhookDeliveries(ctx context.Context, pool *pgxpool.Pool, webhookIDs
 			}
 			inserted++
 		}
-		fmt.Printf("✓ deliveries  %d inserted for webhook#%d\n", inserted, webhookID)
+		fmt.Printf("✓ deliveries  %d inserted for webhook#%s\n", inserted, webhookID)
 	}
 }
 

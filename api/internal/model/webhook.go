@@ -6,7 +6,7 @@ import (
 )
 
 type Webhook struct {
-	ID        int64     `json:"id"`
+	ID        string    `json:"id"`
 	ProjectID int64     `json:"project_id"`
 	URL       string    `json:"url"`
 	Secret    string    `json:"-"`
@@ -17,7 +17,7 @@ type Webhook struct {
 
 type WebhookDelivery struct {
 	ID             string          `json:"id"`
-	WebhookID      int64           `json:"webhook_id"`
+	WebhookID      string          `json:"webhook_id"`
 	Event          string          `json:"event"`
 	Payload        json.RawMessage `json:"payload"`
 	Status         string          `json:"status"`

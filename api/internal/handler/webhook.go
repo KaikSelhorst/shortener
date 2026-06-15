@@ -11,6 +11,7 @@ import (
 	"github.com/KaikSelhorst/shortener/internal/model"
 	"github.com/KaikSelhorst/shortener/internal/repository"
 	"github.com/KaikSelhorst/shortener/internal/service"
+	"github.com/google/uuid"
 	"github.com/go-chi/chi/v5"
 )
 
@@ -161,9 +162,8 @@ func (h *WebhookHandler) DeleteWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	idStr := chi.URLParam(r, "id")
-	id, err := strconv.ParseInt(idStr, 10, 64)
-	if err != nil {
+	id := chi.URLParam(r, "id")
+	if _, err := uuid.Parse(id); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid id")
 		return
 	}
@@ -192,8 +192,8 @@ func (h *WebhookHandler) ListDeliveries(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	webhookID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
-	if err != nil {
+	webhookID := chi.URLParam(r, "id")
+	if _, err := uuid.Parse(webhookID); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid id")
 		return
 	}

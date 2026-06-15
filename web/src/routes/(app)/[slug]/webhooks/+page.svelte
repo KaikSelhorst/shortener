@@ -44,7 +44,7 @@
 	}
 
 	// Delete dialog
-	let pendingDeleteId = $state<number | null>(null)
+	let pendingDeleteId = $state<string | null>(null)
 	let confirmOpen = $state(false)
 
 	$effect(() => {

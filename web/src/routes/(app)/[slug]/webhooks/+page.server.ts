@@ -35,7 +35,7 @@ export const actions: Actions = {
 
 	delete: async ({ request, params, cookies, fetch }) => {
 		const data = await request.formData()
-		const id = Number(data.get('id'))
+		const id = data.get('id') as string
 
 		try {
 			const token = cookies.get('access_token')
