@@ -8,21 +8,33 @@ import (
 	"github.com/KaikSelhorst/shortener/internal/model"
 	"github.com/KaikSelhorst/shortener/internal/repository"
 	"github.com/KaikSelhorst/shortener/internal/service"
+	"github.com/KaikSelhorst/shortener/internal/sse"
 	"github.com/go-chi/chi/v5"
 )
 
 type RedirectHandler struct {
 	linkRepository repository.LinkRepo
 	tracker        *service.TrackerService
-	cache          *cache.LinkCache
+	linkCache      *cache.LinkCache
+	analyticsCache *cache.AnalyticsCache
+	hub            *sse.Hub
 	ipHashSecret   string
 }
 
-func NewRedirectHandler(linkRepository repository.LinkRepo, tracker *service.TrackerService, cache *cache.LinkCache, ipHashSecret string) *RedirectHandler {
+func NewRedirectHandler(
+	linkRepository repository.LinkRepo,
+	tracker *service.TrackerService,
+	linkCache *cache.LinkCache,
+	analyticsCache *cache.AnalyticsCache,
+	hub *sse.Hub,
+	ipHashSecret string,
+) *RedirectHandler {
 	return &RedirectHandler{
 		linkRepository: linkRepository,
 		tracker:        tracker,
-		cache:          cache,
+		linkCache:      linkCache,
+		analyticsCache: analyticsCache,
+		hub:            hub,
 		ipHashSecret:   ipHashSecret,
 	}
 }
@@ -30,7 +42,7 @@ func NewRedirectHandler(linkRepository repository.LinkRepo, tracker *service.Tra
 func (h *RedirectHandler) HandleRedirect(w http.ResponseWriter, r *http.Request) {
 	code := chi.URLParam(r, "code")
 
-	link, ok := h.cache.Get(code)
+	link, ok := h.linkCache.Get(code)
 	if !ok {
 		var err error
 		link, err = h.linkRepository.GetByCode(r.Context(), code)
@@ -41,7 +53,7 @@ func (h *RedirectHandler) HandleRedirect(w http.ResponseWriter, r *http.Request)
 		// Only cache non-expired links; caching an expired link wastes memory
 		// since it will always result in a 410 on every subsequent request.
 		if !link.IsExpired() {
-			h.cache.Set(link)
+			h.linkCache.Set(link)
 		}
 	}
 
@@ -74,4 +86,7 @@ func (h *RedirectHandler) HandleRedirect(w http.ResponseWriter, r *http.Request)
 	}
 
 	h.tracker.Record(click)
+	h.hub.Notify(link.ProjectID, link.ID, link.ShortCode)
+	h.analyticsCache.InvalidateProject(link.ProjectID)
+	h.analyticsCache.InvalidateLink(link.ID)
 }

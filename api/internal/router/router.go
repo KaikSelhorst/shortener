@@ -23,6 +23,7 @@ type Handlers struct {
 	APIKeyHandler    *handler.APIKeyHandler
 	TOTPHandler      *handler.TOTPHandler
 	AnalyticsHandler *handler.AnalyticsHandler
+	SSEHandler       *handler.SSEHandler
 }
 
 type Router struct {
@@ -90,6 +91,11 @@ func New(cfg *config.Config, handlers *Handlers, authService *service.AuthServic
 		// Analytics — JWT only (API key check is enforced inside the handler).
 		r.Get("/{slug}/analytics", handlers.AnalyticsHandler.GetProjectAnalytics)
 		r.Get("/{slug}/links/{code}/analytics", handlers.AnalyticsHandler.GetLinkAnalytics)
+
+		// SSE streams — JWT only.
+		r.Get("/stream", handlers.SSEHandler.HandleUserStream)
+		r.Get("/{slug}/stream", handlers.SSEHandler.HandleProjectStream)
+		r.Get("/{slug}/links/{code}/stream", handlers.SSEHandler.HandleLinkStream)
 	})
 
 	server := &http.Server{

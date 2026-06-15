@@ -1,6 +1,7 @@
 package cache
 
 import (
+	"fmt"
 	"sync"
 	"time"
 
@@ -58,6 +59,26 @@ func (c *AnalyticsCache) GetProject(key string) (*model.ProjectAnalytics, bool) 
 func (c *AnalyticsCache) SetProject(key string, v *model.ProjectAnalytics) {
 	c.mu.Lock()
 	c.projects[key] = analyticsEntry[*model.ProjectAnalytics]{value: v, expiresAt: time.Now().Add(c.ttl)}
+	c.mu.Unlock()
+}
+
+var analyticsPeriods = []string{"7d", "30d", "90d", ""}
+
+// InvalidateProject removes all period variants for a project from the cache.
+func (c *AnalyticsCache) InvalidateProject(projectID int64) {
+	c.mu.Lock()
+	for _, p := range analyticsPeriods {
+		delete(c.projects, fmt.Sprintf("project:%d:%s", projectID, p))
+	}
+	c.mu.Unlock()
+}
+
+// InvalidateLink removes all period variants for a link from the cache.
+func (c *AnalyticsCache) InvalidateLink(linkID int64) {
+	c.mu.Lock()
+	for _, p := range analyticsPeriods {
+		delete(c.links, fmt.Sprintf("link:%d:%s", linkID, p))
+	}
 	c.mu.Unlock()
 }
 

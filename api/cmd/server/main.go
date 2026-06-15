@@ -17,6 +17,7 @@ import (
 	"github.com/KaikSelhorst/shortener/internal/repository"
 	"github.com/KaikSelhorst/shortener/internal/router"
 	"github.com/KaikSelhorst/shortener/internal/service"
+	"github.com/KaikSelhorst/shortener/internal/sse"
 	"github.com/KaikSelhorst/shortener/migrations"
 )
 
@@ -57,6 +58,8 @@ func main() {
 	refreshTokenRepository := repository.NewRefreshTokenRepository(db.Pool)
 	apiKeyRepository := repository.NewAPIKeyRepository(db.Pool)
 
+	hub := sse.NewHub()
+
 	tracker := service.NewTrackerService(clickRepository, logger)
 	authService := service.NewAuthService(cfg.JWTSecret)
 
@@ -71,13 +74,14 @@ func main() {
 	defer analyticsCache.Close()
 
 	healthHandler := handler.NewHealthHandler()
-	redirectHandler := handler.NewRedirectHandler(linkRepository, tracker, linkCache, cfg.IPHashSecret)
-	projectHandler := handler.NewProjectHandler(projectRepository)
+	redirectHandler := handler.NewRedirectHandler(linkRepository, tracker, linkCache, analyticsCache, hub, cfg.IPHashSecret)
+	projectHandler := handler.NewProjectHandler(projectRepository, hub)
 	linkHandler := handler.NewLinkHandler(linkRepository, projectRepository, shortcodeService, linkCache, cfg.BaseURL, cfg.CursorSecret)
 	authHandler := handler.NewAuthHandler(userRepository, refreshTokenRepository, authService)
 	apiKeyHandler := handler.NewAPIKeyHandler(apiKeyRepository, projectRepository, authService)
 	totpHandler := handler.NewTOTPHandler(userRepository, refreshTokenRepository, authService)
 	analyticsHandler := handler.NewAnalyticsHandler(clickRepository, projectRepository, linkRepository, analyticsCache)
+	sseHandler := handler.NewSSEHandler(hub, projectRepository, linkRepository)
 
 	handlers := &router.Handlers{
 		HealthHandler:    healthHandler,
@@ -88,6 +92,7 @@ func main() {
 		APIKeyHandler:    apiKeyHandler,
 		TOTPHandler:      totpHandler,
 		AnalyticsHandler: analyticsHandler,
+		SSEHandler:       sseHandler,
 	}
 
 	r := router.New(cfg, handlers, authService, apiKeyRepository)
