@@ -34,6 +34,7 @@ func New(cfg *config.Config, handlers *Handlers, authService *service.AuthServic
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Use(middleware.RequestID)
+	r.Use(authmw.SecurityHeaders)
 	r.Use(func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			r.Body = http.MaxBytesReader(w, r.Body, 1<<20) // 1 MiB
@@ -42,20 +43,21 @@ func New(cfg *config.Config, handlers *Handlers, authService *service.AuthServic
 	})
 
 	requireAuth := authmw.RequireAuth(authService, apiKeyRepo)
+	authLimiter := authmw.NewRateLimiter(10, time.Minute)
 
 	r.Get("/health", handlers.HealthHandler.Ok)
 	r.Get("/{code}", handlers.RedirectHandler.HandleRedirect)
 
 	r.Route("/auth", func(r chi.Router) {
-		r.Post("/register", handlers.AuthHandler.Register)
-		r.Post("/login", handlers.AuthHandler.Login)
+		r.With(authLimiter.Limit).Post("/register", handlers.AuthHandler.Register)
+		r.With(authLimiter.Limit).Post("/login", handlers.AuthHandler.Login)
 		r.Post("/refresh", handlers.AuthHandler.Refresh)
 		r.Post("/logout", handlers.AuthHandler.Logout)
 		r.With(requireAuth).Get("/me", handlers.AuthHandler.Me)
 
 		// Step 2 of the login flow — no auth required (uses short-lived session token).
 		r.Route("/mfa", func(r chi.Router) {
-			r.Post("/totp", handlers.TOTPHandler.ValidateMFA)
+			r.With(authLimiter.Limit).Post("/totp", handlers.TOTPHandler.ValidateMFA)
 		})
 
 		// TOTP management — requires a valid access token.
