@@ -3,7 +3,9 @@ package handler
 import (
 	"encoding/json"
 	"net/http"
+	"net/url"
 	"strconv"
+	"strings"
 
 	"github.com/KaikSelhorst/shortener/internal/cache"
 	"github.com/KaikSelhorst/shortener/internal/dto"
@@ -38,6 +40,18 @@ func NewLinkHandler(
 		baseURL:           baseURL,
 		cursorSecret:      cursorSecret,
 	}
+}
+
+func (h *LinkHandler) isSelfReferential(rawURL string) bool {
+	base, err := url.Parse(h.baseURL)
+	if err != nil {
+		return false
+	}
+	target, err := url.Parse(rawURL)
+	if err != nil {
+		return false
+	}
+	return strings.EqualFold(target.Host, base.Host)
 }
 
 func (h *LinkHandler) toLinkResponse(link *model.Link) dto.LinkResponse {
@@ -115,6 +129,10 @@ func (h *LinkHandler) CreateLink(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := req.Validate(); err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	if h.isSelfReferential(req.URL) {
+		writeError(w, http.StatusBadRequest, "url cannot point to this shortener")
 		return
 	}
 
@@ -258,6 +276,10 @@ func (h *LinkHandler) UpdateLink(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := req.Validate(); err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	if h.isSelfReferential(req.URL) {
+		writeError(w, http.StatusBadRequest, "url cannot point to this shortener")
 		return
 	}
 

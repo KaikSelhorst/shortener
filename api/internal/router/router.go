@@ -35,6 +35,7 @@ func New(cfg *config.Config, handlers *Handlers, authService *service.AuthServic
 	r.Use(middleware.Logger)
 	r.Use(middleware.RequestID)
 	r.Use(authmw.SecurityHeaders)
+	r.Use(authmw.RequireJSON)
 	r.Use(func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			r.Body = http.MaxBytesReader(w, r.Body, 1<<20) // 1 MiB

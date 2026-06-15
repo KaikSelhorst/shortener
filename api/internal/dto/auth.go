@@ -23,6 +23,9 @@ func (r *RegisterRequest) Validate() error {
 	if len(r.Password) < 8 {
 		return errors.New("password must be at least 8 characters")
 	}
+	if len(r.Password) > 72 {
+		return errors.New("password must be at most 72 characters")
+	}
 	return nil
 }
 

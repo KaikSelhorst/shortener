@@ -17,6 +17,9 @@ func (r *ProjectRequest) Validate() error {
 	if r.Name == "" {
 		return errors.New("name is required")
 	}
+	if len(r.Name) > 100 {
+		return errors.New("name must be at most 100 characters")
+	}
 	if !validName.MatchString(r.Name) {
 		return errors.New("name can only contain letters, digits, spaces, hyphens and underscores")
 	}
