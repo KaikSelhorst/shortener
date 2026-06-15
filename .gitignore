@@ -1,3 +1,21 @@
 docs
-.env
 .zed/
+
+# Env files — never commit actual .env files
+.env
+.env.*
+!.env.example
+
+# Web build artifacts
+web/.svelte-kit
+web/build
+web/.output
+node_modules
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Vite
+vite.config.js.timestamp-*
+vite.config.ts.timestamp-*
