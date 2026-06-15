@@ -68,7 +68,7 @@
 						<TableCell>
 							{#if extractShortCode(d)}
 								<a
-									href="/{data.slug}/{extractShortCode(d)}"
+									href="/{extractShortCode(d)}"
 									class="font-mono text-xs text-muted-foreground hover:text-foreground transition-colors"
 								>/{extractShortCode(d)}</a>
 							{:else}
