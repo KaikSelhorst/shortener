@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { onMount } from 'svelte'
 	import type { PageData, ActionData } from './$types'
 	import { Button, Input, Dialog } from '$lib'
 
@@ -10,13 +11,32 @@
 	$effect(() => {
 		if (!confirmOpen) pendingSlug = null
 	})
+
+	let sessionClicks = $state<Record<number, number>>({})
+	let connected = $state(false)
+
+	onMount(() => {
+		const es = new EventSource('/api/stream')
+		es.onopen = () => (connected = true)
+		es.onmessage = (e) => {
+			const evt = JSON.parse(e.data) as { project_id: number }
+			sessionClicks[evt.project_id] = (sessionClicks[evt.project_id] ?? 0) + 1
+		}
+		es.onerror = () => (connected = false)
+		return () => es.close()
+	})
 </script>
 
-<div class="mx-auto max-w-4xl">
+<div class="mx-auto max-w-6xl">
 	<div class="tui-panel">
 		<div class="tui-panel-header justify-between">
 			<span>▌ projects</span>
-			<span class="text-muted-foreground">{data.projects.length} total</span>
+			<div class="flex items-center gap-3">
+				{#if connected}
+					<span class="font-mono text-[10px] uppercase tracking-wider text-tui-green">● live</span>
+				{/if}
+				<span class="text-muted-foreground">{data.projects.length} total</span>
+			</div>
 		</div>
 
 		<div class="border-b border-border bg-background px-4 py-3">
@@ -49,9 +69,16 @@
 					{#each data.projects as project (project.id)}
 						<tr class="group transition-colors hover:bg-primary/5">
 							<td class="px-4 py-3">
-								<a href="/{project.slug}" class="font-mono text-xs text-primary hover:underline">
-									{project.name}
-								</a>
+								<div class="flex items-center gap-2">
+									<a href="/{project.slug}" class="font-mono text-xs text-primary hover:underline">
+										{project.name}
+									</a>
+									{#if sessionClicks[project.id]}
+										<span class="font-mono text-[10px] text-tui-green">
+											+{sessionClicks[project.id]}
+										</span>
+									{/if}
+								</div>
 							</td>
 							<td class="px-4 py-3">
 								<span class="font-mono text-xs text-muted-foreground">{project.slug}</span>
