@@ -30,7 +30,7 @@ func NewHub() *Hub {
 }
 
 func (h *Hub) SubscribeProject(projectID int64) chan ClickEvent {
-	ch := make(chan ClickEvent, 16)
+	ch := make(chan ClickEvent, 64)
 	h.mu.Lock()
 	if h.byProject[projectID] == nil {
 		h.byProject[projectID] = make(map[chan ClickEvent]struct{})
@@ -51,7 +51,7 @@ func (h *Hub) UnsubscribeProject(projectID int64, ch chan ClickEvent) {
 }
 
 func (h *Hub) SubscribeLink(linkID int64) chan ClickEvent {
-	ch := make(chan ClickEvent, 16)
+	ch := make(chan ClickEvent, 64)
 	h.mu.Lock()
 	if h.byLink[linkID] == nil {
 		h.byLink[linkID] = make(map[chan ClickEvent]struct{})
@@ -72,7 +72,7 @@ func (h *Hub) UnsubscribeLink(linkID int64, ch chan ClickEvent) {
 }
 
 func (h *Hub) SubscribeUser(userID int64) chan ClickEvent {
-	ch := make(chan ClickEvent, 16)
+	ch := make(chan ClickEvent, 64)
 	h.mu.Lock()
 	if h.byUser[userID] == nil {
 		h.byUser[userID] = make(map[chan ClickEvent]struct{})
