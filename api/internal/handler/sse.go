@@ -66,7 +66,10 @@ func (h *SSEHandler) HandleProjectStream(w http.ResponseWriter, r *http.Request)
 			if !ok {
 				return
 			}
-			data, _ := json.Marshal(evt)
+			data, err := json.Marshal(evt)
+			if err != nil {
+				continue
+			}
 			fmt.Fprintf(w, "data: %s\n\n", data)
 			_ = rc.Flush()
 		case <-ticker.C:
@@ -131,7 +134,10 @@ func (h *SSEHandler) HandleLinkStream(w http.ResponseWriter, r *http.Request) {
 			if !ok {
 				return
 			}
-			data, _ := json.Marshal(evt)
+			data, err := json.Marshal(evt)
+			if err != nil {
+				continue
+			}
 			fmt.Fprintf(w, "data: %s\n\n", data)
 			_ = rc.Flush()
 		case <-ticker.C:
@@ -186,7 +192,10 @@ func (h *SSEHandler) HandleUserStream(w http.ResponseWriter, r *http.Request) {
 			if !ok {
 				return
 			}
-			data, _ := json.Marshal(evt)
+			data, err := json.Marshal(evt)
+			if err != nil {
+				continue
+			}
 			fmt.Fprintf(w, "data: %s\n\n", data)
 			_ = rc.Flush()
 		case <-ticker.C:
