@@ -28,11 +28,18 @@ func (r *LinkRepo) Create(_ context.Context, link *model.Link, generateCode func
 	defer r.mu.Unlock()
 
 	link.ID = r.nextID.Add(1)
-	code, err := generateCode(uint64(link.ID))
-	if err != nil {
-		return err
+
+	if link.ShortCode != "" {
+		if _, exists := r.links[link.ShortCode]; exists {
+			return repository.ErrConflict
+		}
+	} else {
+		code, err := generateCode(uint64(link.ID))
+		if err != nil {
+			return err
+		}
+		link.ShortCode = code
 	}
-	link.ShortCode = code
 
 	copy := *link
 	r.links[copy.ShortCode] = &copy
