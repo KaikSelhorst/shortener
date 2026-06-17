@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Button from './Button.svelte'
+	import { onDestroy } from 'svelte'
 
 	interface Props {
 		value: string
@@ -8,11 +9,15 @@
 	let { value }: Props = $props()
 
 	let copied = $state(false)
+	let timeoutId: ReturnType<typeof setTimeout> | undefined
+
+	onDestroy(() => clearTimeout(timeoutId))
 
 	async function copy() {
 		await navigator.clipboard.writeText(value)
 		copied = true
-		setTimeout(() => (copied = false), 2000)
+		clearTimeout(timeoutId)
+		timeoutId = setTimeout(() => (copied = false), 2000)
 	}
 </script>
 
