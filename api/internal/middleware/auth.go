@@ -5,8 +5,10 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
+	"github.com/KaikSelhorst/shortener/internal/cache"
 	"github.com/KaikSelhorst/shortener/internal/httputil"
 	"github.com/KaikSelhorst/shortener/internal/model"
 	"github.com/KaikSelhorst/shortener/internal/repository"
@@ -16,8 +18,8 @@ import (
 type contextKey string
 
 const (
-	UserIDKey  contextKey = "user_id"
-	APIKeyKey  contextKey = "api_key"
+	UserIDKey contextKey = "user_id"
+	APIKeyKey contextKey = "api_key"
 )
 
 func UserIDFromContext(ctx context.Context) (int64, bool) {
@@ -40,7 +42,14 @@ func ProjectAllowed(ctx context.Context, projectID int64) bool {
 	return *key.ProjectID == projectID
 }
 
-func RequireAuth(authService *service.AuthService, apiKeyRepo repository.APIKeyRepo) func(http.Handler) http.Handler {
+// lastUsedCache tracks the last time each API key ID was persisted to the DB.
+// Updates are debounced to at most once per minute per key.
+var (
+	lastUsedCache sync.Map     // map[int64]time.Time
+	lastUsedSem   = make(chan struct{}, 20)
+)
+
+func RequireAuth(authService *service.AuthService, apiKeyRepo repository.APIKeyRepo, keyCache *cache.APIKeyCache) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			authHeader := r.Header.Get("Authorization")
@@ -53,18 +62,20 @@ func RequireAuth(authService *service.AuthService, apiKeyRepo repository.APIKeyR
 
 			if strings.HasPrefix(token, "sk_") {
 				hash := service.HashToken(token)
-				key, err := apiKeyRepo.GetByHash(r.Context(), hash)
-				if err != nil {
-					httputil.WriteError(w, http.StatusUnauthorized, "unauthorized")
-					return
-				}
-				go func(id int64) {
-					ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-					defer cancel()
-					if err := apiKeyRepo.UpdateLastUsed(ctx, id); err != nil {
-						log.Printf("middleware: failed to update api key last_used_at (id=%d): %v", id, err)
+
+				key, ok := keyCache.Get(hash)
+				if !ok {
+					var err error
+					key, err = apiKeyRepo.GetByHash(r.Context(), hash)
+					if err != nil {
+						httputil.WriteError(w, http.StatusUnauthorized, "unauthorized")
+						return
 					}
-				}(key.ID)
+					keyCache.Set(hash, key)
+				}
+
+				go updateLastUsed(apiKeyRepo, key.ID)
+
 				ctx := context.WithValue(r.Context(), UserIDKey, key.UserID)
 				ctx = context.WithValue(ctx, APIKeyKey, key)
 				next.ServeHTTP(w, r.WithContext(ctx))
@@ -80,6 +91,27 @@ func RequireAuth(authService *service.AuthService, apiKeyRepo repository.APIKeyR
 			ctx := context.WithValue(r.Context(), UserIDKey, userID)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
+	}
+}
+
+// updateLastUsed persists last_used_at for an API key at most once per minute,
+// using a bounded semaphore to cap concurrent DB writes.
+func updateLastUsed(repo repository.APIKeyRepo, id int64) {
+	now := time.Now()
+	if v, ok := lastUsedCache.Load(id); ok && now.Sub(v.(time.Time)) < time.Minute {
+		return
+	}
+	select {
+	case lastUsedSem <- struct{}{}:
+	default:
+		return
+	}
+	defer func() { <-lastUsedSem }()
+	lastUsedCache.Store(id, now)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := repo.UpdateLastUsed(ctx, id); err != nil {
+		log.Printf("middleware: failed to update api key last_used_at (id=%d): %v", id, err)
 	}
 }
 
