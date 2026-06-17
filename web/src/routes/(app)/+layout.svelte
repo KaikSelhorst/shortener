@@ -15,9 +15,30 @@
 				':' +
 				String(now.getSeconds()).padStart(2, '0')
 		}
-		tick()
-		const id = setInterval(tick, 1000)
-		return () => clearInterval(id)
+
+		let id: ReturnType<typeof setInterval> | undefined
+
+		function start() {
+			tick()
+			id = setInterval(tick, 1000)
+		}
+
+		function stop() {
+			clearInterval(id)
+			id = undefined
+		}
+
+		function onVisibilityChange() {
+			document.hidden ? stop() : start()
+		}
+
+		document.addEventListener('visibilitychange', onVisibilityChange)
+		start()
+
+		return () => {
+			stop()
+			document.removeEventListener('visibilitychange', onVisibilityChange)
+		}
 	})
 </script>
 
