@@ -11,6 +11,9 @@ import (
 	"go.uber.org/zap"
 )
 
+// deliverySem caps the number of concurrent HTTP deliveries across all ticks.
+var deliverySem = make(chan struct{}, 5)
+
 func Start(ctx context.Context, repo repository.WebhookRepo, svc *service.WebhookService, client *http.Client, logger *zap.SugaredLogger) {
 	if err := repo.ResetStuckDeliveries(ctx); err != nil {
 		logger.Errorw("webhook: reset stuck deliveries", "error", err)
@@ -34,7 +37,11 @@ func process(ctx context.Context, repo repository.WebhookRepo, svc *service.Webh
 		return
 	}
 	for _, p := range pending {
-		go deliver(ctx, repo, svc, client, logger, p)
+		deliverySem <- struct{}{}
+		go func(p *repository.PendingDelivery) {
+			defer func() { <-deliverySem }()
+			deliver(ctx, repo, svc, client, logger, p)
+		}(p)
 	}
 }
 
