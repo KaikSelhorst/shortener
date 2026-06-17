@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"time"
 
 	"github.com/KaikSelhorst/shortener/internal/model"
 	"github.com/KaikSelhorst/shortener/internal/repository"
@@ -20,10 +21,31 @@ import (
 type WebhookService struct {
 	repo      repository.WebhookRepo
 	secretKey []byte
+	sem       chan struct{}
 }
 
 func NewWebhookService(repo repository.WebhookRepo, secretKey []byte) *WebhookService {
-	return &WebhookService{repo: repo, secretKey: secretKey}
+	return &WebhookService{
+		repo:      repo,
+		secretKey: secretKey,
+		sem:       make(chan struct{}, 50),
+	}
+}
+
+// DispatchAsync runs Dispatch in a bounded goroutine pool.
+// If all 50 slots are busy the dispatch is dropped rather than blocking the caller.
+func (s *WebhookService) DispatchAsync(projectID int64, event string, payload any) {
+	select {
+	case s.sem <- struct{}{}:
+	default:
+		return
+	}
+	go func() {
+		defer func() { <-s.sem }()
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		s.Dispatch(ctx, projectID, event, payload)
+	}()
 }
 
 // EncryptSecret encrypts a plaintext secret using AES-256-GCM.
