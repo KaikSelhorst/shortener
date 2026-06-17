@@ -110,6 +110,7 @@
 			<TableBody>
 				{#each data.links.data as link (link.id)}
 					{@const expired = link.expires_at != null && new Date(link.expires_at).getTime() < now}
+					{@const maxed = link.max_clicks != null && link.total_clicks >= link.max_clicks}
 					{@const totalClicks = link.total_clicks + (sessionClicks[link.short_code] ?? 0)}
 					<TableRow>
 						<TableCell>
@@ -134,15 +135,15 @@
 							</a>
 						</TableCell>
 						<TableCell>
-							{#if expired}
-								<Badge variant="error">expired</Badge>
+							{#if expired || maxed}
+								<Badge variant="error">{maxed ? 'maxed' : 'expired'}</Badge>
 							{:else}
 								<Badge variant="success">active</Badge>
 							{/if}
 						</TableCell>
 						<TableCell>
 							<span class="font-mono text-xs tabular-nums {sessionClicks[link.short_code] ? 'text-tui-green' : 'text-muted-foreground'}">
-								{totalClicks.toLocaleString()}
+								{totalClicks.toLocaleString()}{link.max_clicks != null ? ` / ${link.max_clicks.toLocaleString()}` : ''}
 							</span>
 						</TableCell>
 						<TableCell class="text-muted-foreground">
@@ -225,6 +226,7 @@
 				maxlength={50}
 			/>
 			<Input name="expires_at" type="datetime-local" label="Expires at" />
+			<Input name="max_clicks" type="number" label="Max clicks" placeholder="unlimited" min={1} />
 			{#if createError}
 				<p class="font-mono text-xs text-destructive">{createError}</p>
 			{/if}

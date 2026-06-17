@@ -45,6 +45,7 @@ export interface Link {
 	description: string | null
 	og_image: string | null
 	expires_at: string | null
+	max_clicks: number | null
 	created_at: string
 	short_url: string
 	total_clicks: number
@@ -64,6 +65,7 @@ export interface LinkRequest {
 	description?: string
 	og_image?: string
 	expires_at?: string
+	max_clicks?: number
 	custom_code?: string
 }
 
