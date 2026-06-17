@@ -3,6 +3,7 @@
 	import type { SubmitFunction } from '@sveltejs/kit'
 	import type { CreateWebhookResponse } from '$lib/types'
 	import { enhance } from '$app/forms'
+	import { formatDate } from '$lib/format'
 	import {
 		Badge,
 		Button,
@@ -119,7 +120,7 @@
 							{/if}
 						</TableCell>
 						<TableCell class="text-muted-foreground">
-							{new Date(wh.created_at).toLocaleDateString()}
+							{formatDate(wh.created_at)}
 						</TableCell>
 						<TableCell class="text-right">
 							<div class="flex items-center justify-end gap-2">

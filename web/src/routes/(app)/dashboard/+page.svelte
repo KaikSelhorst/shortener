@@ -2,6 +2,7 @@
 	import type { PageData, ActionData } from './$types'
 	import { Button, Input, Dialog } from '$lib'
 	import { useSSE } from '$lib/sse.svelte'
+	import { formatDate } from '$lib/format'
 
 	let { data, form }: { data: PageData; form: ActionData } = $props()
 
@@ -78,7 +79,7 @@
 							</td>
 							<td class="px-4 py-3">
 								<span class="font-mono text-xs text-muted-foreground">
-									{new Date(project.created_at).toLocaleDateString()}
+									{formatDate(project.created_at)}
 								</span>
 							</td>
 							<td class="px-4 py-3 text-right">

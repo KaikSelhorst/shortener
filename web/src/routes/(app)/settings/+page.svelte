@@ -3,6 +3,7 @@
 	import type { SubmitFunction } from '@sveltejs/kit'
 	import type { CreateApiKeyResponse, TOTPSetupResponse } from '$lib/types'
 	import { enhance } from '$app/forms'
+	import { formatDate } from '$lib/format'
 	import {
 		Badge,
 		Button,
@@ -160,7 +161,7 @@
 							{/if}
 						</TableCell>
 						<TableCell class="text-muted-foreground">
-							{key.last_used_at ? new Date(key.last_used_at).toLocaleDateString() : '—'}
+							{formatDate(key.last_used_at)}
 						</TableCell>
 						<TableCell class="text-right">
 							<Button

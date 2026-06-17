@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { PageData } from './$types'
+	import { formatDateTime } from '$lib/format'
 	import {
 		Badge,
 		Table,
@@ -94,7 +95,7 @@
 							{d.attempts}
 						</TableCell>
 						<TableCell class="text-muted-foreground">
-							{new Date(d.created_at).toLocaleString()}
+							{formatDateTime(d.created_at)}
 						</TableCell>
 					</TableRow>
 				{:else}

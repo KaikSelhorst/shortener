@@ -3,6 +3,7 @@
 	import type { SubmitFunction } from '@sveltejs/kit'
 	import { enhance } from '$app/forms'
 	import { useSSE } from '$lib/sse.svelte'
+	import { formatDate } from '$lib/format'
 	import {
 		Badge,
 		Button,
@@ -47,11 +48,7 @@
 
 	let sessionClicks = $state<Record<string, number>>({})
 
-	const linkClicks = $derived(
-		Object.fromEntries(
-			data.links.data.map((l) => [l.short_code, l.total_clicks + (sessionClicks[l.short_code] ?? 0)]),
-		),
-	)
+	const now = Date.now()
 
 	const sse = useSSE(() => `/api/${data.slug}/stream`, (e) => {
 		const evt = JSON.parse(e.data) as { short_code: string }
@@ -112,7 +109,8 @@
 			</TableHead>
 			<TableBody>
 				{#each data.links.data as link (link.id)}
-					{@const expired = link.expires_at != null && new Date(link.expires_at) < new Date()}
+					{@const expired = link.expires_at != null && new Date(link.expires_at).getTime() < now}
+					{@const totalClicks = link.total_clicks + (sessionClicks[link.short_code] ?? 0)}
 					<TableRow>
 						<TableCell>
 							<a
@@ -144,14 +142,14 @@
 						</TableCell>
 						<TableCell>
 							<span class="font-mono text-xs tabular-nums {sessionClicks[link.short_code] ? 'text-tui-green' : 'text-muted-foreground'}">
-								{linkClicks[link.short_code].toLocaleString()}
+								{totalClicks.toLocaleString()}
 							</span>
 						</TableCell>
 						<TableCell class="text-muted-foreground">
-							{new Date(link.created_at).toLocaleDateString()}
+							{formatDate(link.created_at)}
 						</TableCell>
 						<TableCell class="text-muted-foreground">
-							{link.expires_at ? new Date(link.expires_at).toLocaleDateString() : '—'}
+							{formatDate(link.expires_at)}
 						</TableCell>
 						<TableCell class="text-right">
 							<div class="flex items-center justify-end gap-2">
