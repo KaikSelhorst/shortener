@@ -132,21 +132,22 @@ func ensureProjects(ctx context.Context, pool *pgxpool.Pool, userID int64) map[s
 // --- Links ---------------------------------------------------------------
 
 var linkSeeds = []struct {
-	project string
-	url     string
-	title   string
+	project    string
+	url        string
+	title      string
+	customCode string // empty = auto-generate
 }{
-	{"marketing", "https://github.com/KaikSelhorst/shortener", "Shortener on GitHub"},
-	{"marketing", "https://example.com/landing", "Landing Page"},
-	{"marketing", "https://example.com/pricing", "Pricing"},
-	{"marketing", "https://example.com/docs", "Documentation"},
-	{"tech-blog", "https://go.dev/blog/intro-generics", "Intro to Go Generics"},
-	{"tech-blog", "https://svelte.dev/blog/runes", "Svelte Runes"},
-	{"tech-blog", "https://www.postgresql.org/docs/current/", "PostgreSQL Docs"},
-	{"tech-blog", "https://tailwindcss.com/blog/tailwindcss-v4", "Tailwind CSS v4"},
-	{"social-media", "https://twitter.com/golang", "Go on Twitter/X"},
-	{"social-media", "https://linkedin.com/company/postgresql", "PostgreSQL on LinkedIn"},
-	{"social-media", "https://youtube.com/@ThePrimeagen", "ThePrimeagen on YouTube"},
+	{"marketing", "https://github.com/KaikSelhorst/shortener", "Shortener on GitHub", "repo"},
+	{"marketing", "https://example.com/landing", "Landing Page", "landing"},
+	{"marketing", "https://example.com/pricing", "Pricing", "pricing"},
+	{"marketing", "https://example.com/docs", "Documentation", ""},
+	{"tech-blog", "https://go.dev/blog/intro-generics", "Intro to Go Generics", ""},
+	{"tech-blog", "https://svelte.dev/blog/runes", "Svelte Runes", "svelte-runes"},
+	{"tech-blog", "https://www.postgresql.org/docs/current/", "PostgreSQL Docs", "pg-docs"},
+	{"tech-blog", "https://tailwindcss.com/blog/tailwindcss-v4", "Tailwind CSS v4", ""},
+	{"social-media", "https://twitter.com/golang", "Go on Twitter/X", "golang-x"},
+	{"social-media", "https://linkedin.com/company/postgresql", "PostgreSQL on LinkedIn", ""},
+	{"social-media", "https://youtube.com/@ThePrimeagen", "ThePrimeagen on YouTube", "prime"},
 }
 
 type seededLink struct {
@@ -165,20 +166,30 @@ func ensureLinks(ctx context.Context, pool *pgxpool.Pool, svc *service.Shortcode
 			pid, l.url,
 		).Scan(&id, &code)
 		if err != nil {
-			if err = pool.QueryRow(ctx,
-				`INSERT INTO links (project_id, original_url, title) VALUES ($1, $2, $3) RETURNING id`,
-				pid, l.url, l.title,
-			).Scan(&id); err != nil {
-				log.Fatalf("insert link %q: %v", l.url, err)
-			}
-			code, err = svc.GenerateShortCode(uint64(id))
-			if err != nil {
-				log.Fatalf("generate shortcode for id=%d: %v", id, err)
-			}
-			if _, err = pool.Exec(ctx,
-				`UPDATE links SET short_code = $1 WHERE id = $2`, code, id,
-			); err != nil {
-				log.Fatalf("update short_code: %v", err)
+			if l.customCode != "" {
+				if err = pool.QueryRow(ctx,
+					`INSERT INTO links (project_id, original_url, title, short_code) VALUES ($1, $2, $3, $4) RETURNING id`,
+					pid, l.url, l.title, l.customCode,
+				).Scan(&id); err != nil {
+					log.Fatalf("insert link %q: %v", l.url, err)
+				}
+				code = l.customCode
+			} else {
+				if err = pool.QueryRow(ctx,
+					`INSERT INTO links (project_id, original_url, title) VALUES ($1, $2, $3) RETURNING id`,
+					pid, l.url, l.title,
+				).Scan(&id); err != nil {
+					log.Fatalf("insert link %q: %v", l.url, err)
+				}
+				code, err = svc.GenerateShortCode(uint64(id))
+				if err != nil {
+					log.Fatalf("generate shortcode for id=%d: %v", id, err)
+				}
+				if _, err = pool.Exec(ctx,
+					`UPDATE links SET short_code = $1 WHERE id = $2`, code, id,
+				); err != nil {
+					log.Fatalf("update short_code: %v", err)
+				}
 			}
 			fmt.Printf("✓ link        /%s  →  %s\n", code, l.url)
 		} else {
