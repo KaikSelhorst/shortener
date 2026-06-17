@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/KaikSelhorst/shortener/internal/cache"
 	"github.com/KaikSelhorst/shortener/internal/config"
 	"github.com/KaikSelhorst/shortener/internal/handler"
 	authmw "github.com/KaikSelhorst/shortener/internal/middleware"
@@ -31,7 +32,7 @@ type Router struct {
 	Server *http.Server
 }
 
-func New(cfg *config.Config, handlers *Handlers, authService *service.AuthService, apiKeyRepo repository.APIKeyRepo) *Router {
+func New(cfg *config.Config, handlers *Handlers, authService *service.AuthService, apiKeyRepo repository.APIKeyRepo, keyCache *cache.APIKeyCache) *Router {
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Use(middleware.RequestID)
@@ -44,7 +45,7 @@ func New(cfg *config.Config, handlers *Handlers, authService *service.AuthServic
 		})
 	})
 
-	requireAuth := authmw.RequireAuth(authService, apiKeyRepo)
+	requireAuth := authmw.RequireAuth(authService, apiKeyRepo, keyCache)
 	authLimiter := authmw.NewRateLimiter(10, time.Minute)
 
 	r.Get("/health", handlers.HealthHandler.Ok)

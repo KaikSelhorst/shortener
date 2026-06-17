@@ -73,6 +73,7 @@ func main() {
 
 	linkCache := cache.NewLinkCache(1000, 5*time.Minute)
 	analyticsCache := cache.NewAnalyticsCache(5 * time.Minute)
+	apiKeyCache := cache.NewAPIKeyCache(2 * time.Minute)
 	defer linkCache.Close()
 	defer analyticsCache.Close()
 
@@ -102,7 +103,7 @@ func main() {
 
 	go webhook.Start(ctx, webhookRepository, webhookService, &http.Client{Timeout: 10 * time.Second}, logger)
 
-	r := router.New(cfg, handlers, authService, apiKeyRepository)
+	r := router.New(cfg, handlers, authService, apiKeyRepository, apiKeyCache)
 
 	go func() {
 		if err := r.Run(); err != nil && !errors.Is(err, http.ErrServerClosed) {
