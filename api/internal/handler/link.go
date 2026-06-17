@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"context"
 	"encoding/json"
 	"net/http"
 	"net/url"
@@ -175,7 +174,7 @@ func (h *LinkHandler) CreateLink(w http.ResponseWriter, r *http.Request) {
 	resp := h.toLinkResponse(newLink)
 	writeJSON(w, http.StatusCreated, resp)
 
-	go h.webhookService.Dispatch(context.Background(), project.ID, "link.created", linkEventPayload{
+	h.webhookService.DispatchAsync(project.ID, "link.created", linkEventPayload{
 		Event:     "link.created",
 		ProjectID: project.ID,
 		Link:      resp,
@@ -333,7 +332,7 @@ func (h *LinkHandler) UpdateLink(w http.ResponseWriter, r *http.Request) {
 	resp := h.toLinkResponse(link)
 	writeJSON(w, http.StatusOK, resp)
 
-	go h.webhookService.Dispatch(context.Background(), link.ProjectID, "link.updated", linkEventPayload{
+	h.webhookService.DispatchAsync(link.ProjectID, "link.updated", linkEventPayload{
 		Event:     "link.updated",
 		ProjectID: link.ProjectID,
 		Link:      resp,
@@ -367,7 +366,7 @@ func (h *LinkHandler) DeleteLink(w http.ResponseWriter, r *http.Request) {
 	h.cache.Delete(code)
 	w.WriteHeader(http.StatusNoContent)
 
-	go h.webhookService.Dispatch(context.Background(), link.ProjectID, "link.deleted", linkEventPayload{
+	h.webhookService.DispatchAsync(link.ProjectID, "link.deleted", linkEventPayload{
 		Event:     "link.deleted",
 		ProjectID: link.ProjectID,
 		Link:      h.toLinkResponse(link),

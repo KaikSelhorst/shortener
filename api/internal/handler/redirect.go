@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"context"
 	"net"
 	"net/http"
 
@@ -101,7 +100,7 @@ func (h *RedirectHandler) HandleRedirect(w http.ResponseWriter, r *http.Request)
 	h.analyticsCache.InvalidateProject(link.ProjectID)
 	h.analyticsCache.InvalidateLink(link.ID)
 
-	go h.webhookService.Dispatch(context.Background(), link.ProjectID, "link.clicked", clickedPayload{
+	h.webhookService.DispatchAsync(link.ProjectID, "link.clicked", clickedPayload{
 		Event:     "link.clicked",
 		ProjectID: link.ProjectID,
 		LinkID:    link.ID,
