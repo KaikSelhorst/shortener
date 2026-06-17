@@ -17,8 +17,7 @@
 	const chartH = $derived(height - padTop - padBottom)
 	const chartW = $derived(W - padLeft - padRight)
 
-	const counts = $derived(data.map((d) => d.count))
-	const maxVal = $derived(Math.max(...counts, 1))
+	const maxVal = $derived(data.reduce((m, d) => Math.max(m, d.count), 1))
 
 	const pts = $derived(
 		data.map((d, i) => ({
@@ -41,8 +40,9 @@
 
 	const labelStep = $derived(Math.ceil(data.length / 5))
 
+	const dateFmt = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' })
 	function fmtDate(iso: string) {
-		return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+		return dateFmt.format(new Date(iso))
 	}
 
 	// tooltip state
