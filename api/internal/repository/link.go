@@ -5,7 +5,9 @@ import (
 	"errors"
 
 	"github.com/KaikSelhorst/shortener/internal/model"
+	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -123,6 +125,23 @@ func (r *LinkRepository) List(ctx context.Context, projectID int64, cursor uint6
 }
 
 func (r *LinkRepository) Create(ctx context.Context, link *model.Link, generateCode func(uint64) (string, error)) error {
+	if link.ShortCode != "" {
+		// Custom code: single INSERT — unique constraint handles duplicates.
+		err := r.db.QueryRow(ctx,
+			"INSERT INTO links (project_id, original_url, title, description, og_image, expires_at, short_code) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, created_at",
+			link.ProjectID, link.OriginalURL, link.Title, link.Description, link.OgImage, link.ExpiresAt, link.ShortCode,
+		).Scan(&link.ID, &link.CreatedAt)
+		if err != nil {
+			var pgErr *pgconn.PgError
+			if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.UniqueViolation {
+				return ErrConflict
+			}
+			return err
+		}
+		return nil
+	}
+
+	// Auto-generate: insert without code, then derive from the row ID.
 	tx, err := r.db.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
 		return err

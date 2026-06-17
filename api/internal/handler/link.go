@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -165,8 +166,15 @@ func (h *LinkHandler) CreateLink(w http.ResponseWriter, r *http.Request) {
 		OgImage:     req.OgImage,
 		ExpiresAt:   req.ExpiresAt,
 	}
+	if req.CustomCode != nil && *req.CustomCode != "" {
+		newLink.ShortCode = *req.CustomCode
+	}
 
 	if err := h.linkRepository.Create(r.Context(), newLink, h.shortcodeService.GenerateShortCode); err != nil {
+		if errors.Is(err, repository.ErrConflict) {
+			writeError(w, http.StatusConflict, "short code already in use")
+			return
+		}
 		writeError(w, http.StatusInternalServerError, "failed to create link")
 		return
 	}

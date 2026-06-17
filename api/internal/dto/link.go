@@ -3,7 +3,16 @@ package dto
 import (
 	"errors"
 	"net/url"
+	"regexp"
+	"strings"
 	"time"
+)
+
+var (
+	customCodeRe = regexp.MustCompile(`^[a-zA-Z0-9_-]+$`)
+	reservedCodes = map[string]bool{
+		"health": true, "auth": true, "api-keys": true, "projects": true,
+	}
 )
 
 func validateURL(raw string) error {
@@ -27,6 +36,7 @@ type LinkRequest struct {
 	Description *string    `json:"description"`
 	OgImage     *string    `json:"og_image"`
 	ExpiresAt   *time.Time `json:"expires_at"`
+	CustomCode  *string    `json:"custom_code"`
 }
 
 func (r *LinkRequest) Validate() error {
@@ -35,6 +45,21 @@ func (r *LinkRequest) Validate() error {
 	}
 	if r.ExpiresAt != nil && !r.ExpiresAt.After(time.Now().UTC()) {
 		return errors.New("expires_at must be in the future")
+	}
+	if r.CustomCode != nil && *r.CustomCode != "" {
+		code := *r.CustomCode
+		if len(code) < 3 {
+			return errors.New("custom code must be at least 3 characters")
+		}
+		if len(code) > 50 {
+			return errors.New("custom code must be at most 50 characters")
+		}
+		if !customCodeRe.MatchString(code) {
+			return errors.New("custom code may only contain letters, numbers, hyphens, and underscores")
+		}
+		if reservedCodes[strings.ToLower(code)] {
+			return errors.New("this short code is reserved")
+		}
 	}
 	return nil
 }
