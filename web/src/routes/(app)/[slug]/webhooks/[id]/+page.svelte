@@ -20,7 +20,7 @@
 	}
 </script>
 
-<div class="mx-auto max-w-6xl">
+<div class="mx-auto max-w-7xl">
 	<div class="tui-panel">
 		<div class="tui-panel-header justify-between">
 			<div class="flex items-center gap-2">
