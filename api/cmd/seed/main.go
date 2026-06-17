@@ -136,18 +136,19 @@ var linkSeeds = []struct {
 	url        string
 	title      string
 	customCode string // empty = auto-generate
+	maxClicks  int64  // 0 = unlimited
 }{
-	{"marketing", "https://github.com/KaikSelhorst/shortener", "Shortener on GitHub", "repo"},
-	{"marketing", "https://example.com/landing", "Landing Page", "landing"},
-	{"marketing", "https://example.com/pricing", "Pricing", "pricing"},
-	{"marketing", "https://example.com/docs", "Documentation", ""},
-	{"tech-blog", "https://go.dev/blog/intro-generics", "Intro to Go Generics", ""},
-	{"tech-blog", "https://svelte.dev/blog/runes", "Svelte Runes", "svelte-runes"},
-	{"tech-blog", "https://www.postgresql.org/docs/current/", "PostgreSQL Docs", "pg-docs"},
-	{"tech-blog", "https://tailwindcss.com/blog/tailwindcss-v4", "Tailwind CSS v4", ""},
-	{"social-media", "https://twitter.com/golang", "Go on Twitter/X", "golang-x"},
-	{"social-media", "https://linkedin.com/company/postgresql", "PostgreSQL on LinkedIn", ""},
-	{"social-media", "https://youtube.com/@ThePrimeagen", "ThePrimeagen on YouTube", "prime"},
+	{"marketing", "https://github.com/KaikSelhorst/shortener", "Shortener on GitHub", "repo", 0},
+	{"marketing", "https://example.com/landing", "Landing Page", "landing", 500},
+	{"marketing", "https://example.com/pricing", "Pricing", "pricing", 0},
+	{"marketing", "https://example.com/docs", "Documentation", "", 0},
+	{"tech-blog", "https://go.dev/blog/intro-generics", "Intro to Go Generics", "", 0},
+	{"tech-blog", "https://svelte.dev/blog/runes", "Svelte Runes", "svelte-runes", 100},
+	{"tech-blog", "https://www.postgresql.org/docs/current/", "PostgreSQL Docs", "pg-docs", 0},
+	{"tech-blog", "https://tailwindcss.com/blog/tailwindcss-v4", "Tailwind CSS v4", "", 0},
+	{"social-media", "https://twitter.com/golang", "Go on Twitter/X", "golang-x", 0},
+	{"social-media", "https://linkedin.com/company/postgresql", "PostgreSQL on LinkedIn", "", 50},
+	{"social-media", "https://youtube.com/@ThePrimeagen", "ThePrimeagen on YouTube", "prime", 0},
 }
 
 type seededLink struct {
@@ -166,18 +167,23 @@ func ensureLinks(ctx context.Context, pool *pgxpool.Pool, svc *service.Shortcode
 			pid, l.url,
 		).Scan(&id, &code)
 		if err != nil {
+			var maxClicks *int64
+			if l.maxClicks > 0 {
+				mc := l.maxClicks
+				maxClicks = &mc
+			}
 			if l.customCode != "" {
 				if err = pool.QueryRow(ctx,
-					`INSERT INTO links (project_id, original_url, title, short_code) VALUES ($1, $2, $3, $4) RETURNING id`,
-					pid, l.url, l.title, l.customCode,
+					`INSERT INTO links (project_id, original_url, title, short_code, max_clicks) VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+					pid, l.url, l.title, l.customCode, maxClicks,
 				).Scan(&id); err != nil {
 					log.Fatalf("insert link %q: %v", l.url, err)
 				}
 				code = l.customCode
 			} else {
 				if err = pool.QueryRow(ctx,
-					`INSERT INTO links (project_id, original_url, title) VALUES ($1, $2, $3) RETURNING id`,
-					pid, l.url, l.title,
+					`INSERT INTO links (project_id, original_url, title, max_clicks) VALUES ($1, $2, $3, $4) RETURNING id`,
+					pid, l.url, l.title, maxClicks,
 				).Scan(&id); err != nil {
 					log.Fatalf("insert link %q: %v", l.url, err)
 				}
