@@ -1,14 +1,17 @@
 <script lang="ts">
 	import type { PageData, ActionData } from './$types'
 	import type { SubmitFunction } from '@sveltejs/kit'
+	import type { Link } from '$lib/types'
 	import { enhance } from '$app/forms'
 	import { useSSE } from '$lib/sse.svelte'
-	import { formatDate } from '$lib/format'
+	import { useQrcode } from '$lib/qrcode.svelte'
+	import { formatDate, toDatetimeLocal, parseUtm } from '$lib/format'
 	import {
 		Badge,
 		Button,
 		Input,
 		Dialog,
+		QRCode,
 		Table,
 		TableHead,
 		TableBody,
@@ -21,9 +24,10 @@
 
 	let createOpen = $state(false)
 	let createError = $state<string | null>(null)
+	let createUtmExpanded = $state(false)
 
 	$effect(() => {
-		if (!createOpen) createError = null
+		if (!createOpen) { createError = null; createUtmExpanded = false }
 	})
 
 	const handleCreate: SubmitFunction = () => {
@@ -39,12 +43,36 @@
 		}
 	}
 
+	let editLink = $state<Link | null>(null)
+	let editOpen = $state(false)
+	let editError = $state<string | null>(null)
+	let editUtmExpanded = $state(false)
+
+	$effect(() => {
+		if (!editOpen) { editLink = null; editError = null; editUtmExpanded = false }
+	})
+
+	const handleEdit: SubmitFunction = () => {
+		editError = null
+		return async ({ result, update }) => {
+			if (result.type === 'failure') {
+				const d = result.data as { error?: string }
+				editError = d?.error ?? 'Failed to update link'
+			} else {
+				await update()
+				editOpen = false
+			}
+		}
+	}
+
 	let pendingCode = $state<string | null>(null)
 	let confirmOpen = $state(false)
 
 	$effect(() => {
 		if (!confirmOpen) pendingCode = null
 	})
+
+	const qr = useQrcode()
 
 	let sessionClicks = $state<Record<string, number>>({})
 
@@ -56,7 +84,7 @@
 	})
 </script>
 
-<div class="mx-auto max-w-6xl">
+<div class="mx-auto max-w-7xl">
 	<div class="tui-panel">
 		<div class="tui-panel-header justify-between">
 			<div class="flex items-center gap-2">
@@ -110,8 +138,8 @@
 			<TableBody>
 				{#each data.links.data as link (link.id)}
 					{@const expired = link.expires_at != null && new Date(link.expires_at).getTime() < now}
-					{@const maxed = link.max_clicks != null && link.total_clicks >= link.max_clicks}
 					{@const totalClicks = link.total_clicks + (sessionClicks[link.short_code] ?? 0)}
+					{@const maxed = link.max_clicks != null && totalClicks >= link.max_clicks}
 					<TableRow>
 						<TableCell>
 							<a
@@ -154,6 +182,25 @@
 						</TableCell>
 						<TableCell class="text-right">
 							<div class="flex items-center justify-end gap-2">
+								<Button
+									variant="ghost"
+									size="sm"
+									onclick={() => {
+										const utm = parseUtm(link.original_url)
+										editUtmExpanded = !!(utm.source || utm.medium || utm.campaign || utm.term || utm.content)
+										editLink = link
+										editOpen = true
+									}}
+								>
+									edit
+								</Button>
+								<Button
+									variant="ghost"
+									size="sm"
+									onclick={() => qr.show(link.short_url, link.short_code)}
+								>
+									qr
+								</Button>
 								<Button
 									variant="ghost"
 									size="sm"
@@ -227,6 +274,22 @@
 			/>
 			<Input name="expires_at" type="datetime-local" label="Expires at" />
 			<Input name="max_clicks" type="number" label="Max clicks" placeholder="unlimited" min={1} />
+			<button
+				type="button"
+				onclick={() => (createUtmExpanded = !createUtmExpanded)}
+				class="font-mono text-[10px] uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors text-left"
+			>
+				{createUtmExpanded ? '▾' : '▸'} utm parameters
+			</button>
+			{#if createUtmExpanded}
+				<div class="flex flex-col gap-4 border-l border-border pl-3">
+					<Input name="utm_source" type="text" label="Source" placeholder="newsletter, twitter, google" />
+					<Input name="utm_medium" type="text" label="Medium" placeholder="email, social, cpc" />
+					<Input name="utm_campaign" type="text" label="Campaign" placeholder="spring_sale" />
+					<Input name="utm_term" type="text" label="Term" placeholder="keywords (optional)" />
+					<Input name="utm_content" type="text" label="Content" placeholder="variant_a (optional)" />
+				</div>
+			{/if}
 			{#if createError}
 				<p class="font-mono text-xs text-destructive">{createError}</p>
 			{/if}
@@ -235,6 +298,68 @@
 	{#snippet footer()}
 		<Button variant="outline" onclick={() => (createOpen = false)}>cancel</Button>
 		<Button type="submit" form="create-link-form">create</Button>
+	{/snippet}
+</Dialog>
+
+<Dialog bind:open={editOpen} title="Edit link" size="md">
+	{#snippet children()}
+		{#if editLink}
+			{@const utm = parseUtm(editLink.original_url)}
+			<form
+				id="edit-link-form"
+				method="POST"
+				action="?/update"
+				use:enhance={handleEdit}
+				class="flex flex-col gap-4"
+			>
+				<input type="hidden" name="code" value={editLink.short_code} />
+				<Input name="url" type="url" label="URL" required value={utm.baseUrl} />
+				<Input name="title" type="text" label="Title" placeholder="optional title" value={editLink.title ?? ''} />
+				<Input name="expires_at" type="datetime-local" label="Expires at" value={toDatetimeLocal(editLink.expires_at)} />
+				<Input name="max_clicks" type="number" label="Max clicks" placeholder="unlimited" min={1} value={editLink.max_clicks ?? ''} />
+				<button
+					type="button"
+					onclick={() => (editUtmExpanded = !editUtmExpanded)}
+					class="font-mono text-[10px] uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors text-left"
+				>
+					{editUtmExpanded ? '▾' : '▸'} utm parameters
+				</button>
+				{#if editUtmExpanded}
+					<div class="flex flex-col gap-4 border-l border-border pl-3">
+						<Input name="utm_source" type="text" label="Source" placeholder="newsletter, twitter, google" value={utm.source} />
+						<Input name="utm_medium" type="text" label="Medium" placeholder="email, social, cpc" value={utm.medium} />
+						<Input name="utm_campaign" type="text" label="Campaign" placeholder="spring_sale" value={utm.campaign} />
+						<Input name="utm_term" type="text" label="Term" placeholder="keywords (optional)" value={utm.term} />
+						<Input name="utm_content" type="text" label="Content" placeholder="variant_a (optional)" value={utm.content} />
+					</div>
+				{/if}
+				{#if editError}
+					<p class="font-mono text-xs text-destructive">{editError}</p>
+				{/if}
+			</form>
+		{/if}
+	{/snippet}
+	{#snippet footer()}
+		<Button variant="outline" onclick={() => (editOpen = false)}>cancel</Button>
+		<Button type="submit" form="edit-link-form">save</Button>
+	{/snippet}
+</Dialog>
+
+<Dialog bind:open={qr.open} title="QR Code">
+	{#snippet children()}
+		{#if qr.url}
+			<div class="flex flex-col items-center gap-4">
+				<div bind:this={qr.container}>
+					<QRCode data={qr.url} moduleSize={6} />
+				</div>
+				<p class="font-mono text-[10px] text-muted-foreground break-all text-center">{qr.url}</p>
+			</div>
+		{/if}
+	{/snippet}
+	{#snippet footer()}
+		<Button variant="outline" onclick={qr.downloadSVG}>↓ svg</Button>
+		<Button variant="outline" onclick={qr.downloadPNG}>↓ png</Button>
+		<Button onclick={() => (qr.open = false)}>close</Button>
 	{/snippet}
 </Dialog>
 
