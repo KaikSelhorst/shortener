@@ -36,6 +36,7 @@ type LinkRequest struct {
 	Description *string    `json:"description"`
 	OgImage     *string    `json:"og_image"`
 	ExpiresAt   *time.Time `json:"expires_at"`
+	MaxClicks   *int64     `json:"max_clicks"`
 	CustomCode  *string    `json:"custom_code"`
 }
 
@@ -45,6 +46,9 @@ func (r *LinkRequest) Validate() error {
 	}
 	if r.ExpiresAt != nil && !r.ExpiresAt.After(time.Now().UTC()) {
 		return errors.New("expires_at must be in the future")
+	}
+	if r.MaxClicks != nil && *r.MaxClicks <= 0 {
+		return errors.New("max_clicks must be greater than zero")
 	}
 	if r.CustomCode != nil && *r.CustomCode != "" {
 		code := *r.CustomCode
@@ -73,6 +77,7 @@ type LinkResponse struct {
 	Description *string    `json:"description"`
 	OgImage     *string    `json:"og_image"`
 	ExpiresAt   *time.Time `json:"expires_at"`
+	MaxClicks   *int64     `json:"max_clicks"`
 	CreatedAt   time.Time  `json:"created_at"`
 	ShortURL    string     `json:"short_url"`
 	TotalClicks int64      `json:"total_clicks"`

@@ -54,21 +54,27 @@ func (h *RedirectHandler) HandleRedirect(w http.ResponseWriter, r *http.Request)
 
 	link, ok := h.linkCache.Get(code)
 	if !ok {
+		// Use GetByCodeWithStats so TotalClicks is available for the click-limit check.
+		// Only links without max_clicks are cached; click-limited links always go through
+		// this path so the count is fresh on every request.
 		var err error
-		link, err = h.linkRepository.GetByCode(r.Context(), code)
+		link, err = h.linkRepository.GetByCodeWithStats(r.Context(), code)
 		if err != nil {
 			writeError(w, http.StatusNotFound, "link not found")
 			return
 		}
-		// Only cache non-expired links; caching an expired link wastes memory
-		// since it will always result in a 410 on every subsequent request.
-		if !link.IsExpired() {
+		if !link.IsExpired() && link.MaxClicks == nil {
 			h.linkCache.Set(link)
 		}
 	}
 
 	if link.IsExpired() {
 		writeError(w, http.StatusGone, "link has expired")
+		return
+	}
+
+	if link.IsClickLimitReached() {
+		writeError(w, http.StatusGone, "link has reached its click limit")
 		return
 	}
 

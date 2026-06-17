@@ -81,6 +81,7 @@ func (h *LinkHandler) toLinkResponse(link *model.Link) dto.LinkResponse {
 		Description: link.Description,
 		OgImage:     link.OgImage,
 		ExpiresAt:   link.ExpiresAt,
+		MaxClicks:   link.MaxClicks,
 		CreatedAt:   link.CreatedAt,
 		ShortURL:    h.baseURL + "/" + link.ShortCode,
 		TotalClicks: link.TotalClicks,
@@ -165,6 +166,7 @@ func (h *LinkHandler) CreateLink(w http.ResponseWriter, r *http.Request) {
 		Description: req.Description,
 		OgImage:     req.OgImage,
 		ExpiresAt:   req.ExpiresAt,
+		MaxClicks:   req.MaxClicks,
 	}
 	if req.CustomCode != nil && *req.CustomCode != "" {
 		newLink.ShortCode = *req.CustomCode
@@ -329,6 +331,7 @@ func (h *LinkHandler) UpdateLink(w http.ResponseWriter, r *http.Request) {
 	link.Description = req.Description
 	link.OgImage = req.OgImage
 	link.ExpiresAt = req.ExpiresAt
+	link.MaxClicks = req.MaxClicks
 
 	if err := h.linkRepository.Update(r.Context(), link); err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to update link")

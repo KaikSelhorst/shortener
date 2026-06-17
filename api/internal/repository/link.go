@@ -22,8 +22,9 @@ func NewLinkRepository(db *pgxpool.Pool) *LinkRepository {
 func (r *LinkRepository) GetByCode(ctx context.Context, code string) (*model.Link, error) {
 	var link model.Link
 	err := r.db.QueryRow(ctx,
-		"SELECT id, project_id, short_code, original_url, title, description, og_image, expires_at, created_at FROM links WHERE short_code = $1", code,
-	).Scan(&link.ID, &link.ProjectID, &link.ShortCode, &link.OriginalURL, &link.Title, &link.Description, &link.OgImage, &link.ExpiresAt, &link.CreatedAt)
+		`SELECT id, project_id, short_code, original_url, title, description, og_image, expires_at, max_clicks, created_at
+		 FROM links WHERE short_code = $1`, code,
+	).Scan(&link.ID, &link.ProjectID, &link.ShortCode, &link.OriginalURL, &link.Title, &link.Description, &link.OgImage, &link.ExpiresAt, &link.MaxClicks, &link.CreatedAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrNotFound
@@ -36,11 +37,11 @@ func (r *LinkRepository) GetByCode(ctx context.Context, code string) (*model.Lin
 func (r *LinkRepository) GetByCodeWithStats(ctx context.Context, code string) (*model.Link, error) {
 	var link model.Link
 	err := r.db.QueryRow(ctx,
-		`SELECT l.id, l.project_id, l.short_code, l.original_url, l.title, l.description, l.og_image, l.expires_at, l.created_at, COUNT(c.id) AS total_clicks
-FROM links l LEFT JOIN clicks c ON c.link_id = l.id
-WHERE l.short_code = $1
-GROUP BY l.id`, code,
-	).Scan(&link.ID, &link.ProjectID, &link.ShortCode, &link.OriginalURL, &link.Title, &link.Description, &link.OgImage, &link.ExpiresAt, &link.CreatedAt, &link.TotalClicks)
+		`SELECT l.id, l.project_id, l.short_code, l.original_url, l.title, l.description, l.og_image, l.expires_at, l.max_clicks, l.created_at, COUNT(c.id) AS total_clicks
+		 FROM links l LEFT JOIN clicks c ON c.link_id = l.id
+		 WHERE l.short_code = $1
+		 GROUP BY l.id`, code,
+	).Scan(&link.ID, &link.ProjectID, &link.ShortCode, &link.OriginalURL, &link.Title, &link.Description, &link.OgImage, &link.ExpiresAt, &link.MaxClicks, &link.CreatedAt, &link.TotalClicks)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrNotFound
@@ -51,7 +52,7 @@ GROUP BY l.id`, code,
 }
 
 func (r *LinkRepository) List(ctx context.Context, projectID int64, cursor uint64, direction string, limit int) ([]*model.Link, error) {
-	const cols = "SELECT id, project_id, short_code, original_url, title, description, og_image, expires_at, created_at FROM links"
+	const cols = `SELECT id, project_id, short_code, original_url, title, description, og_image, expires_at, max_clicks, created_at FROM links`
 
 	var (
 		rows pgx.Rows
@@ -75,7 +76,7 @@ func (r *LinkRepository) List(ctx context.Context, projectID int64, cursor uint6
 	var links []*model.Link
 	for rows.Next() {
 		var link model.Link
-		if err := rows.Scan(&link.ID, &link.ProjectID, &link.ShortCode, &link.OriginalURL, &link.Title, &link.Description, &link.OgImage, &link.ExpiresAt, &link.CreatedAt); err != nil {
+		if err := rows.Scan(&link.ID, &link.ProjectID, &link.ShortCode, &link.OriginalURL, &link.Title, &link.Description, &link.OgImage, &link.ExpiresAt, &link.MaxClicks, &link.CreatedAt); err != nil {
 			return nil, err
 		}
 		links = append(links, &link)
@@ -128,8 +129,9 @@ func (r *LinkRepository) Create(ctx context.Context, link *model.Link, generateC
 	if link.ShortCode != "" {
 		// Custom code: single INSERT — unique constraint handles duplicates.
 		err := r.db.QueryRow(ctx,
-			"INSERT INTO links (project_id, original_url, title, description, og_image, expires_at, short_code) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, created_at",
-			link.ProjectID, link.OriginalURL, link.Title, link.Description, link.OgImage, link.ExpiresAt, link.ShortCode,
+			`INSERT INTO links (project_id, original_url, title, description, og_image, expires_at, max_clicks, short_code)
+			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id, created_at`,
+			link.ProjectID, link.OriginalURL, link.Title, link.Description, link.OgImage, link.ExpiresAt, link.MaxClicks, link.ShortCode,
 		).Scan(&link.ID, &link.CreatedAt)
 		if err != nil {
 			var pgErr *pgconn.PgError
@@ -151,8 +153,9 @@ func (r *LinkRepository) Create(ctx context.Context, link *model.Link, generateC
 	defer func() { _ = tx.Rollback(ctx) }()
 
 	err = tx.QueryRow(ctx,
-		"INSERT INTO links (project_id, original_url, title, description, og_image, expires_at) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, created_at",
-		link.ProjectID, link.OriginalURL, link.Title, link.Description, link.OgImage, link.ExpiresAt,
+		`INSERT INTO links (project_id, original_url, title, description, og_image, expires_at, max_clicks)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, created_at`,
+		link.ProjectID, link.OriginalURL, link.Title, link.Description, link.OgImage, link.ExpiresAt, link.MaxClicks,
 	).Scan(&link.ID, &link.CreatedAt)
 	if err != nil {
 		return err
@@ -174,8 +177,8 @@ func (r *LinkRepository) Create(ctx context.Context, link *model.Link, generateC
 
 func (r *LinkRepository) Update(ctx context.Context, link *model.Link) error {
 	_, err := r.db.Exec(ctx,
-		"UPDATE links SET original_url = $1, title = $2, description = $3, og_image = $4, expires_at = $5 WHERE id = $6",
-		link.OriginalURL, link.Title, link.Description, link.OgImage, link.ExpiresAt, link.ID,
+		`UPDATE links SET original_url = $1, title = $2, description = $3, og_image = $4, expires_at = $5, max_clicks = $6 WHERE id = $7`,
+		link.OriginalURL, link.Title, link.Description, link.OgImage, link.ExpiresAt, link.MaxClicks, link.ID,
 	)
 	return err
 }

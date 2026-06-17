@@ -11,10 +11,15 @@ type Link struct {
 	Description *string    `json:"description"`
 	OgImage     *string    `json:"og_image"`
 	ExpiresAt   *time.Time `json:"expires_at"`
+	MaxClicks   *int64     `json:"max_clicks"`
 	CreatedAt   time.Time  `json:"created_at"`
 	TotalClicks int64      `json:"total_clicks"`
 }
 
 func (l *Link) IsExpired() bool {
 	return l.ExpiresAt != nil && l.ExpiresAt.Before(time.Now().UTC())
+}
+
+func (l *Link) IsClickLimitReached() bool {
+	return l.MaxClicks != nil && l.TotalClicks >= *l.MaxClicks
 }
