@@ -64,6 +64,7 @@ export interface LinkRequest {
 	description?: string
 	og_image?: string
 	expires_at?: string
+	custom_code?: string
 }
 
 export interface ApiKeyResponse {

@@ -215,6 +215,15 @@
 		>
 			<Input name="url" type="url" label="URL" placeholder="https://example.com" required />
 			<Input name="title" type="text" label="Title" placeholder="optional title" />
+			<Input
+				name="custom_code"
+				type="text"
+				label="Short code"
+				placeholder="my-link (leave blank to auto-generate)"
+				pattern="[a-zA-Z0-9_\-]+"
+				minlength={3}
+				maxlength={50}
+			/>
 			<Input name="expires_at" type="datetime-local" label="Expires at" />
 			{#if createError}
 				<p class="font-mono text-xs text-destructive">{createError}</p>
