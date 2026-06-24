@@ -1,4 +1,4 @@
-docs
+/docs
 .zed/
 
 # Env files — never commit actual .env files
