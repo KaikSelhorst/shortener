@@ -28,6 +28,13 @@
 			>
 				▶ settings
 			</a>
+			<a
+				href="/docs"
+				onclick={() => (open = false)}
+				class="flex w-full items-center gap-2 px-3 py-2 font-mono text-xs text-foreground hover:bg-card hover:text-primary transition-colors"
+			>
+				▶ api docs
+			</a>
 			<div class="border-t border-border"></div>
 			<form method="POST" action="/api/auth/logout">
 				<button

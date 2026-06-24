@@ -45,6 +45,12 @@
 <div class="flex min-h-screen flex-col bg-background">
 	<header class="border-b border-border bg-card">
 		<div class="flex items-center px-4 py-2.5">
+			<a
+				href="/dashboard"
+				class="font-mono text-[10px] uppercase tracking-widest text-muted-foreground transition-colors hover:text-foreground"
+			>
+				shortener
+			</a>
 			<div class="ml-auto flex items-center gap-4">
 				<span class="font-mono text-[11px] tabular-nums text-accent">{time}</span>
 				<div class="h-3 w-px bg-border"></div>
