@@ -1,0 +1,907 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Shortener API",
+    "version": "1.0.0",
+    "description": "URL shortener and analytics platform with webhook support."
+  },
+  "servers": [
+    { "url": "http://localhost:8080", "description": "Local development" }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Access token obtained from /auth/login or /auth/refresh."
+      },
+      "apiKeyAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "API key created via /api-keys. Format: Bearer sk_..."
+      }
+    },
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "properties": { "error": { "type": "string" } }
+      },
+      "UserResponse": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "email": { "type": "string", "format": "email" },
+          "created_at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "AuthState": {
+        "type": "object",
+        "description": "next='complete' means tokens are present. next='totp' means a second factor is required; use the session value with /auth/mfa/totp.",
+        "properties": {
+          "next": { "type": "string", "enum": ["complete", "totp"] },
+          "session": { "type": "string" },
+          "access_token": { "type": "string" },
+          "refresh_token": { "type": "string" },
+          "token_type": { "type": "string" },
+          "expires_in": { "type": "integer" }
+        }
+      },
+      "TOTPSetupResponse": {
+        "type": "object",
+        "properties": {
+          "uri": { "type": "string", "description": "otpauth:// URI for QR code generation." },
+          "secret": { "type": "string", "description": "Human-readable base32 secret." }
+        }
+      },
+      "ProjectResponse": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "name": { "type": "string" },
+          "slug": { "type": "string" },
+          "created_at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "LinkResponse": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "project_id": { "type": "integer" },
+          "short_code": { "type": "string" },
+          "original_url": { "type": "string", "format": "uri" },
+          "title": { "type": "string", "nullable": true },
+          "description": { "type": "string", "nullable": true },
+          "og_image": { "type": "string", "nullable": true },
+          "expires_at": { "type": "string", "format": "date-time", "nullable": true },
+          "max_clicks": { "type": "integer", "nullable": true },
+          "created_at": { "type": "string", "format": "date-time" },
+          "short_url": { "type": "string", "format": "uri" },
+          "total_clicks": { "type": "integer" }
+        }
+      },
+      "ListLinksResponse": {
+        "type": "object",
+        "properties": {
+          "data": { "type": "array", "items": { "$ref": "#/components/schemas/LinkResponse" } },
+          "next_cursor": { "type": "string", "nullable": true },
+          "prev_cursor": { "type": "string", "nullable": true },
+          "limit": { "type": "integer" }
+        }
+      },
+      "APIKeyResponse": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "user_id": { "type": "integer" },
+          "project_id": { "type": "integer", "nullable": true },
+          "name": { "type": "string" },
+          "key_prefix": { "type": "string" },
+          "scopes": { "type": "array", "items": { "type": "string" } },
+          "last_used_at": { "type": "string", "format": "date-time", "nullable": true },
+          "created_at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "CreateAPIKeyResponse": {
+        "allOf": [
+          { "$ref": "#/components/schemas/APIKeyResponse" },
+          {
+            "type": "object",
+            "properties": {
+              "token": { "type": "string", "description": "Full API key. Shown only once at creation time." }
+            }
+          }
+        ]
+      },
+      "WebhookResponse": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "project_id": { "type": "integer" },
+          "url": { "type": "string", "format": "uri" },
+          "events": { "type": "array", "items": { "type": "string" } },
+          "enabled": { "type": "boolean" },
+          "created_at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "CreateWebhookResponse": {
+        "allOf": [
+          { "$ref": "#/components/schemas/WebhookResponse" },
+          {
+            "type": "object",
+            "properties": {
+              "secret": { "type": "string", "description": "HMAC signing secret. Shown only once at creation time." }
+            }
+          }
+        ]
+      },
+      "WebhookDeliveryResponse": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "webhook_id": { "type": "string", "format": "uuid" },
+          "event": { "type": "string" },
+          "payload": { "type": "object" },
+          "status": { "type": "string" },
+          "attempts": { "type": "integer" },
+          "response_status": { "type": "integer", "nullable": true },
+          "next_retry_at": { "type": "string", "format": "date-time" },
+          "created_at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "ListDeliveriesResponse": {
+        "type": "object",
+        "properties": {
+          "data": { "type": "array", "items": { "$ref": "#/components/schemas/WebhookDeliveryResponse" } },
+          "has_more": { "type": "boolean" },
+          "page": { "type": "integer" }
+        }
+      },
+      "ClicksOverTime": {
+        "type": "object",
+        "properties": {
+          "date": { "type": "string", "format": "date-time" },
+          "count": { "type": "integer" }
+        }
+      },
+      "DeviceBreakdown": {
+        "type": "object",
+        "properties": {
+          "mobile": { "type": "integer" },
+          "desktop": { "type": "integer" },
+          "tablet": { "type": "integer" },
+          "bot": { "type": "integer" },
+          "unknown": { "type": "integer" }
+        }
+      },
+      "ReferrerBreakdown": {
+        "type": "object",
+        "properties": {
+          "direct": { "type": "integer" },
+          "instagram": { "type": "integer" },
+          "facebook": { "type": "integer" },
+          "twitter": { "type": "integer" },
+          "tiktok": { "type": "integer" },
+          "linkedin": { "type": "integer" },
+          "whatsapp": { "type": "integer" },
+          "youtube": { "type": "integer" },
+          "google": { "type": "integer" },
+          "discord": { "type": "integer" },
+          "other": { "type": "integer" }
+        }
+      },
+      "BrowserBreakdown": {
+        "type": "object",
+        "properties": {
+          "chrome": { "type": "integer" },
+          "firefox": { "type": "integer" },
+          "safari": { "type": "integer" },
+          "edge": { "type": "integer" },
+          "opera": { "type": "integer" },
+          "samsung": { "type": "integer" },
+          "ie": { "type": "integer" },
+          "other": { "type": "integer" }
+        }
+      },
+      "TopLink": {
+        "type": "object",
+        "properties": {
+          "short_code": { "type": "string" },
+          "original_url": { "type": "string", "format": "uri" },
+          "title": { "type": "string", "nullable": true },
+          "total_clicks": { "type": "integer" }
+        }
+      },
+      "ProjectAnalytics": {
+        "type": "object",
+        "properties": {
+          "total_clicks": { "type": "integer" },
+          "unique_clicks": { "type": "integer" },
+          "over_time": { "type": "array", "items": { "$ref": "#/components/schemas/ClicksOverTime" } },
+          "devices": { "$ref": "#/components/schemas/DeviceBreakdown" },
+          "referrers": { "$ref": "#/components/schemas/ReferrerBreakdown" },
+          "browsers": { "$ref": "#/components/schemas/BrowserBreakdown" },
+          "top_links": { "type": "array", "items": { "$ref": "#/components/schemas/TopLink" } }
+        }
+      },
+      "LinkAnalytics": {
+        "type": "object",
+        "properties": {
+          "link_id": { "type": "integer" },
+          "short_code": { "type": "string" },
+          "total_clicks": { "type": "integer" },
+          "unique_clicks": { "type": "integer" },
+          "over_time": { "type": "array", "items": { "$ref": "#/components/schemas/ClicksOverTime" } },
+          "devices": { "$ref": "#/components/schemas/DeviceBreakdown" },
+          "referrers": { "$ref": "#/components/schemas/ReferrerBreakdown" },
+          "browsers": { "$ref": "#/components/schemas/BrowserBreakdown" }
+        }
+      }
+    }
+  },
+  "tags": [
+    { "name": "System",    "description": "Health and utility endpoints." },
+    { "name": "Auth",      "description": "Registration, login, token refresh and logout." },
+    { "name": "TOTP",      "description": "Two-factor authentication setup and management. Requires a valid access token." },
+    { "name": "API Keys",  "description": "Create and manage API keys. Keys can be scoped to specific operations and optionally restricted to a single project. Analytics endpoints are not accessible with API keys." },
+    { "name": "Projects",  "description": "Project management. Accessible with JWT or a scoped API key." },
+    { "name": "Links",     "description": "Short link management. Accessible with JWT or a scoped API key." },
+    { "name": "Analytics", "description": "Click analytics. JWT-only — API keys are not accepted." },
+    { "name": "SSE",       "description": "Server-sent event streams for real-time click and link updates. JWT-only." },
+    { "name": "Webhooks",  "description": "Webhook subscriptions and delivery history. Supported events: link.clicked, link.created, link.updated, link.deleted. Payloads are HMAC-SHA256 signed; the secret is shown only at creation time." }
+  ],
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": ["System"],
+        "summary": "Health check",
+        "responses": {
+          "200": { "description": "Service is healthy." }
+        }
+      }
+    },
+    "/{code}": {
+      "get": {
+        "tags": ["System"],
+        "summary": "Redirect to original URL",
+        "parameters": [
+          { "name": "code", "in": "path", "required": true, "schema": { "type": "string" }, "description": "Short code for the link." }
+        ],
+        "responses": {
+          "302": { "description": "Redirect to the original URL." },
+          "404": { "description": "Short code not found or expired." },
+          "410": { "description": "Link has reached its max click limit." }
+        }
+      }
+    },
+    "/auth/register": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Register a new account",
+        "description": "Rate limited to 10 requests per minute.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "password"],
+                "properties": {
+                  "email": { "type": "string", "format": "email" },
+                  "password": { "type": "string", "minLength": 8, "maxLength": 72 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Account created.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AuthState" } } }
+          },
+          "409": {
+            "description": "Email already registered.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          },
+          "422": {
+            "description": "Validation error.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          }
+        }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Login",
+        "description": "Rate limited to 10 req/min. If TOTP is enabled, next='totp' is returned with a short-lived session token. Pass it to /auth/mfa/totp to complete authentication.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "password"],
+                "properties": {
+                  "email": { "type": "string", "format": "email" },
+                  "password": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login result. Check the next field.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AuthState" } } }
+          },
+          "401": {
+            "description": "Invalid credentials.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          }
+        }
+      }
+    },
+    "/auth/refresh": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Refresh access token",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["refresh_token"],
+                "properties": { "refresh_token": { "type": "string" } }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "New token pair.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AuthState" } } }
+          },
+          "401": {
+            "description": "Refresh token invalid or expired.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          }
+        }
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Logout and revoke refresh token",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["refresh_token"],
+                "properties": { "refresh_token": { "type": "string" } }
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": { "description": "Logged out. Refresh token revoked." }
+        }
+      }
+    },
+    "/auth/me": {
+      "get": {
+        "tags": ["Auth"],
+        "summary": "Get current user",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Authenticated user.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UserResponse" } } }
+          },
+          "401": {
+            "description": "Missing or invalid token.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          }
+        }
+      }
+    },
+    "/auth/mfa/totp": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Complete TOTP MFA step",
+        "description": "Rate limited to 10 req/min. Called after /auth/login when next='totp'.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["session", "code"],
+                "properties": {
+                  "session": { "type": "string", "description": "Short-lived session token from the login response." },
+                  "code": { "type": "string", "description": "6-digit TOTP code from the authenticator app." }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Authentication complete.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AuthState" } } }
+          },
+          "401": {
+            "description": "Invalid session or TOTP code.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          }
+        }
+      }
+    },
+    "/auth/totp/setup": {
+      "post": {
+        "tags": ["TOTP"],
+        "summary": "Initiate TOTP setup",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "TOTP provisioning data. Scan the URI with an authenticator app.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TOTPSetupResponse" } } }
+          },
+          "409": {
+            "description": "TOTP is already enabled.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          }
+        }
+      }
+    },
+    "/auth/totp/confirm": {
+      "post": {
+        "tags": ["TOTP"],
+        "summary": "Confirm TOTP setup",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["code"],
+                "properties": {
+                  "code": { "type": "string", "description": "6-digit code to verify the setup." }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": { "description": "TOTP enabled." },
+          "401": {
+            "description": "Invalid TOTP code.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          }
+        }
+      }
+    },
+    "/auth/totp": {
+      "delete": {
+        "tags": ["TOTP"],
+        "summary": "Disable TOTP",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["code"],
+                "properties": {
+                  "code": { "type": "string", "description": "Current 6-digit TOTP code to confirm intent." }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": { "description": "TOTP disabled." },
+          "401": {
+            "description": "Invalid TOTP code.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          }
+        }
+      }
+    },
+    "/api-keys": {
+      "get": {
+        "tags": ["API Keys"],
+        "summary": "List API keys",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "All API keys for the current user.",
+            "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/APIKeyResponse" } } } }
+          }
+        }
+      },
+      "post": {
+        "tags": ["API Keys"],
+        "summary": "Create API key",
+        "description": "The full key token is returned only once in the response.",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["name", "scopes"],
+                "properties": {
+                  "name": { "type": "string" },
+                  "scopes": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": ["links:create","links:read","links:update","links:delete","projects:create","projects:read","projects:update","projects:delete","webhooks:read","webhooks:create","webhooks:delete","*"]
+                    }
+                  },
+                  "project_id": { "type": "integer", "nullable": true, "description": "Restrict key to a single project. Omit for account-wide access." }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created API key.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreateAPIKeyResponse" } } }
+          },
+          "422": {
+            "description": "Validation error.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          }
+        }
+      }
+    },
+    "/api-keys/{id}": {
+      "delete": {
+        "tags": ["API Keys"],
+        "summary": "Delete API key",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "204": { "description": "Key deleted." },
+          "404": { "description": "Key not found.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
+    },
+    "/projects": {
+      "get": {
+        "tags": ["Projects"],
+        "summary": "List projects",
+        "security": [{ "bearerAuth": [] }, { "apiKeyAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "All projects for the current user.",
+            "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/ProjectResponse" } } } }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Projects"],
+        "summary": "Create project",
+        "security": [{ "bearerAuth": [] }, { "apiKeyAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["name"],
+                "properties": {
+                  "name": { "type": "string", "maxLength": 100, "description": "Letters, digits, spaces, hyphens and underscores only." }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Created project.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ProjectResponse" } } } },
+          "422": { "description": "Validation error.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
+    },
+    "/projects/{slug}": {
+      "put": {
+        "tags": ["Projects"],
+        "summary": "Update project",
+        "security": [{ "bearerAuth": [] }, { "apiKeyAuth": [] }],
+        "parameters": [
+          { "name": "slug", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["name"],
+                "properties": { "name": { "type": "string", "maxLength": 100 } }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Updated project.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ProjectResponse" } } } },
+          "404": { "description": "Project not found.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      },
+      "delete": {
+        "tags": ["Projects"],
+        "summary": "Delete project",
+        "security": [{ "bearerAuth": [] }, { "apiKeyAuth": [] }],
+        "parameters": [
+          { "name": "slug", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "204": { "description": "Project deleted." },
+          "404": { "description": "Project not found.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
+    },
+    "/projects/{slug}/links": {
+      "get": {
+        "tags": ["Links"],
+        "summary": "List links",
+        "security": [{ "bearerAuth": [] }, { "apiKeyAuth": [] }],
+        "parameters": [
+          { "name": "slug", "in": "path", "required": true, "schema": { "type": "string" } },
+          { "name": "cursor", "in": "query", "schema": { "type": "string" }, "description": "Cursor for pagination." },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 20 } }
+        ],
+        "responses": {
+          "200": { "description": "Paginated list of links.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ListLinksResponse" } } } }
+        }
+      },
+      "post": {
+        "tags": ["Links"],
+        "summary": "Create link",
+        "security": [{ "bearerAuth": [] }, { "apiKeyAuth": [] }],
+        "parameters": [
+          { "name": "slug", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["url"],
+                "properties": {
+                  "url": { "type": "string", "format": "uri" },
+                  "title": { "type": "string", "nullable": true },
+                  "description": { "type": "string", "nullable": true },
+                  "og_image": { "type": "string", "format": "uri", "nullable": true },
+                  "expires_at": { "type": "string", "format": "date-time", "nullable": true },
+                  "max_clicks": { "type": "integer", "minimum": 1, "nullable": true },
+                  "custom_code": { "type": "string", "minLength": 3, "maxLength": 50, "nullable": true, "description": "Letters, numbers, hyphens and underscores only." }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Created link.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LinkResponse" } } } },
+          "409": { "description": "Custom code already in use.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
+    },
+    "/projects/{slug}/links/{code}": {
+      "get": {
+        "tags": ["Links"],
+        "summary": "Get link",
+        "security": [{ "bearerAuth": [] }, { "apiKeyAuth": [] }],
+        "parameters": [
+          { "name": "slug", "in": "path", "required": true, "schema": { "type": "string" } },
+          { "name": "code", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Link details.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LinkResponse" } } } },
+          "404": { "description": "Link not found.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      },
+      "put": {
+        "tags": ["Links"],
+        "summary": "Update link",
+        "security": [{ "bearerAuth": [] }, { "apiKeyAuth": [] }],
+        "parameters": [
+          { "name": "slug", "in": "path", "required": true, "schema": { "type": "string" } },
+          { "name": "code", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["url"],
+                "properties": {
+                  "url": { "type": "string", "format": "uri" },
+                  "title": { "type": "string", "nullable": true },
+                  "description": { "type": "string", "nullable": true },
+                  "og_image": { "type": "string", "format": "uri", "nullable": true },
+                  "expires_at": { "type": "string", "format": "date-time", "nullable": true },
+                  "max_clicks": { "type": "integer", "minimum": 1, "nullable": true },
+                  "custom_code": { "type": "string", "minLength": 3, "maxLength": 50, "nullable": true }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Updated link.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LinkResponse" } } } },
+          "404": { "description": "Link not found.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      },
+      "delete": {
+        "tags": ["Links"],
+        "summary": "Delete link",
+        "security": [{ "bearerAuth": [] }, { "apiKeyAuth": [] }],
+        "parameters": [
+          { "name": "slug", "in": "path", "required": true, "schema": { "type": "string" } },
+          { "name": "code", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "204": { "description": "Link deleted." },
+          "404": { "description": "Link not found.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
+    },
+    "/projects/{slug}/analytics": {
+      "get": {
+        "tags": ["Analytics"],
+        "summary": "Project analytics",
+        "description": "JWT-only. API keys are not accepted for analytics endpoints.",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "slug", "in": "path", "required": true, "schema": { "type": "string" } },
+          { "name": "period", "in": "query", "schema": { "type": "string", "enum": ["7d","30d","90d"], "default": "30d" } }
+        ],
+        "responses": {
+          "200": { "description": "Aggregated analytics for the project.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ProjectAnalytics" } } } },
+          "403": { "description": "API keys are not allowed on this endpoint.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
+    },
+    "/projects/{slug}/links/{code}/analytics": {
+      "get": {
+        "tags": ["Analytics"],
+        "summary": "Link analytics",
+        "description": "JWT-only. API keys are not accepted for analytics endpoints.",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "slug", "in": "path", "required": true, "schema": { "type": "string" } },
+          { "name": "code", "in": "path", "required": true, "schema": { "type": "string" } },
+          { "name": "period", "in": "query", "schema": { "type": "string", "enum": ["7d","30d","90d"], "default": "30d" } }
+        ],
+        "responses": {
+          "200": { "description": "Aggregated analytics for the link.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LinkAnalytics" } } } },
+          "403": { "description": "API keys are not allowed on this endpoint.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
+    },
+    "/projects/stream": {
+      "get": {
+        "tags": ["SSE"],
+        "summary": "User-level event stream",
+        "description": "Emits real-time events for all links across all projects. JWT-only.",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "SSE stream.", "content": { "text/event-stream": { "schema": { "type": "string" } } } }
+        }
+      }
+    },
+    "/projects/{slug}/stream": {
+      "get": {
+        "tags": ["SSE"],
+        "summary": "Project-level event stream",
+        "description": "Emits real-time events for all links in the given project. JWT-only.",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "slug", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "SSE stream.", "content": { "text/event-stream": { "schema": { "type": "string" } } } }
+        }
+      }
+    },
+    "/projects/{slug}/links/{code}/stream": {
+      "get": {
+        "tags": ["SSE"],
+        "summary": "Link-level event stream",
+        "description": "Emits real-time click events for a single link. JWT-only.",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "slug", "in": "path", "required": true, "schema": { "type": "string" } },
+          { "name": "code", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "SSE stream.", "content": { "text/event-stream": { "schema": { "type": "string" } } } }
+        }
+      }
+    },
+    "/projects/{slug}/webhooks": {
+      "get": {
+        "tags": ["Webhooks"],
+        "summary": "List webhooks",
+        "security": [{ "bearerAuth": [] }, { "apiKeyAuth": [] }],
+        "parameters": [
+          { "name": "slug", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "All webhooks for the project.", "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/WebhookResponse" } } } } }
+        }
+      },
+      "post": {
+        "tags": ["Webhooks"],
+        "summary": "Create webhook",
+        "description": "The signing secret is returned only once in the response.",
+        "security": [{ "bearerAuth": [] }, { "apiKeyAuth": [] }],
+        "parameters": [
+          { "name": "slug", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["url", "events"],
+                "properties": {
+                  "url": { "type": "string", "format": "uri" },
+                  "events": { "type": "array", "items": { "type": "string", "enum": ["link.clicked","link.created","link.updated","link.deleted"] } }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Created webhook.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreateWebhookResponse" } } } }
+        }
+      }
+    },
+    "/projects/{slug}/webhooks/{id}": {
+      "delete": {
+        "tags": ["Webhooks"],
+        "summary": "Delete webhook",
+        "security": [{ "bearerAuth": [] }, { "apiKeyAuth": [] }],
+        "parameters": [
+          { "name": "slug", "in": "path", "required": true, "schema": { "type": "string" } },
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "204": { "description": "Webhook deleted." },
+          "404": { "description": "Webhook not found.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
+    },
+    "/projects/{slug}/webhooks/{id}/deliveries": {
+      "get": {
+        "tags": ["Webhooks"],
+        "summary": "List webhook deliveries",
+        "security": [{ "bearerAuth": [] }, { "apiKeyAuth": [] }],
+        "parameters": [
+          { "name": "slug", "in": "path", "required": true, "schema": { "type": "string" } },
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } },
+          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } }
+        ],
+        "responses": {
+          "200": { "description": "Delivery history.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ListDeliveriesResponse" } } } }
+        }
+      }
+    }
+  }
+}

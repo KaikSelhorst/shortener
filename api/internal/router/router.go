@@ -7,6 +7,7 @@ import (
 
 	"github.com/KaikSelhorst/shortener/internal/cache"
 	"github.com/KaikSelhorst/shortener/internal/config"
+	"github.com/KaikSelhorst/shortener/internal/docs"
 	"github.com/KaikSelhorst/shortener/internal/handler"
 	authmw "github.com/KaikSelhorst/shortener/internal/middleware"
 	"github.com/KaikSelhorst/shortener/internal/repository"
@@ -49,6 +50,7 @@ func New(cfg *config.Config, handlers *Handlers, authService *service.AuthServic
 	authLimiter := authmw.NewRateLimiter(10, time.Minute)
 
 	r.Get("/health", handlers.HealthHandler.Ok)
+	r.Get("/openapi.json", docs.Handler)
 	r.Get("/{code}", handlers.RedirectHandler.HandleRedirect)
 
 	r.Route("/auth", func(r chi.Router) {
