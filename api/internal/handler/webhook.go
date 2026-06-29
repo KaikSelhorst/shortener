@@ -11,8 +11,7 @@ import (
 	"github.com/KaikSelhorst/shortener/internal/model"
 	"github.com/KaikSelhorst/shortener/internal/repository"
 	"github.com/KaikSelhorst/shortener/internal/service"
-	"github.com/google/uuid"
-	"github.com/go-chi/chi/v5"
+	"github.com/KaikSelhorst/shortener/internal/uuidv7"
 )
 
 type WebhookHandler struct {
@@ -59,7 +58,7 @@ func (h *WebhookHandler) toDeliveryResponse(d *model.WebhookDelivery) dto.Webhoo
 }
 
 func (h *WebhookHandler) resolveProject(w http.ResponseWriter, r *http.Request, userID int64) (*model.Project, bool) {
-	slug := chi.URLParam(r, "slug")
+	slug := r.PathValue("slug")
 	project, err := h.projectRepository.FindBySlug(r.Context(), slug)
 	if err != nil {
 		repoError(w, err, "project not found")
@@ -163,8 +162,8 @@ func (h *WebhookHandler) DeleteWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id := chi.URLParam(r, "id")
-	if _, err := uuid.Parse(id); err != nil {
+	id := r.PathValue("id")
+	if !uuidv7.IsValid(id) {
 		writeError(w, http.StatusBadRequest, "invalid id")
 		return
 	}
@@ -193,8 +192,8 @@ func (h *WebhookHandler) ListDeliveries(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	webhookID := chi.URLParam(r, "id")
-	if _, err := uuid.Parse(webhookID); err != nil {
+	webhookID := r.PathValue("id")
+	if !uuidv7.IsValid(webhookID) {
 		writeError(w, http.StatusBadRequest, "invalid id")
 		return
 	}
