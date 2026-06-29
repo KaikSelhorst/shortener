@@ -9,7 +9,6 @@ import (
 	"github.com/KaikSelhorst/shortener/internal/repository"
 	"github.com/KaikSelhorst/shortener/internal/service"
 	"github.com/KaikSelhorst/shortener/internal/sse"
-	"github.com/go-chi/chi/v5"
 )
 
 type clickedPayload struct {
@@ -50,7 +49,7 @@ func NewRedirectHandler(
 }
 
 func (h *RedirectHandler) HandleRedirect(w http.ResponseWriter, r *http.Request) {
-	code := chi.URLParam(r, "code")
+	code := r.PathValue("code")
 
 	link, ok := h.linkCache.Get(code)
 	if !ok {

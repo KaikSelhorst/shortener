@@ -9,7 +9,6 @@ import (
 	"github.com/KaikSelhorst/shortener/internal/middleware"
 	"github.com/KaikSelhorst/shortener/internal/repository"
 	"github.com/KaikSelhorst/shortener/internal/sse"
-	"github.com/go-chi/chi/v5"
 )
 
 type SSEHandler struct {
@@ -29,7 +28,7 @@ func (h *SSEHandler) HandleProjectStream(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	slug := chi.URLParam(r, "slug")
+	slug := r.PathValue("slug")
 	project, err := h.projects.FindBySlug(r.Context(), slug)
 	if err != nil {
 		repoError(w, err, "project not found")
@@ -86,7 +85,7 @@ func (h *SSEHandler) HandleLinkStream(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	slug := chi.URLParam(r, "slug")
+	slug := r.PathValue("slug")
 	project, err := h.projects.FindBySlug(r.Context(), slug)
 	if err != nil {
 		repoError(w, err, "project not found")
@@ -99,7 +98,7 @@ func (h *SSEHandler) HandleLinkStream(w http.ResponseWriter, r *http.Request) {
 
 	h.hub.RegisterProjectUser(project.ID, userID)
 
-	code := chi.URLParam(r, "code")
+	code := r.PathValue("code")
 	link, err := h.links.GetByCode(r.Context(), code)
 	if err != nil {
 		repoError(w, err, "link not found")

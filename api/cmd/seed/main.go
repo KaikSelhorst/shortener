@@ -345,7 +345,7 @@ func ensureWebhookDeliveries(ctx context.Context, pool *pgxpool.Pool, webhookIDs
 				 VALUES ($1, $2, $3, $4, $5, $6, $7)`,
 				webhookID, s.event, payload, s.status, s.attempts, s.responseStatus, createdAt,
 			); err != nil {
-				log.Fatalf("insert delivery for webhook#%d: %v", webhookID, err)
+				log.Fatalf("insert delivery for webhook#%s: %v", webhookID, err)
 			}
 			inserted++
 		}

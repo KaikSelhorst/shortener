@@ -11,7 +11,6 @@ import (
 	"github.com/KaikSelhorst/shortener/internal/repository"
 	"github.com/KaikSelhorst/shortener/internal/service"
 	"github.com/KaikSelhorst/shortener/internal/sse"
-	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgerrcode"
 )
@@ -108,7 +107,7 @@ func (h *ProjectHandler) UpdateProject(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	slug := chi.URLParam(r, "slug")
+	slug := r.PathValue("slug")
 	project, err := h.projectRepository.FindBySlug(r.Context(), slug)
 	if err != nil {
 		repoError(w, err, "project not found")
@@ -147,7 +146,7 @@ func (h *ProjectHandler) DeleteProject(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	slug := chi.URLParam(r, "slug")
+	slug := r.PathValue("slug")
 	project, err := h.projectRepository.FindBySlug(r.Context(), slug)
 	if err != nil {
 		repoError(w, err, "project not found")

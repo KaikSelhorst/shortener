@@ -8,7 +8,6 @@ import (
 	"github.com/KaikSelhorst/shortener/internal/cache"
 	"github.com/KaikSelhorst/shortener/internal/middleware"
 	"github.com/KaikSelhorst/shortener/internal/repository"
-	"github.com/go-chi/chi/v5"
 )
 
 type AnalyticsHandler struct {
@@ -44,7 +43,7 @@ func (h *AnalyticsHandler) GetProjectAnalytics(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	slug := chi.URLParam(r, "slug")
+	slug := r.PathValue("slug")
 	project, err := h.projects.FindBySlug(r.Context(), slug)
 	if err != nil {
 		repoError(w, err, "project not found")
@@ -86,7 +85,7 @@ func (h *AnalyticsHandler) GetLinkAnalytics(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	slug := chi.URLParam(r, "slug")
+	slug := r.PathValue("slug")
 	project, err := h.projects.FindBySlug(r.Context(), slug)
 	if err != nil {
 		repoError(w, err, "project not found")
@@ -97,7 +96,7 @@ func (h *AnalyticsHandler) GetLinkAnalytics(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	code := chi.URLParam(r, "code")
+	code := r.PathValue("code")
 	link, err := h.links.GetByCode(r.Context(), code)
 	if err != nil {
 		repoError(w, err, "link not found")

@@ -14,6 +14,7 @@ import (
 	"github.com/KaikSelhorst/shortener/internal/testutil"
 )
 
+
 func newWebhookHandler() (*handler.WebhookHandler, *fakes.WebhookRepo, *fakes.ProjectRepo) {
 	webhooks := fakes.NewWebhookRepo()
 	projects := fakes.NewProjectRepo()
@@ -59,7 +60,7 @@ func TestWebhookHandler_CreateWebhook_Success(t *testing.T) {
 		Events: []string{"link.clicked"},
 	})
 	r = testutil.WithUserID(r, p.UserID)
-	r = withChiParams(r, map[string]string{"slug": p.Slug})
+	r = withPathValues(r, map[string]string{"slug": p.Slug})
 
 	h.CreateWebhook(w, r)
 
@@ -91,7 +92,7 @@ func TestWebhookHandler_CreateWebhook_InvalidURL(t *testing.T) {
 		Events: []string{"link.clicked"},
 	})
 	r = testutil.WithUserID(r, p.UserID)
-	r = withChiParams(r, map[string]string{"slug": p.Slug})
+	r = withPathValues(r, map[string]string{"slug": p.Slug})
 
 	h.CreateWebhook(w, r)
 
@@ -110,7 +111,7 @@ func TestWebhookHandler_CreateWebhook_NoEvents(t *testing.T) {
 		Events: []string{},
 	})
 	r = testutil.WithUserID(r, p.UserID)
-	r = withChiParams(r, map[string]string{"slug": p.Slug})
+	r = withPathValues(r, map[string]string{"slug": p.Slug})
 
 	h.CreateWebhook(w, r)
 
@@ -129,7 +130,7 @@ func TestWebhookHandler_CreateWebhook_InvalidEvent(t *testing.T) {
 		Events: []string{"not.an.event"},
 	})
 	r = testutil.WithUserID(r, p.UserID)
-	r = withChiParams(r, map[string]string{"slug": p.Slug})
+	r = withPathValues(r, map[string]string{"slug": p.Slug})
 
 	h.CreateWebhook(w, r)
 
@@ -148,7 +149,7 @@ func TestWebhookHandler_CreateWebhook_Forbidden(t *testing.T) {
 		Events: []string{"link.clicked"},
 	})
 	r = testutil.WithUserID(r, 999) // wrong user
-	r = withChiParams(r, map[string]string{"slug": p.Slug})
+	r = withPathValues(r, map[string]string{"slug": p.Slug})
 
 	h.CreateWebhook(w, r)
 
@@ -166,7 +167,7 @@ func TestWebhookHandler_ListWebhooks_Empty(t *testing.T) {
 	w := httptest.NewRecorder()
 	r := testutil.NewRequest(http.MethodGet, "/", nil)
 	r = testutil.WithUserID(r, p.UserID)
-	r = withChiParams(r, map[string]string{"slug": p.Slug})
+	r = withPathValues(r, map[string]string{"slug": p.Slug})
 
 	h.ListWebhooks(w, r)
 
@@ -184,7 +185,7 @@ func TestWebhookHandler_ListWebhooks_ReturnsOwned(t *testing.T) {
 	w := httptest.NewRecorder()
 	r := testutil.NewRequest(http.MethodGet, "/", nil)
 	r = testutil.WithUserID(r, p.UserID)
-	r = withChiParams(r, map[string]string{"slug": p.Slug})
+	r = withPathValues(r, map[string]string{"slug": p.Slug})
 
 	h.ListWebhooks(w, r)
 
@@ -210,7 +211,7 @@ func TestWebhookHandler_DeleteWebhook_Success(t *testing.T) {
 	w := httptest.NewRecorder()
 	r := testutil.NewRequest(http.MethodDelete, "/", nil)
 	r = testutil.WithUserID(r, p.UserID)
-	r = withChiParams(r, map[string]string{"slug": p.Slug, "id": wh.ID})
+	r = withPathValues(r, map[string]string{"slug": p.Slug, "id": wh.ID})
 
 	h.DeleteWebhook(w, r)
 
@@ -229,7 +230,7 @@ func TestWebhookHandler_DeleteWebhook_InvalidUUID(t *testing.T) {
 	w := httptest.NewRecorder()
 	r := testutil.NewRequest(http.MethodDelete, "/", nil)
 	r = testutil.WithUserID(r, p.UserID)
-	r = withChiParams(r, map[string]string{"slug": p.Slug, "id": "not-a-uuid"})
+	r = withPathValues(r, map[string]string{"slug": p.Slug, "id": "not-a-uuid"})
 
 	h.DeleteWebhook(w, r)
 
@@ -245,7 +246,7 @@ func TestWebhookHandler_DeleteWebhook_NotFound(t *testing.T) {
 	w := httptest.NewRecorder()
 	r := testutil.NewRequest(http.MethodDelete, "/", nil)
 	r = testutil.WithUserID(r, p.UserID)
-	r = withChiParams(r, map[string]string{
+	r = withPathValues(r, map[string]string{
 		"slug": p.Slug,
 		"id":   "019401a0-a78e-7a00-a000-000000000001",
 	})
@@ -265,7 +266,7 @@ func TestWebhookHandler_DeleteWebhook_Forbidden(t *testing.T) {
 	w := httptest.NewRecorder()
 	r := testutil.NewRequest(http.MethodDelete, "/", nil)
 	r = testutil.WithUserID(r, 999) // wrong user
-	r = withChiParams(r, map[string]string{"slug": p.Slug, "id": wh.ID})
+	r = withPathValues(r, map[string]string{"slug": p.Slug, "id": wh.ID})
 
 	h.DeleteWebhook(w, r)
 
@@ -286,7 +287,7 @@ func TestWebhookHandler_ListDeliveries_Success(t *testing.T) {
 	w := httptest.NewRecorder()
 	r := testutil.NewRequest(http.MethodGet, "/?page=1&limit=20", nil)
 	r = testutil.WithUserID(r, p.UserID)
-	r = withChiParams(r, map[string]string{"slug": p.Slug, "id": wh.ID})
+	r = withPathValues(r, map[string]string{"slug": p.Slug, "id": wh.ID})
 
 	h.ListDeliveries(w, r)
 
@@ -316,7 +317,7 @@ func TestWebhookHandler_ListDeliveries_HasMore(t *testing.T) {
 	w := httptest.NewRecorder()
 	r := testutil.NewRequest(http.MethodGet, "/?page=1&limit=20", nil)
 	r = testutil.WithUserID(r, p.UserID)
-	r = withChiParams(r, map[string]string{"slug": p.Slug, "id": wh.ID})
+	r = withPathValues(r, map[string]string{"slug": p.Slug, "id": wh.ID})
 
 	h.ListDeliveries(w, r)
 
@@ -337,7 +338,7 @@ func TestWebhookHandler_ListDeliveries_InvalidUUID(t *testing.T) {
 	w := httptest.NewRecorder()
 	r := testutil.NewRequest(http.MethodGet, "/", nil)
 	r = testutil.WithUserID(r, p.UserID)
-	r = withChiParams(r, map[string]string{"slug": p.Slug, "id": "bad-id"})
+	r = withPathValues(r, map[string]string{"slug": p.Slug, "id": "bad-id"})
 
 	h.ListDeliveries(w, r)
 
@@ -353,7 +354,7 @@ func TestWebhookHandler_ListDeliveries_WebhookNotFound(t *testing.T) {
 	w := httptest.NewRecorder()
 	r := testutil.NewRequest(http.MethodGet, "/", nil)
 	r = testutil.WithUserID(r, p.UserID)
-	r = withChiParams(r, map[string]string{
+	r = withPathValues(r, map[string]string{
 		"slug": p.Slug,
 		"id":   "019401a0-a78e-7a00-a000-000000000001",
 	})
