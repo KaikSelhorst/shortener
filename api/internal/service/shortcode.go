@@ -2,52 +2,51 @@ package service
 
 import (
 	"fmt"
-
-	"github.com/sqids/sqids-go"
+	"strings"
 )
 
 const alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
-// ShortcodeService encodes and decodes short codes using a fixed alphabet and
-// a custom base-10 digit mapping. The encoding logic (numberToDigits /
-// digitsToNumber) is a stable contract with the database — changing it would
-// invalidate all existing short_code values.
-type ShortcodeService struct {
-	s *sqids.Sqids
-}
+const base = uint64(len(alphabet)) // 62
+
+// ShortcodeService encodes and decodes short codes using bijective base-62
+// over a fixed alphabet. The encoding is a stable contract with the database —
+// changing it would invalidate all existing short_code values.
+type ShortcodeService struct{}
 
 func NewShortcodeService() (*ShortcodeService, error) {
-	s, err := sqids.New(sqids.Options{Alphabet: alphabet})
-	if err != nil {
-		return nil, fmt.Errorf("shortcode: failed to initialize sqids: %w", err)
-	}
-	return &ShortcodeService{s: s}, nil
+	return &ShortcodeService{}, nil
 }
 
 func (svc *ShortcodeService) GenerateShortCode(id uint64) (string, error) {
 	if id == 0 {
 		return "", fmt.Errorf("shortcode: id must be greater than zero")
 	}
-	return svc.s.Encode(numberToDigits(id))
+	// MaxUint64 in base 62 needs at most 11 chars; 12 is a safe ceiling.
+	var buf [12]byte
+	n := 0
+	for id > 0 {
+		buf[n] = alphabet[id%base]
+		id /= base
+		n++
+	}
+	for i, j := 0, n-1; i < j; i, j = i+1, j-1 {
+		buf[i], buf[j] = buf[j], buf[i]
+	}
+	return string(buf[:n]), nil
 }
 
 func (svc *ShortcodeService) DecodeShortCode(code string) uint64 {
-	return digitsToNumber(svc.s.Decode(code))
-}
-
-func numberToDigits(id uint64) []uint64 {
-	var digits []uint64
-	for id > 0 {
-		digits = append(digits, id%10)
-		id /= 10
+	if code == "" {
+		return 0
 	}
-	return digits
-}
-
-func digitsToNumber(digits []uint64) uint64 {
 	var id uint64
-	for i := len(digits) - 1; i >= 0; i-- {
-		id = id*10 + digits[i]
+	for _, c := range code {
+		idx := strings.IndexRune(alphabet, c)
+		if idx < 0 {
+			return 0
+		}
+		id = id*base + uint64(idx)
 	}
 	return id
 }
