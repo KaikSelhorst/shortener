@@ -12,6 +12,7 @@ import (
 	authmw "github.com/KaikSelhorst/shortener/internal/middleware"
 	"github.com/KaikSelhorst/shortener/internal/repository"
 	"github.com/KaikSelhorst/shortener/internal/service"
+	"go.uber.org/zap"
 )
 
 type Handlers struct {
@@ -41,7 +42,7 @@ func stack(mws ...func(http.Handler) http.Handler) func(http.Handler) http.Handl
 	}
 }
 
-func New(cfg *config.Config, handlers *Handlers, authService *service.AuthService, apiKeyRepo repository.APIKeyRepo, keyCache *cache.APIKeyCache) *Router {
+func New(cfg *config.Config, handlers *Handlers, authService *service.AuthService, apiKeyRepo repository.APIKeyRepo, keyCache *cache.APIKeyCache, logger *zap.SugaredLogger) *Router {
 	mux := http.NewServeMux()
 
 	requireAuth := authmw.RequireAuth(authService, apiKeyRepo, keyCache)
@@ -51,7 +52,7 @@ func New(cfg *config.Config, handlers *Handlers, authService *service.AuthServic
 
 	base := stack(
 		authmw.RequestID,
-		authmw.Logger,
+		authmw.NewLogger(logger),
 		authmw.SecurityHeaders,
 		authmw.RequireJSON,
 		func(next http.Handler) http.Handler { return http.MaxBytesHandler(next, 1<<20) },

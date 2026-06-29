@@ -103,7 +103,7 @@ func main() {
 
 	go webhook.Start(ctx, webhookRepository, webhookService, &http.Client{Timeout: 10 * time.Second}, logger)
 
-	r := router.New(cfg, handlers, authService, apiKeyRepository, apiKeyCache)
+	r := router.New(cfg, handlers, authService, apiKeyRepository, apiKeyCache, logger)
 
 	go func() {
 		if err := r.Run(); err != nil && !errors.Is(err, http.ErrServerClosed) {
