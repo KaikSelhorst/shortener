@@ -1,4 +1,3 @@
-// Package jwt implements HS256 JWT signing and verification using only stdlib.
 package jwt
 
 import (
@@ -13,7 +12,12 @@ import (
 
 var header = base64.RawURLEncoding.EncodeToString([]byte(`{"alg":"HS256","typ":"JWT"}`))
 
-// Sign creates a HS256 JWT token from an arbitrary JSON-marshalable payload.
+// Expirable may be implemented by claims types to opt in to automatic expiry
+// enforcement inside Verify.
+type Expirable interface {
+	ExpiresAt() time.Time
+}
+
 func Sign(payload any, secret []byte) (string, error) {
 	raw, err := json.Marshal(payload)
 	if err != nil {
@@ -25,8 +29,6 @@ func Sign(payload any, secret []byte) (string, error) {
 	return body + "." + base64.RawURLEncoding.EncodeToString(mac.Sum(nil)), nil
 }
 
-// Verify validates the HS256 signature and unmarshals the payload into dst.
-// Returns an error if the signature is invalid or the payload cannot be decoded.
 func Verify(token string, secret []byte, dst any) error {
 	parts := strings.SplitN(token, ".", 3)
 	if len(parts) != 3 {
@@ -44,11 +46,17 @@ func Verify(token string, secret []byte, dst any) error {
 	if err != nil {
 		return fmt.Errorf("jwt: invalid payload encoding")
 	}
-	return json.Unmarshal(raw, dst)
+	if err := json.Unmarshal(raw, dst); err != nil {
+		return err
+	}
+	if e, ok := dst.(Expirable); ok {
+		if time.Now().After(e.ExpiresAt()) {
+			return fmt.Errorf("jwt: token expired")
+		}
+	}
+	return nil
 }
 
-// NumericDate is a Unix timestamp that marshals/unmarshals as a JSON number,
-// compatible with the JWT spec (RFC 7519 §2).
 type NumericDate int64
 
 func NewNumericDate(t time.Time) NumericDate { return NumericDate(t.Unix()) }
