@@ -33,7 +33,7 @@ func TestLinkRepository_Create(t *testing.T) {
 	u := makeUser(t)
 	p := makeProject(t, u.ID)
 
-	svc, _ := service.NewShortcodeService()
+	svc, _ := service.NewShortcodeService([]byte("test-shortcode-secret-32-chars!!"))
 	repo := newLinkRepo()
 
 	link := &model.Link{ProjectID: p.ID, OriginalURL: "https://example.com"}
@@ -53,7 +53,7 @@ func TestLinkRepository_GetByCode(t *testing.T) {
 	u := makeUser(t)
 	p := makeProject(t, u.ID)
 
-	svc, _ := service.NewShortcodeService()
+	svc, _ := service.NewShortcodeService([]byte("test-shortcode-secret-32-chars!!"))
 	repo := newLinkRepo()
 
 	link := &model.Link{ProjectID: p.ID, OriginalURL: "https://getbycode.com"}
@@ -84,7 +84,7 @@ func TestLinkRepository_Update(t *testing.T) {
 	u := makeUser(t)
 	p := makeProject(t, u.ID)
 
-	svc, _ := service.NewShortcodeService()
+	svc, _ := service.NewShortcodeService([]byte("test-shortcode-secret-32-chars!!"))
 	repo := newLinkRepo()
 
 	link := &model.Link{ProjectID: p.ID, OriginalURL: "https://original.com"}
@@ -111,7 +111,7 @@ func TestLinkRepository_DeleteByCode(t *testing.T) {
 	u := makeUser(t)
 	p := makeProject(t, u.ID)
 
-	svc, _ := service.NewShortcodeService()
+	svc, _ := service.NewShortcodeService([]byte("test-shortcode-secret-32-chars!!"))
 	repo := newLinkRepo()
 
 	link := &model.Link{ProjectID: p.ID, OriginalURL: "https://todelete.com"}
@@ -134,7 +134,7 @@ func TestLinkRepository_List(t *testing.T) {
 	u := makeUser(t)
 	p := makeProject(t, u.ID)
 
-	svc, _ := service.NewShortcodeService()
+	svc, _ := service.NewShortcodeService([]byte("test-shortcode-secret-32-chars!!"))
 	repo := newLinkRepo()
 
 	for _, url := range []string{"https://a.com", "https://b.com", "https://c.com"} {

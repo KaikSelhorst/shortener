@@ -66,7 +66,7 @@ func main() {
 	authService := service.NewAuthService(cfg.JWTSecret)
 	webhookService := service.NewWebhookService(webhookRepository, []byte(cfg.WebhookSecretKey))
 
-	shortcodeService, err := service.NewShortcodeService()
+	shortcodeService, err := service.NewShortcodeService([]byte(cfg.ShortcodeSecret))
 	if err != nil {
 		logger.Fatal(err)
 	}

@@ -13,6 +13,7 @@ type Config struct {
 	JWTSecret         string
 	IPHashSecret      string
 	WebhookSecretKey  string
+	ShortcodeSecret   string
 }
 
 func Load() (*Config, error) {
@@ -23,6 +24,7 @@ func Load() (*Config, error) {
 	jwtSecret := os.Getenv("JWT_SECRET")
 	ipHashSecret := os.Getenv("IP_HASH_SECRET")
 	webhookSecretKey := os.Getenv("WEBHOOK_SECRET_KEY")
+	shortcodeSecret := os.Getenv("SHORTCODE_SECRET")
 
 	if port == "" {
 		port = "8080"
@@ -52,6 +54,10 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("WEBHOOK_SECRET_KEY must be at least 32 characters")
 	}
 
+	if len(shortcodeSecret) < 32 {
+		return nil, fmt.Errorf("SHORTCODE_SECRET must be at least 32 characters")
+	}
+
 	return &Config{
 		Port:         port,
 		DatabaseURL:  databaseURL,
@@ -60,5 +66,6 @@ func Load() (*Config, error) {
 		JWTSecret:        jwtSecret,
 		IPHashSecret:     ipHashSecret,
 		WebhookSecretKey: webhookSecretKey,
+		ShortcodeSecret:  shortcodeSecret,
 	}, nil
 }

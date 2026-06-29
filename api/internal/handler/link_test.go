@@ -18,7 +18,7 @@ import (
 func newLinkHandler() (*handler.LinkHandler, *fakes.LinkRepo, *fakes.ProjectRepo) {
 	links := fakes.NewLinkRepo()
 	projects := fakes.NewProjectRepo()
-	svc, _ := service.NewShortcodeService()
+	svc, _ := service.NewShortcodeService([]byte("test-shortcode-secret-32-chars!!"))
 	lc := cache.NewLinkCache(100, time.Minute)
 	webhookSvc := service.NewWebhookService(fakes.NewWebhookRepo(), []byte("test-key"))
 	return handler.NewLinkHandler(links, projects, svc, webhookSvc, lc, "http://short.test", "cursor-secret"), links, projects
@@ -45,7 +45,7 @@ func seedProject(t *testing.T, projects *fakes.ProjectRepo, userID int64, name, 
 // seedLink creates a link in the fake repo using the shortcode service.
 func seedLink(t *testing.T, links *fakes.LinkRepo, projectID int64, url string) *model.Link {
 	t.Helper()
-	svc, _ := service.NewShortcodeService()
+	svc, _ := service.NewShortcodeService([]byte("test-shortcode-secret-32-chars!!"))
 	link := &model.Link{ProjectID: projectID, OriginalURL: url}
 	if err := links.Create(t.Context(), link, svc.GenerateShortCode); err != nil {
 		t.Fatalf("seedLink: %v", err)

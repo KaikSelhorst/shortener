@@ -42,6 +42,10 @@ func main() {
 	if webhookKey == "" {
 		log.Fatal("WEBHOOK_SECRET_KEY is required")
 	}
+	shortcodeSecret := os.Getenv("SHORTCODE_SECRET")
+	if shortcodeSecret == "" {
+		log.Fatal("SHORTCODE_SECRET is required")
+	}
 
 	if err := migrations.Run(dbURL); err != nil {
 		log.Fatalf("migrations: %v", err)
@@ -54,7 +58,7 @@ func main() {
 	}
 	defer db.Close()
 
-	shortcodes, err := service.NewShortcodeService()
+	shortcodes, err := service.NewShortcodeService([]byte(shortcodeSecret))
 	if err != nil {
 		log.Fatalf("shortcode service: %v", err)
 	}

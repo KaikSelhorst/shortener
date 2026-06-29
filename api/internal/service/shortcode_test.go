@@ -7,7 +7,7 @@ import (
 
 func TestShortcodeService_RoundTrip(t *testing.T) {
 	t.Parallel()
-	svc, err := NewShortcodeService()
+	svc, err := NewShortcodeService([]byte("test-shortcode-secret-32-chars!!"))
 	if err != nil {
 		t.Fatalf("NewShortcodeService: %v", err)
 	}
@@ -28,7 +28,7 @@ func TestShortcodeService_RoundTrip(t *testing.T) {
 
 func TestShortcodeService_ZeroIDError(t *testing.T) {
 	t.Parallel()
-	svc, _ := NewShortcodeService()
+	svc, _ := NewShortcodeService([]byte("test-shortcode-secret-32-chars!!"))
 	_, err := svc.GenerateShortCode(0)
 	if err == nil {
 		t.Error("expected error for id=0, got nil")
@@ -37,7 +37,7 @@ func TestShortcodeService_ZeroIDError(t *testing.T) {
 
 func TestShortcodeService_Deterministic(t *testing.T) {
 	t.Parallel()
-	svc, _ := NewShortcodeService()
+	svc, _ := NewShortcodeService([]byte("test-shortcode-secret-32-chars!!"))
 	id := uint64(42)
 	a, _ := svc.GenerateShortCode(id)
 	b, _ := svc.GenerateShortCode(id)
@@ -48,7 +48,7 @@ func TestShortcodeService_Deterministic(t *testing.T) {
 
 func TestShortcodeService_MaxUint64(t *testing.T) {
 	t.Parallel()
-	svc, _ := NewShortcodeService()
+	svc, _ := NewShortcodeService([]byte("test-shortcode-secret-32-chars!!"))
 	id := uint64(math.MaxUint64)
 	code, err := svc.GenerateShortCode(id)
 	if err != nil {
@@ -62,7 +62,7 @@ func TestShortcodeService_MaxUint64(t *testing.T) {
 
 func TestShortcodeService_DifferentIDsDifferentCodes(t *testing.T) {
 	t.Parallel()
-	svc, _ := NewShortcodeService()
+	svc, _ := NewShortcodeService([]byte("test-shortcode-secret-32-chars!!"))
 	a, _ := svc.GenerateShortCode(1)
 	b, _ := svc.GenerateShortCode(2)
 	if a == b {
