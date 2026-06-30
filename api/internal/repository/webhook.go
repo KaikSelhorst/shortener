@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/KaikSelhorst/shortener/internal/model"
-	"github.com/google/uuid"
+	"github.com/KaikSelhorst/shortener/internal/uuidv7"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -45,11 +45,11 @@ func NewWebhookRepository(db *pgxpool.Pool) *WebhookRepository {
 }
 
 func (r *WebhookRepository) Create(ctx context.Context, w *model.Webhook) error {
-	id, err := uuid.NewV7()
+	id, err := uuidv7.New()
 	if err != nil {
 		return err
 	}
-	w.ID = id.String()
+	w.ID = id
 	return r.db.QueryRow(ctx,
 		`INSERT INTO webhooks (id, project_id, url, secret, events, enabled)
 		 VALUES ($1, $2, $3, $4, $5, $6)
