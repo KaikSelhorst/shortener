@@ -82,7 +82,7 @@ func main() {
 	projectHandler := handler.NewProjectHandler(projectRepository, hub)
 	linkHandler := handler.NewLinkHandler(linkRepository, projectRepository, shortcodeService, webhookService, linkCache, cfg.BaseURL, cfg.CursorSecret)
 	webhookHandler := handler.NewWebhookHandler(webhookService, webhookRepository, projectRepository)
-	authHandler := handler.NewAuthHandler(userRepository, refreshTokenRepository, authService)
+	authHandler := handler.NewAuthHandler(userRepository, refreshTokenRepository, authService, cfg.RegistrationDisabled)
 	apiKeyHandler := handler.NewAPIKeyHandler(apiKeyRepository, projectRepository, authService)
 	totpHandler := handler.NewTOTPHandler(userRepository, refreshTokenRepository, authService)
 	analyticsHandler := handler.NewAnalyticsHandler(clickRepository, projectRepository, linkRepository, analyticsCache)

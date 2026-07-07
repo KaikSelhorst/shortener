@@ -6,14 +6,15 @@ import (
 )
 
 type Config struct {
-	Port              string
-	DatabaseURL       string
-	BaseURL           string
-	CursorSecret      string
-	JWTSecret         string
-	IPHashSecret      string
-	WebhookSecretKey  string
-	ShortcodeSecret   string
+	Port                 string
+	DatabaseURL          string
+	BaseURL              string
+	CursorSecret         string
+	JWTSecret            string
+	IPHashSecret         string
+	WebhookSecretKey     string
+	ShortcodeSecret      string
+	RegistrationDisabled bool
 }
 
 func Load() (*Config, error) {
@@ -25,6 +26,7 @@ func Load() (*Config, error) {
 	ipHashSecret := os.Getenv("IP_HASH_SECRET")
 	webhookSecretKey := os.Getenv("WEBHOOK_SECRET_KEY")
 	shortcodeSecret := os.Getenv("SHORTCODE_SECRET")
+	registrationDisabled := os.Getenv("REGISTRATION_DISABLED") == "true"
 
 	if port == "" {
 		port = "8080"
@@ -59,13 +61,14 @@ func Load() (*Config, error) {
 	}
 
 	return &Config{
-		Port:         port,
-		DatabaseURL:  databaseURL,
-		BaseURL:      baseURL,
-		CursorSecret: cursorSecret,
-		JWTSecret:        jwtSecret,
-		IPHashSecret:     ipHashSecret,
-		WebhookSecretKey: webhookSecretKey,
-		ShortcodeSecret:  shortcodeSecret,
+		Port:                 port,
+		DatabaseURL:          databaseURL,
+		BaseURL:              baseURL,
+		CursorSecret:         cursorSecret,
+		JWTSecret:            jwtSecret,
+		IPHashSecret:         ipHashSecret,
+		WebhookSecretKey:     webhookSecretKey,
+		ShortcodeSecret:      shortcodeSecret,
+		RegistrationDisabled: registrationDisabled,
 	}, nil
 }
