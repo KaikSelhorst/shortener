@@ -13,13 +13,13 @@
 	const inputType = $derived(isPassword ? (showPassword ? 'text' : 'password') : type)
 
 	const base =
-		'flex w-full bg-transparent border-b border-input px-0 py-1.5 text-xs text-foreground ' +
-		'font-mono placeholder:text-muted-foreground/40 ' +
-		'focus:outline-none focus:border-primary ' +
-		'disabled:opacity-30 disabled:cursor-not-allowed ' +
-		'transition-colors'
+		'flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm text-foreground ' +
+		'placeholder:text-muted-foreground/50 ' +
+		'focus:outline-none focus:border-ring focus:ring-1 focus:ring-ring ' +
+		'disabled:opacity-40 disabled:cursor-not-allowed ' +
+		'transition-colors h-9'
 
-	const borderState = $derived(error ? 'border-destructive focus:border-destructive' : '')
+	const borderState = $derived(error ? 'border-destructive focus:border-destructive focus:ring-destructive' : '')
 	const cls = $derived([base, borderState, isPassword ? 'pr-14' : '', className].filter(Boolean).join(' '))
 </script>
 
@@ -33,15 +33,15 @@
 					type="button"
 					tabindex="-1"
 					onclick={() => (showPassword = !showPassword)}
-					class="absolute right-0 top-1/2 -translate-y-1/2 font-mono text-[9px] uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors"
+					class="absolute right-2.5 top-1/2 -translate-y-1/2 text-[11px] font-medium text-muted-foreground hover:text-foreground transition-colors"
 					aria-label={showPassword ? 'Hide password' : 'Show password'}
 				>
-					[{showPassword ? 'hide' : 'show'}]
+					{showPassword ? 'hide' : 'show'}
 				</button>
 			{/if}
 		</div>
 		{#if error}
-			<span class="font-mono text-[10px] text-destructive">{error}</span>
+			<span class="text-[12px] text-destructive">{error}</span>
 		{/if}
 	</label>
 {:else}
@@ -52,14 +52,14 @@
 				type="button"
 				tabindex="-1"
 				onclick={() => (showPassword = !showPassword)}
-				class="absolute right-0 top-1/2 -translate-y-1/2 font-mono text-[9px] uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors"
+				class="absolute right-2.5 top-1/2 -translate-y-1/2 text-[11px] font-medium text-muted-foreground hover:text-foreground transition-colors"
 				aria-label={showPassword ? 'Hide password' : 'Show password'}
 			>
-				[{showPassword ? 'hide' : 'show'}]
+				{showPassword ? 'hide' : 'show'}
 			</button>
 		{/if}
 	</div>
 	{#if error}
-		<span class="font-mono text-[10px] text-destructive">{error}</span>
+		<span class="text-[12px] text-destructive">{error}</span>
 	{/if}
 {/if}

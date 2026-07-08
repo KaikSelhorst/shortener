@@ -1,74 +1,53 @@
 <script lang="ts">
-	import UserMenu from '$lib/components/UserMenu.svelte'
-
+	import { page } from '$app/stores'
 	let { children } = $props()
 
-	let time = $state('')
+	const navItems = [
+		{ href: '/dashboard', label: 'Dashboard' },
+		{ href: '/settings', label: 'Settings' },
+		{ href: '/docs', label: 'API Docs' },
+	]
 
-	$effect(() => {
-		function tick() {
-			const now = new Date()
-			time =
-				String(now.getHours()).padStart(2, '0') +
-				':' +
-				String(now.getMinutes()).padStart(2, '0') +
-				':' +
-				String(now.getSeconds()).padStart(2, '0')
-		}
-
-		let id: ReturnType<typeof setInterval> | undefined
-
-		function start() {
-			tick()
-			id = setInterval(tick, 1000)
-		}
-
-		function stop() {
-			clearInterval(id)
-			id = undefined
-		}
-
-		function onVisibilityChange() {
-			document.hidden ? stop() : start()
-		}
-
-		document.addEventListener('visibilitychange', onVisibilityChange)
-		start()
-
-		return () => {
-			stop()
-			document.removeEventListener('visibilitychange', onVisibilityChange)
-		}
-	})
+	function isActive(href: string, pathname: string): boolean {
+		if (href === '/dashboard') return pathname === '/dashboard'
+		return pathname === href || pathname.startsWith(href + '/')
+	}
 </script>
 
-<div class="flex min-h-screen flex-col bg-background">
-	<header class="border-b border-border bg-card">
-		<div class="flex items-center px-4 py-2.5">
-			<a
-				href="/dashboard"
-				class="font-mono text-[10px] uppercase tracking-widest text-muted-foreground transition-colors hover:text-foreground"
-			>
-				shortener
-			</a>
-			<div class="ml-auto flex items-center gap-4">
-				<span class="font-mono text-[11px] tabular-nums text-accent">{time}</span>
-				<div class="h-3 w-px bg-border"></div>
-				<UserMenu />
-			</div>
+<div class="flex h-screen overflow-hidden bg-background">
+	<aside class="w-44 shrink-0 border-r border-border flex flex-col">
+		<div class="h-11 flex items-center px-5 border-b border-border shrink-0">
+			<a href="/dashboard" class="text-[13px] font-semibold text-foreground tracking-tight">Shortener</a>
 		</div>
-	</header>
 
-	<main class="flex-1 px-4 py-6">
+		<nav class="flex-1 overflow-y-auto py-2">
+			{#each navItems as item}
+				{@const active = isActive(item.href, $page.url.pathname)}
+				<a
+					href={item.href}
+					class="flex items-center px-5 py-1.5 text-sm transition-colors border-l-2
+						{active
+							? 'border-foreground text-foreground'
+							: 'border-transparent text-muted-foreground hover:text-foreground'}"
+				>
+					{item.label}
+				</a>
+			{/each}
+		</nav>
+
+		<div class="border-t border-border shrink-0">
+			<form method="POST" action="/api/auth/logout">
+				<button
+					type="submit"
+					class="w-full flex items-center px-5 py-3 text-sm text-muted-foreground hover:text-destructive transition-colors"
+				>
+					Sign out
+				</button>
+			</form>
+		</div>
+	</aside>
+
+	<div class="flex-1 min-h-0 overflow-auto">
 		{@render children()}
-	</main>
-
-	<footer class="border-t border-border px-4 py-1.5">
-		<div class="flex items-center justify-between">
-			<span class="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">
-				shortener — url management system
-			</span>
-			<span class="font-mono text-[9px] text-muted-foreground">sys:ok</span>
-		</div>
-	</footer>
+	</div>
 </div>

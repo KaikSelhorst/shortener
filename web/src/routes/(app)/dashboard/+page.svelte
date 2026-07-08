@@ -8,120 +8,84 @@
 
 	let pendingSlug = $state<string | null>(null)
 	let confirmOpen = $state(false)
-
-	$effect(() => {
-		if (!confirmOpen) pendingSlug = null
-	})
+	$effect(() => { if (!confirmOpen) pendingSlug = null })
 
 	let sessionClicks = $state<Record<number, number>>({})
-
 	const sse = useSSE(() => '/api/stream', (e) => {
 		const evt = JSON.parse(e.data) as { project_id: number }
 		sessionClicks[evt.project_id] = (sessionClicks[evt.project_id] ?? 0) + 1
 	})
 </script>
 
-<div class="mx-auto max-w-7xl">
-	<div class="tui-panel">
-		<div class="tui-panel-header justify-between">
-			<span>▌ projects</span>
-			<div class="flex items-center gap-3">
-				{#if sse.connected}
-					<span class="font-mono text-[10px] uppercase tracking-wider text-tui-green">● live</span>
-				{/if}
-				<span class="text-muted-foreground">{data.projects.length} total</span>
-			</div>
-		</div>
-
-		<div class="border-b border-border bg-background px-4 py-3">
-			<form method="POST" action="?/create" class="flex items-end gap-3">
-				<div class="flex-1">
-					<Input name="name" type="text" placeholder="new project name..." required />
-				</div>
-				<Button type="submit" size="sm">+ create</Button>
-			</form>
-			{#if form?.error}
-				<p class="mt-2 font-mono text-xs text-destructive">{form.error}</p>
-			{/if}
-		</div>
-
-		{#if data.projects.length === 0}
-			<div class="px-4 py-14 text-center font-mono text-xs text-muted-foreground">
-				-- no projects yet --
-			</div>
-		{:else}
-			<table class="w-full">
-				<thead class="border-b border-border">
-					<tr>
-						<th class="px-4 py-2.5 text-left font-normal tui-label">Name</th>
-						<th class="px-4 py-2.5 text-left font-normal tui-label">Slug</th>
-						<th class="px-4 py-2.5 text-left font-normal tui-label">Created</th>
-						<th class="px-4 py-2.5 text-right font-normal tui-label"></th>
-					</tr>
-				</thead>
-				<tbody class="divide-y divide-border">
-					{#each data.projects as project (project.id)}
-						<tr class="group transition-colors hover:bg-primary/5">
-							<td class="px-4 py-3">
-								<div class="flex items-center gap-2">
-									<a href="/{project.slug}" class="font-mono text-xs text-primary hover:underline">
-										{project.name}
-									</a>
-									{#if sessionClicks[project.id]}
-										<span class="font-mono text-[10px] text-tui-green">
-											+{sessionClicks[project.id]}
-										</span>
-									{/if}
-								</div>
-							</td>
-							<td class="px-4 py-3">
-								<span class="font-mono text-xs text-muted-foreground">{project.slug}</span>
-							</td>
-							<td class="px-4 py-3">
-								<span class="font-mono text-xs text-muted-foreground">
-									{formatDate(project.created_at)}
-								</span>
-							</td>
-							<td class="px-4 py-3 text-right">
-								<div
-									class="flex items-center justify-end gap-3 opacity-0 transition-opacity group-hover:opacity-100"
-								>
-									<a
-										href="/{project.slug}/analytics"
-										class="font-mono text-[10px] uppercase tracking-wider text-accent hover:underline"
-									>
-										analytics
-									</a>
-									<span class="text-border">|</span>
-									<button
-										onclick={() => {
-											pendingSlug = project.slug
-											confirmOpen = true
-										}}
-										class="font-mono text-[10px] uppercase tracking-wider text-destructive hover:underline"
-									>
-										delete
-									</button>
-								</div>
-							</td>
-						</tr>
-					{/each}
-				</tbody>
-			</table>
-		{/if}
+<div class="sticky top-0 z-10 bg-background border-b border-border px-4 h-11 flex items-center justify-between">
+	<div class="flex items-center gap-2">
+		<span class="text-sm font-medium text-foreground">Projects</span>
+		<span class="text-xs text-muted-foreground">{data.projects.length}</span>
 	</div>
+	{#if sse.connected}
+		<span class="flex items-center gap-1.5 text-xs text-success">
+			<span class="w-1.5 h-1.5 rounded-full bg-success"></span>Live
+		</span>
+	{/if}
 </div>
 
-<Dialog
-	bind:open={confirmOpen}
-	title="Delete project"
-	description="This will permanently delete the project and all its links. This action cannot be undone."
->
+<div class="border-b border-border px-4 py-2.5">
+	<form method="POST" action="?/create" class="flex items-center gap-2">
+		<Input name="name" type="text" placeholder="New project name…" class="max-w-xs h-8 text-sm" required />
+		<Button type="submit" size="sm">Create</Button>
+	</form>
+	{#if form?.error}
+		<p class="mt-2 text-xs text-destructive">{form.error}</p>
+	{/if}
+</div>
+
+{#if data.projects.length === 0}
+	<div class="flex items-center justify-center py-20 text-sm text-muted-foreground">
+		No projects yet — create one above.
+	</div>
+{:else}
+	<table class="w-full text-sm">
+		<thead class="border-b border-border">
+			<tr>
+				<th class="px-4 py-1.5 text-left text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Name</th>
+				<th class="px-4 py-1.5 text-left text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Slug</th>
+				<th class="px-4 py-1.5 text-left text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Created</th>
+				<th class="px-4 py-1.5 text-right text-[11px] font-semibold text-muted-foreground uppercase tracking-wider"></th>
+			</tr>
+		</thead>
+		<tbody>
+			{#each data.projects as project (project.id)}
+				<tr class="group hover:bg-secondary/40 transition-colors">
+					<td class="px-4 py-1.5">
+						<div class="flex items-center gap-2">
+							<a href="/{project.slug}" class="text-sm font-medium text-foreground hover:underline underline-offset-4">
+								{project.name}
+							</a>
+							{#if sessionClicks[project.id]}
+								<span class="text-xs text-success">+{sessionClicks[project.id]}</span>
+							{/if}
+						</div>
+					</td>
+					<td class="px-4 py-1.5 text-sm text-muted-foreground">{project.slug}</td>
+					<td class="px-4 py-1.5 text-sm text-muted-foreground">{formatDate(project.created_at)}</td>
+					<td class="px-4 py-1.5 text-right">
+						<div class="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+							<Button variant="ghost" size="sm" href="/{project.slug}/analytics">Analytics</Button>
+							<Button variant="ghost-destructive" size="sm" onclick={() => { pendingSlug = project.slug; confirmOpen = true }}>Delete</Button>
+						</div>
+					</td>
+				</tr>
+			{/each}
+		</tbody>
+	</table>
+{/if}
+
+<Dialog bind:open={confirmOpen} title="Delete project" description="This will permanently delete the project and all its links. This action cannot be undone.">
 	{#snippet footer()}
-		<Button variant="outline" onclick={() => (confirmOpen = false)}>cancel</Button>
+		<Button variant="outline" onclick={() => (confirmOpen = false)}>Cancel</Button>
 		<form method="POST" action="?/delete">
 			<input type="hidden" name="slug" value={pendingSlug} />
-			<Button type="submit" variant="destructive">confirm delete</Button>
+			<Button type="submit" variant="destructive">Delete</Button>
 		</form>
 	{/snippet}
 </Dialog>

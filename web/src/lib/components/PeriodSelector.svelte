@@ -1,22 +1,14 @@
 <script lang="ts">
 	import { periods } from '$lib/analytics'
-
-	interface Props {
-		current: string
-	}
-
+	interface Props { current: string }
 	let { current }: Props = $props()
 </script>
 
-<div class="flex">
+<div class="flex rounded-md border border-border overflow-hidden">
 	{#each periods as p (p.value)}
-		<a
-			href="?period={p.value}"
-			class="border border-transparent px-3 py-0.5 font-mono text-[10px] uppercase tracking-wider transition-colors
-			{current === p.value
-				? 'border-primary text-primary'
-				: 'text-muted-foreground hover:text-foreground'}"
-		>
+		<a href="?period={p.value}"
+			class="px-3 py-1 text-xs font-medium transition-colors border-r border-border last:border-r-0
+				{current === p.value ? 'bg-secondary text-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'}">
 			{p.label}
 		</a>
 	{/each}

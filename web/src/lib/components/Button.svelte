@@ -2,7 +2,7 @@
 	import type { Snippet } from 'svelte'
 	import type { HTMLButtonAttributes } from 'svelte/elements'
 
-	type Variant = 'primary' | 'secondary' | 'destructive' | 'ghost' | 'ghost-destructive' | 'outline'
+	type Variant = 'default' | 'secondary' | 'outline' | 'ghost' | 'destructive' | 'ghost-destructive'
 	type Size = 'sm' | 'md'
 
 	interface Props extends HTMLButtonAttributes {
@@ -13,7 +13,7 @@
 	}
 
 	let {
-		variant = 'primary',
+		variant = 'default',
 		size = 'md',
 		type = 'button',
 		href,
@@ -23,23 +23,23 @@
 	}: Props = $props()
 
 	const base =
-		'inline-flex cursor-pointer items-center justify-center font-mono uppercase tracking-wider ' +
-		'border transition-colors ' +
-		'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring ' +
-		'disabled:pointer-events-none disabled:opacity-30'
+		'inline-flex cursor-pointer items-center justify-center font-medium rounded ' +
+		'transition-colors select-none ' +
+		'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background ' +
+		'disabled:pointer-events-none disabled:opacity-40'
 
 	const variants: Record<Variant, string> = {
-		primary:             'border-primary text-primary bg-transparent hover:bg-primary/10',
-		secondary:           'border-border text-muted-foreground hover:border-accent hover:text-accent',
-		destructive:         'border-destructive text-destructive bg-transparent hover:bg-destructive/10',
-		ghost:               'border-transparent text-muted-foreground hover:text-foreground hover:border-border',
-		'ghost-destructive': 'border-transparent text-destructive hover:border-destructive/40',
-		outline:             'border-border text-muted-foreground hover:border-accent hover:text-accent',
+		default:            'bg-primary text-primary-foreground hover:bg-primary/90',
+		secondary:          'bg-secondary text-secondary-foreground border border-border hover:bg-secondary/70',
+		outline:            'border border-border bg-transparent text-foreground hover:bg-secondary',
+		ghost:              'border border-transparent bg-transparent text-foreground hover:bg-secondary',
+		destructive:        'border border-destructive/40 text-destructive bg-destructive/5 hover:bg-destructive/10',
+		'ghost-destructive':'border border-transparent bg-transparent text-destructive hover:bg-destructive/10',
 	}
 
 	const sizes: Record<Size, string> = {
-		sm: 'h-7 gap-1 px-2.5 text-[10px]',
-		md: 'h-8 gap-1.5 px-3 text-xs',
+		sm: 'h-7 gap-1 px-2.5 text-[12px]',
+		md: 'h-8 gap-1.5 px-3 text-[13px]',
 	}
 
 	const cls = $derived([base, variants[variant], sizes[size], className].filter(Boolean).join(' '))

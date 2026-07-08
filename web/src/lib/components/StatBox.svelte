@@ -10,8 +10,8 @@
 	let { label, value, color = 'default' }: Props = $props()
 
 	const colorCls: Record<Color, string> = {
-		green:   'text-primary tui-glow-green',
-		cyan:    'text-accent',
+		green:   'text-success',
+		cyan:    'text-info',
 		default: 'text-foreground',
 	}
 
@@ -20,5 +20,5 @@
 
 <div class="px-5 py-4">
 	<div class="tui-label text-muted-foreground">{label}</div>
-	<div class="mt-1.5 font-mono text-2xl font-bold {colorCls[color]}">{display}</div>
+	<div class="mt-1.5 text-2xl font-semibold tracking-tight {colorCls[color]}">{display}</div>
 </div>

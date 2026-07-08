@@ -84,173 +84,100 @@
 	})
 </script>
 
-<div class="mx-auto max-w-7xl">
-	<div class="tui-panel">
-		<div class="tui-panel-header justify-between">
-			<div class="flex items-center gap-2">
-				<a
-					href="/dashboard"
-					class="font-mono text-[10px] uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors"
-				>
-					projects
-				</a>
-				<span class="text-muted-foreground">/</span>
-				<span>▌ {data.slug}</span>
-			</div>
-			<div class="flex items-center gap-3">
-				{#if sse.connected}
-					<span class="font-mono text-[10px] uppercase tracking-wider text-tui-green">● live</span>
-				{/if}
-				<a
-					href="/{data.slug}/webhooks"
-					class="font-mono text-[10px] uppercase tracking-wider text-muted-foreground hover:text-accent transition-colors"
-				>
-					webhooks
-				</a>
-				<a
-					href="/{data.slug}/analytics"
-					class="font-mono text-[10px] uppercase tracking-wider text-muted-foreground hover:text-accent transition-colors"
-				>
-					analytics
-				</a>
-				<Button size="sm" onclick={() => (createOpen = true)}>+ link</Button>
-			</div>
-		</div>
-
-		{#if form?.error}
-			<div class="border-b border-border px-4 py-2">
-				<p class="font-mono text-xs text-destructive">{form.error}</p>
-			</div>
-		{/if}
-
-		<Table>
-			<TableHead>
-				<TableRow>
-					<TableHeader>Original URL</TableHeader>
-					<TableHeader>Short URL</TableHeader>
-					<TableHeader>Status</TableHeader>
-					<TableHeader>Clicks</TableHeader>
-					<TableHeader>Created</TableHeader>
-					<TableHeader>Expires</TableHeader>
-					<TableHeader class="text-right"></TableHeader>
-				</TableRow>
-			</TableHead>
-			<TableBody>
-				{#each data.links.data as link (link.id)}
-					{@const expired = link.expires_at != null && new Date(link.expires_at).getTime() < now}
-					{@const totalClicks = link.total_clicks + (sessionClicks[link.short_code] ?? 0)}
-					{@const maxed = link.max_clicks != null && totalClicks >= link.max_clicks}
-					<TableRow>
-						<TableCell>
-							<a
-								href={link.original_url}
-								target="_blank"
-								rel="noopener noreferrer"
-								class="block max-w-xs truncate text-muted-foreground hover:text-foreground transition-colors"
-								title={link.original_url}
-							>
-								{link.original_url}
-							</a>
-						</TableCell>
-						<TableCell>
-							<a
-								href={link.short_url}
-								target="_blank"
-								rel="noopener noreferrer"
-								class="text-accent hover:underline"
-							>
-								{link.short_url}
-							</a>
-						</TableCell>
-						<TableCell>
-							{#if expired || maxed}
-								<Badge variant="error">{maxed ? 'maxed' : 'expired'}</Badge>
-							{:else}
-								<Badge variant="success">active</Badge>
-							{/if}
-						</TableCell>
-						<TableCell>
-							<span class="font-mono text-xs tabular-nums {sessionClicks[link.short_code] ? 'text-tui-green' : 'text-muted-foreground'}">
-								{totalClicks.toLocaleString()}{link.max_clicks != null ? ` / ${link.max_clicks.toLocaleString()}` : ''}
-							</span>
-						</TableCell>
-						<TableCell class="text-muted-foreground">
-							{formatDate(link.created_at)}
-						</TableCell>
-						<TableCell class="text-muted-foreground">
-							{formatDate(link.expires_at)}
-						</TableCell>
-						<TableCell class="text-right">
-							<div class="flex items-center justify-end gap-2">
-								<Button
-									variant="ghost"
-									size="sm"
-									onclick={() => {
-										const utm = parseUtm(link.original_url)
-										editUtmExpanded = !!(utm.source || utm.medium || utm.campaign || utm.term || utm.content)
-										editLink = link
-										editOpen = true
-									}}
-								>
-									edit
-								</Button>
-								<Button
-									variant="ghost"
-									size="sm"
-									onclick={() => qr.show(link.short_url, link.short_code)}
-								>
-									qr
-								</Button>
-								<Button
-									variant="ghost"
-									size="sm"
-									href="/{data.slug}/{link.short_code}/analytics"
-								>
-									analytics
-								</Button>
-								<Button
-									variant="ghost-destructive"
-									size="sm"
-									onclick={() => {
-										pendingCode = link.short_code
-										confirmOpen = true
-									}}
-								>
-									delete
-								</Button>
-							</div>
-						</TableCell>
-					</TableRow>
-				{:else}
-					<TableRow>
-						<TableCell colspan={7} class="py-14 text-center text-muted-foreground">
-							-- no links yet --
-						</TableCell>
-					</TableRow>
-				{/each}
-			</TableBody>
-		</Table>
-
-		{#if data.links.prev_cursor || data.links.next_cursor}
-			<div class="flex items-center justify-between border-t border-border px-4 py-2.5">
-				<div>
-					{#if data.links.prev_cursor}
-						<Button variant="outline" size="sm" href="?cursor={data.links.prev_cursor}">
-							← prev
-						</Button>
-					{/if}
-				</div>
-				<div>
-					{#if data.links.next_cursor}
-						<Button variant="outline" size="sm" href="?cursor={data.links.next_cursor}">
-							next →
-						</Button>
-					{/if}
-				</div>
-			</div>
+<div class="sticky top-0 z-10 bg-background border-b border-border px-4 h-11 flex items-center justify-between">
+	<div class="flex items-center gap-1.5 text-sm min-w-0">
+		<a href="/dashboard" class="text-muted-foreground hover:text-foreground transition-colors shrink-0">Projects</a>
+		<span class="text-border shrink-0">/</span>
+		<span class="font-medium text-foreground truncate">{data.slug}</span>
+		{#if sse.connected}
+			<span class="flex items-center gap-1.5 text-xs text-success ml-2 shrink-0">
+				<span class="w-1.5 h-1.5 rounded-full bg-success"></span>Live
+			</span>
 		{/if}
 	</div>
+	<div class="flex items-center gap-2 shrink-0">
+		<a href="/{data.slug}/analytics" class="text-sm text-muted-foreground hover:text-foreground transition-colors">Analytics</a>
+		<a href="/{data.slug}/webhooks" class="text-sm text-muted-foreground hover:text-foreground transition-colors">Webhooks</a>
+		<Button size="sm" onclick={() => (createOpen = true)}>+ Link</Button>
+	</div>
 </div>
+
+{#if form?.error}
+	<div class="border-b border-border px-4 py-2">
+		<p class="text-xs text-destructive">{form.error}</p>
+	</div>
+{/if}
+
+<Table>
+	<TableHead>
+		<TableRow>
+			<TableHeader>Original URL</TableHeader>
+			<TableHeader>Short URL</TableHeader>
+			<TableHeader>Status</TableHeader>
+			<TableHeader>Clicks</TableHeader>
+			<TableHeader>Created</TableHeader>
+			<TableHeader>Expires</TableHeader>
+			<TableHeader class="text-right"></TableHeader>
+		</TableRow>
+	</TableHead>
+	<TableBody>
+		{#each data.links.data as link (link.id)}
+			{@const expired = link.expires_at != null && new Date(link.expires_at).getTime() < now}
+			{@const totalClicks = link.total_clicks + (sessionClicks[link.short_code] ?? 0)}
+			{@const maxed = link.max_clicks != null && totalClicks >= link.max_clicks}
+			<TableRow>
+				<TableCell>
+					<a href={link.original_url} target="_blank" rel="noopener noreferrer"
+						class="block max-w-xs truncate text-muted-foreground hover:text-foreground transition-colors" title={link.original_url}>
+						{link.original_url}
+					</a>
+				</TableCell>
+				<TableCell>
+					<a href={link.short_url} target="_blank" rel="noopener noreferrer" class="text-foreground hover:underline underline-offset-4">
+						{link.short_url}
+					</a>
+				</TableCell>
+				<TableCell>
+					{#if expired || maxed}
+						<Badge variant="error">{maxed ? 'maxed' : 'expired'}</Badge>
+					{:else}
+						<Badge variant="success">active</Badge>
+					{/if}
+				</TableCell>
+				<TableCell>
+					<span class="tabular-nums {sessionClicks[link.short_code] ? 'text-success' : 'text-muted-foreground'}">
+						{totalClicks.toLocaleString()}{link.max_clicks != null ? ` / ${link.max_clicks.toLocaleString()}` : ''}
+					</span>
+				</TableCell>
+				<TableCell class="text-muted-foreground">{formatDate(link.created_at)}</TableCell>
+				<TableCell class="text-muted-foreground">{formatDate(link.expires_at)}</TableCell>
+				<TableCell class="text-right">
+					<div class="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+						<Button variant="ghost" size="sm" onclick={() => {
+							const utm = parseUtm(link.original_url)
+							editUtmExpanded = !!(utm.source || utm.medium || utm.campaign || utm.term || utm.content)
+							editLink = link; editOpen = true
+						}}>Edit</Button>
+						<Button variant="ghost" size="sm" onclick={() => qr.show(link.short_url, link.short_code)}>QR</Button>
+						<Button variant="ghost" size="sm" href="/{data.slug}/{link.short_code}/analytics">Analytics</Button>
+						<Button variant="ghost-destructive" size="sm" onclick={() => { pendingCode = link.short_code; confirmOpen = true }}>Delete</Button>
+					</div>
+				</TableCell>
+			</TableRow>
+		{:else}
+			<TableRow>
+				<TableCell colspan={7} class="py-16 text-center text-muted-foreground">No links yet.</TableCell>
+			</TableRow>
+		{/each}
+	</TableBody>
+</Table>
+
+{#if data.links.prev_cursor || data.links.next_cursor}
+	<div class="flex items-center justify-between border-t border-border px-4 py-2.5">
+		<div>{#if data.links.prev_cursor}<Button variant="outline" size="sm" href="?cursor={data.links.prev_cursor}">← Prev</Button>{/if}</div>
+		<div>{#if data.links.next_cursor}<Button variant="outline" size="sm" href="?cursor={data.links.next_cursor}">Next →</Button>{/if}</div>
+	</div>
+{/if}
 
 <Dialog bind:open={createOpen} title="New link" size="md">
 	{#snippet children()}
@@ -277,9 +204,9 @@
 			<button
 				type="button"
 				onclick={() => (createUtmExpanded = !createUtmExpanded)}
-				class="font-mono text-[10px] uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors text-left"
+				class="text-sm text-muted-foreground hover:text-foreground transition-colors text-left"
 			>
-				{createUtmExpanded ? '▾' : '▸'} utm parameters
+				{createUtmExpanded ? '▾' : '▸'} UTM parameters
 			</button>
 			{#if createUtmExpanded}
 				<div class="flex flex-col gap-4 border-l border-border pl-3">
@@ -291,13 +218,13 @@
 				</div>
 			{/if}
 			{#if createError}
-				<p class="font-mono text-xs text-destructive">{createError}</p>
+				<p class="text-sm text-destructive">{createError}</p>
 			{/if}
 		</form>
 	{/snippet}
 	{#snippet footer()}
-		<Button variant="outline" onclick={() => (createOpen = false)}>cancel</Button>
-		<Button type="submit" form="create-link-form">create</Button>
+		<Button variant="outline" onclick={() => (createOpen = false)}>Cancel</Button>
+		<Button type="submit" form="create-link-form">Create</Button>
 	{/snippet}
 </Dialog>
 
@@ -320,9 +247,9 @@
 				<button
 					type="button"
 					onclick={() => (editUtmExpanded = !editUtmExpanded)}
-					class="font-mono text-[10px] uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors text-left"
+					class="text-sm text-muted-foreground hover:text-foreground transition-colors text-left"
 				>
-					{editUtmExpanded ? '▾' : '▸'} utm parameters
+					{editUtmExpanded ? '▾' : '▸'} UTM parameters
 				</button>
 				{#if editUtmExpanded}
 					<div class="flex flex-col gap-4 border-l border-border pl-3">
@@ -334,14 +261,14 @@
 					</div>
 				{/if}
 				{#if editError}
-					<p class="font-mono text-xs text-destructive">{editError}</p>
+					<p class="text-sm text-destructive">{editError}</p>
 				{/if}
 			</form>
 		{/if}
 	{/snippet}
 	{#snippet footer()}
-		<Button variant="outline" onclick={() => (editOpen = false)}>cancel</Button>
-		<Button type="submit" form="edit-link-form">save</Button>
+		<Button variant="outline" onclick={() => (editOpen = false)}>Cancel</Button>
+		<Button type="submit" form="edit-link-form">Save</Button>
 	{/snippet}
 </Dialog>
 
@@ -352,14 +279,14 @@
 				<div bind:this={qr.container}>
 					<QRCode data={qr.url} moduleSize={6} />
 				</div>
-				<p class="font-mono text-[10px] text-muted-foreground break-all text-center">{qr.url}</p>
+				<p class="text-xs text-muted-foreground break-all text-center">{qr.url}</p>
 			</div>
 		{/if}
 	{/snippet}
 	{#snippet footer()}
-		<Button variant="outline" onclick={qr.downloadSVG}>↓ svg</Button>
-		<Button variant="outline" onclick={qr.downloadPNG}>↓ png</Button>
-		<Button onclick={() => (qr.open = false)}>close</Button>
+		<Button variant="outline" onclick={qr.downloadSVG}>↓ SVG</Button>
+		<Button variant="outline" onclick={qr.downloadPNG}>↓ PNG</Button>
+		<Button onclick={() => (qr.open = false)}>Close</Button>
 	{/snippet}
 </Dialog>
 
@@ -369,10 +296,10 @@
 	description="This will permanently delete the shortened link. This action cannot be undone."
 >
 	{#snippet footer()}
-		<Button variant="outline" onclick={() => (confirmOpen = false)}>cancel</Button>
+		<Button variant="outline" onclick={() => (confirmOpen = false)}>Cancel</Button>
 		<form method="POST" action="?/delete">
 			<input type="hidden" name="code" value={pendingCode} />
-			<Button type="submit" variant="destructive">confirm delete</Button>
+			<Button type="submit" variant="destructive">Delete</Button>
 		</form>
 	{/snippet}
 </Dialog>

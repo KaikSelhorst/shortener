@@ -29,21 +29,25 @@
 	bind:this={dialog}
 	onclose={() => (open = false)}
 	onmousedown={(e) => { if (!inner?.contains(e.target as Node)) open = false }}
-	class="m-auto w-full {widths[size]} border border-border bg-background p-0 shadow-none backdrop:bg-black/75 open:flex open:flex-col"
+	class="m-auto w-full {widths[size]} border border-border bg-card rounded-xl p-0 shadow-2xl backdrop:bg-black/60 open:flex open:flex-col"
 >
 	<div bind:this={inner} class="flex flex-col">
-		<div class="flex items-center justify-between border-b border-border px-4 py-2.5">
-			<span class="font-mono text-[10px] uppercase tracking-widest text-accent">▌ {title}</span>
+		<div class="flex items-center justify-between border-b border-border px-4 py-3">
+			<span class="text-sm font-semibold text-foreground">{title}</span>
 			<button
 				onclick={() => (open = false)}
-				class="font-mono text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+				class="flex items-center justify-center w-6 h-6 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
 				aria-label="Close"
-			>[×]</button>
+			>
+				<svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+					<path d="M1 1l12 12M13 1L1 13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+				</svg>
+			</button>
 		</div>
 
 		<div class="p-5">
 			{#if description}
-				<p class="mb-4 font-mono text-xs text-muted-foreground">{description}</p>
+				<p class="mb-4 text-sm text-muted-foreground">{description}</p>
 			{/if}
 
 			{#if children}

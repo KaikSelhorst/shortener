@@ -56,149 +56,88 @@
 
 </script>
 
-<div class="mx-auto max-w-7xl">
-	<div class="tui-panel">
-		<div class="tui-panel-header justify-between">
-			<div class="flex items-center gap-2">
-				<a
-					href="/dashboard"
-					class="font-mono text-[10px] uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors"
-				>
-					projects
-				</a>
-				<span class="text-muted-foreground">/</span>
-				<a
-					href="/{data.slug}"
-					class="font-mono text-[10px] uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors"
-				>
-					{data.slug}
-				</a>
-				<span class="text-muted-foreground">/</span>
-				<span>▌ webhooks</span>
-			</div>
-			<div class="flex items-center gap-3">
-				<a
-					href="/{data.slug}/analytics"
-					class="font-mono text-[10px] uppercase tracking-wider text-muted-foreground hover:text-accent transition-colors"
-				>
-					analytics
-				</a>
-				<Button size="sm" onclick={() => (createOpen = true)}>+ webhook</Button>
-			</div>
-		</div>
-
-		<Table>
-			<TableHead>
-				<TableRow>
-					<TableHeader>URL</TableHeader>
-					<TableHeader>Events</TableHeader>
-					<TableHeader>Status</TableHeader>
-					<TableHeader>Created</TableHeader>
-					<TableHeader class="text-right"></TableHeader>
-				</TableRow>
-			</TableHead>
-			<TableBody>
-				{#each data.webhooks as wh (wh.id)}
-					<TableRow>
-						<TableCell>
-							<span class="block max-w-xs truncate font-mono text-xs text-muted-foreground" title={wh.url}>
-								{wh.url}
-							</span>
-						</TableCell>
-						<TableCell>
-							<div class="flex flex-wrap gap-1">
-								{#each wh.events as evt}
-									<Badge variant="solid">{evt}</Badge>
-								{/each}
-							</div>
-						</TableCell>
-						<TableCell>
-							{#if wh.enabled}
-								<Badge variant="success">active</Badge>
-							{:else}
-								<Badge variant="error">disabled</Badge>
-							{/if}
-						</TableCell>
-						<TableCell class="text-muted-foreground">
-							{formatDate(wh.created_at)}
-						</TableCell>
-						<TableCell class="text-right">
-							<div class="flex items-center justify-end gap-2">
-								<Button variant="ghost" size="sm" href="/{data.slug}/webhooks/{wh.id}">
-									deliveries
-								</Button>
-								<Button
-									variant="ghost-destructive"
-									size="sm"
-									aria-label="Delete webhook {wh.url}"
-									onclick={() => {
-										pendingDeleteId = wh.id
-										confirmOpen = true
-									}}
-								>
-									delete
-								</Button>
-							</div>
-						</TableCell>
-					</TableRow>
-				{:else}
-					<TableRow>
-						<TableCell colspan={5} class="py-14 text-center text-muted-foreground">
-							-- no webhooks yet --
-						</TableCell>
-					</TableRow>
-				{/each}
-			</TableBody>
-		</Table>
+<div class="sticky top-0 z-10 bg-background border-b border-border px-4 h-11 flex items-center justify-between">
+	<div class="flex items-center gap-1.5 text-sm min-w-0">
+		<a href="/dashboard" class="text-muted-foreground hover:text-foreground transition-colors shrink-0">Projects</a>
+		<span class="text-border shrink-0">/</span>
+		<a href="/{data.slug}" class="text-muted-foreground hover:text-foreground transition-colors shrink-0">{data.slug}</a>
+		<span class="text-border shrink-0">/</span>
+		<span class="font-medium text-foreground">Webhooks</span>
+	</div>
+	<div class="flex items-center gap-2 shrink-0">
+		<a href="/{data.slug}/analytics" class="text-sm text-muted-foreground hover:text-foreground transition-colors">Analytics</a>
+		<Button size="sm" onclick={() => (createOpen = true)}>+ Webhook</Button>
 	</div>
 </div>
+
+<Table>
+	<TableHead>
+		<TableRow>
+			<TableHeader>URL</TableHeader>
+			<TableHeader>Events</TableHeader>
+			<TableHeader>Status</TableHeader>
+			<TableHeader>Created</TableHeader>
+			<TableHeader class="text-right"></TableHeader>
+		</TableRow>
+	</TableHead>
+	<TableBody>
+		{#each data.webhooks as wh (wh.id)}
+			<TableRow>
+				<TableCell><span class="block max-w-xs truncate text-muted-foreground" title={wh.url}>{wh.url}</span></TableCell>
+				<TableCell>
+					<div class="flex flex-wrap gap-1">
+						{#each wh.events as evt}<Badge variant="solid">{evt}</Badge>{/each}
+					</div>
+				</TableCell>
+				<TableCell>
+					{#if wh.enabled}<Badge variant="success">Active</Badge>{:else}<Badge variant="error">Disabled</Badge>{/if}
+				</TableCell>
+				<TableCell class="text-muted-foreground">{formatDate(wh.created_at)}</TableCell>
+				<TableCell class="text-right">
+					<div class="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+						<Button variant="ghost" size="sm" href="/{data.slug}/webhooks/{wh.id}">Deliveries</Button>
+						<Button variant="ghost-destructive" size="sm" onclick={() => { pendingDeleteId = wh.id; confirmOpen = true }}>Delete</Button>
+					</div>
+				</TableCell>
+			</TableRow>
+		{:else}
+			<TableRow>
+				<TableCell colspan={5} class="py-16 text-center text-muted-foreground">No webhooks yet.</TableCell>
+			</TableRow>
+		{/each}
+	</TableBody>
+</Table>
 
 <!-- Create webhook dialog -->
 <Dialog bind:open={createOpen} title="New webhook" size="md">
 	{#snippet children()}
-		<form
-			id="create-webhook-form"
-			method="POST"
-			action="?/create"
-			use:enhance={handleCreate}
-			class="flex flex-col gap-4"
-		>
+		<form id="create-webhook-form" method="POST" action="?/create" use:enhance={handleCreate} class="flex flex-col gap-4">
 			<Input name="url" type="url" label="Endpoint URL" placeholder="https://your-app.com/webhook" required />
-
 			<fieldset class="flex flex-col gap-2 border-0 p-0 m-0">
-				<legend class="font-mono text-[10px] uppercase tracking-wider text-muted-foreground mb-2">Events</legend>
+				<legend class="tui-label mb-2">Events</legend>
 				<div class="grid grid-cols-2 gap-2">
 					{#each ALL_EVENTS as evt}
 						<label class="flex items-center gap-2 cursor-pointer">
-							<input
-								type="checkbox"
-								name="events"
-								value={evt}
-							/>
-							<span class="font-mono text-xs text-foreground">{evt}</span>
+							<input type="checkbox" name="events" value={evt} />
+							<span class="text-sm text-foreground">{evt}</span>
 						</label>
 					{/each}
 				</div>
 			</fieldset>
-
-			{#if createError}
-				<p class="font-mono text-xs text-destructive">{createError}</p>
-			{/if}
+			{#if createError}<p class="text-sm text-destructive">{createError}</p>{/if}
 		</form>
 	{/snippet}
 	{#snippet footer()}
-		<Button variant="outline" onclick={() => (createOpen = false)}>cancel</Button>
-		<Button type="submit" form="create-webhook-form">create</Button>
+		<Button variant="outline" onclick={() => (createOpen = false)}>Cancel</Button>
+		<Button type="submit" form="create-webhook-form">Create</Button>
 	{/snippet}
 </Dialog>
 
-<!-- Secret reveal dialog -->
 <Dialog bind:open={secretOpen} title="Save your webhook secret">
 	{#snippet children()}
 		<div class="flex flex-col gap-3">
-			<p class="font-mono text-xs text-muted-foreground">
-				This secret will not be shown again. Use it to verify the
-				<span class="text-foreground">X-Webhook-Signature</span> header on incoming requests.
+			<p class="text-sm text-muted-foreground">
+				This secret will not be shown again. Use it to verify the <span class="text-foreground font-medium">X-Webhook-Signature</span> header on incoming requests.
 			</p>
 			<CopyInput value={createdWebhook?.secret ?? ''} />
 		</div>
@@ -208,17 +147,12 @@
 	{/snippet}
 </Dialog>
 
-<!-- Delete confirmation dialog -->
-<Dialog
-	bind:open={confirmOpen}
-	title="Delete webhook"
-	description="This will permanently delete the webhook and all delivery history."
->
+<Dialog bind:open={confirmOpen} title="Delete webhook" description="This will permanently delete the webhook and all delivery history.">
 	{#snippet footer()}
-		<Button variant="outline" onclick={() => (confirmOpen = false)}>cancel</Button>
+		<Button variant="outline" onclick={() => (confirmOpen = false)}>Cancel</Button>
 		<form method="POST" action="?/delete">
 			<input type="hidden" name="id" value={pendingDeleteId} />
-			<Button type="submit" variant="destructive">confirm delete</Button>
+			<Button type="submit" variant="destructive">Delete</Button>
 		</form>
 	{/snippet}
 </Dialog>

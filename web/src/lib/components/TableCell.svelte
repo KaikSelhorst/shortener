@@ -10,7 +10,7 @@
 </script>
 
 <td
-	class={['px-4 py-2.5 font-mono text-xs text-foreground', className].filter(Boolean).join(' ')}
+	class={['px-4 py-1.5 text-sm text-foreground', className].filter(Boolean).join(' ')}
 	{...rest}
 >
 	{@render children()}

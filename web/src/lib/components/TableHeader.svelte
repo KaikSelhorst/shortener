@@ -11,7 +11,7 @@
 
 <th
 	class={[
-		'px-4 py-2.5 text-left text-[10px] font-normal uppercase tracking-[0.15em] text-muted-foreground',
+		'px-4 py-1.5 text-left text-[11px] font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap',
 		className,
 	]
 		.filter(Boolean)
