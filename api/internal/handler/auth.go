@@ -22,21 +22,28 @@ type AuthHandler struct {
 	userRepository         repository.UserRepo
 	refreshTokenRepository repository.RefreshTokenRepo
 	authService            *service.AuthService
+	registrationDisabled   bool
 }
 
 func NewAuthHandler(
 	userRepository repository.UserRepo,
 	refreshTokenRepository repository.RefreshTokenRepo,
 	authService *service.AuthService,
+	registrationDisabled bool,
 ) *AuthHandler {
 	return &AuthHandler{
 		userRepository:         userRepository,
 		refreshTokenRepository: refreshTokenRepository,
 		authService:            authService,
+		registrationDisabled:   registrationDisabled,
 	}
 }
 
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
+	if h.registrationDisabled {
+		writeError(w, http.StatusForbidden, "registration is disabled")
+		return
+	}
 	var req dto.RegisterRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request payload")

@@ -12,8 +12,7 @@ import (
 	authmw "github.com/KaikSelhorst/shortener/internal/middleware"
 	"github.com/KaikSelhorst/shortener/internal/repository"
 	"github.com/KaikSelhorst/shortener/internal/service"
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
+	"go.uber.org/zap"
 )
 
 type Handlers struct {
@@ -33,88 +32,78 @@ type Router struct {
 	Server *http.Server
 }
 
-func New(cfg *config.Config, handlers *Handlers, authService *service.AuthService, apiKeyRepo repository.APIKeyRepo, keyCache *cache.APIKeyCache) *Router {
-	r := chi.NewRouter()
-	r.Use(middleware.Logger)
-	r.Use(middleware.RequestID)
-	r.Use(authmw.SecurityHeaders)
-	r.Use(authmw.RequireJSON)
-	r.Use(func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			r.Body = http.MaxBytesReader(w, r.Body, 1<<20) // 1 MiB
-			next.ServeHTTP(w, r)
-		})
-	})
+// stack chains middlewares: first is outermost, last is innermost.
+func stack(mws ...func(http.Handler) http.Handler) func(http.Handler) http.Handler {
+	return func(h http.Handler) http.Handler {
+		for i := len(mws) - 1; i >= 0; i-- {
+			h = mws[i](h)
+		}
+		return h
+	}
+}
+
+func New(cfg *config.Config, handlers *Handlers, authService *service.AuthService, apiKeyRepo repository.APIKeyRepo, keyCache *cache.APIKeyCache, logger *zap.SugaredLogger) *Router {
+	mux := http.NewServeMux()
 
 	requireAuth := authmw.RequireAuth(authService, apiKeyRepo, keyCache)
 	authLimiter := authmw.NewRateLimiter(10, time.Minute)
+	scope := authmw.RequireScope
+	fn := func(f func(http.ResponseWriter, *http.Request)) http.Handler { return http.HandlerFunc(f) }
 
-	r.Get("/health", handlers.HealthHandler.Ok)
-	r.Get("/openapi.json", docs.Handler)
-	r.Get("/{code}", handlers.RedirectHandler.HandleRedirect)
+	base := stack(
+		authmw.RequestID,
+		authmw.NewLogger(logger),
+		authmw.SecurityHeaders,
+		authmw.RequireJSON,
+		func(next http.Handler) http.Handler { return http.MaxBytesHandler(next, 1<<20) },
+	)
 
-	r.Route("/auth", func(r chi.Router) {
-		r.With(authLimiter.Limit).Post("/register", handlers.AuthHandler.Register)
-		r.With(authLimiter.Limit).Post("/login", handlers.AuthHandler.Login)
-		r.Post("/refresh", handlers.AuthHandler.Refresh)
-		r.Post("/logout", handlers.AuthHandler.Logout)
-		r.With(requireAuth).Get("/me", handlers.AuthHandler.Me)
+	auth := stack(base, requireAuth)
+	limited := stack(base, authLimiter.Limit)
 
-		// Step 2 of the login flow — no auth required (uses short-lived session token).
-		r.Route("/mfa", func(r chi.Router) {
-			r.With(authLimiter.Limit).Post("/totp", handlers.TOTPHandler.ValidateMFA)
-		})
+	mux.Handle("GET /health", base(fn(handlers.HealthHandler.Ok)))
+	mux.Handle("GET /openapi.json", base(fn(docs.Handler)))
+	mux.Handle("GET /{code}", base(fn(handlers.RedirectHandler.HandleRedirect)))
 
-		// TOTP management — requires a valid access token.
-		r.Route("/totp", func(r chi.Router) {
-			r.Use(requireAuth)
-			r.Post("/setup",   handlers.TOTPHandler.Setup)
-			r.Post("/confirm", handlers.TOTPHandler.Confirm)
-			r.Delete("/",      handlers.TOTPHandler.Disable)
-		})
-	})
+	mux.Handle("POST /auth/register", limited(fn(handlers.AuthHandler.Register)))
+	mux.Handle("POST /auth/login", limited(fn(handlers.AuthHandler.Login)))
+	mux.Handle("POST /auth/refresh", base(fn(handlers.AuthHandler.Refresh)))
+	mux.Handle("POST /auth/logout", base(fn(handlers.AuthHandler.Logout)))
+	mux.Handle("GET /auth/me", auth(fn(handlers.AuthHandler.Me)))
+	mux.Handle("POST /auth/mfa/totp", limited(fn(handlers.TOTPHandler.ValidateMFA)))
+	mux.Handle("POST /auth/totp/setup", auth(fn(handlers.TOTPHandler.Setup)))
+	mux.Handle("POST /auth/totp/confirm", auth(fn(handlers.TOTPHandler.Confirm)))
+	mux.Handle("DELETE /auth/totp", auth(fn(handlers.TOTPHandler.Disable)))
 
-	r.Route("/api-keys", func(r chi.Router) {
-		r.Use(requireAuth)
-		r.Get("/", handlers.APIKeyHandler.ListAPIKeys)
-		r.Post("/", handlers.APIKeyHandler.CreateAPIKey)
-		r.Delete("/{id}", handlers.APIKeyHandler.DeleteAPIKey)
-	})
+	mux.Handle("GET /api-keys", auth(fn(handlers.APIKeyHandler.ListAPIKeys)))
+	mux.Handle("POST /api-keys", auth(fn(handlers.APIKeyHandler.CreateAPIKey)))
+	mux.Handle("DELETE /api-keys/{id}", auth(fn(handlers.APIKeyHandler.DeleteAPIKey)))
 
-	r.Route("/projects", func(r chi.Router) {
-		r.Use(requireAuth)
+	mux.Handle("GET /projects", auth(scope("projects:read")(fn(handlers.ProjectHandler.ListProjects))))
+	mux.Handle("POST /projects", auth(scope("projects:create")(fn(handlers.ProjectHandler.CreateProject))))
+	mux.Handle("PUT /projects/{slug}", auth(scope("projects:update")(fn(handlers.ProjectHandler.UpdateProject))))
+	mux.Handle("DELETE /projects/{slug}", auth(scope("projects:delete")(fn(handlers.ProjectHandler.DeleteProject))))
 
-		r.With(authmw.RequireScope("projects:read")).Get("/", handlers.ProjectHandler.ListProjects)
-		r.With(authmw.RequireScope("projects:create")).Post("/", handlers.ProjectHandler.CreateProject)
-		r.With(authmw.RequireScope("projects:update")).Put("/{slug}", handlers.ProjectHandler.UpdateProject)
-		r.With(authmw.RequireScope("projects:delete")).Delete("/{slug}", handlers.ProjectHandler.DeleteProject)
+	mux.Handle("POST /projects/{slug}/links", auth(scope("links:create")(fn(handlers.LinkHandler.CreateLink))))
+	mux.Handle("GET /projects/{slug}/links", auth(scope("links:read")(fn(handlers.LinkHandler.ListLinks))))
+	mux.Handle("GET /projects/{slug}/links/{code}", auth(scope("links:read")(fn(handlers.LinkHandler.GetLink))))
+	mux.Handle("PUT /projects/{slug}/links/{code}", auth(scope("links:update")(fn(handlers.LinkHandler.UpdateLink))))
+	mux.Handle("DELETE /projects/{slug}/links/{code}", auth(scope("links:delete")(fn(handlers.LinkHandler.DeleteLink))))
 
-		r.With(authmw.RequireScope("links:create")).Post("/{slug}/links", handlers.LinkHandler.CreateLink)
-		r.With(authmw.RequireScope("links:read")).Get("/{slug}/links", handlers.LinkHandler.ListLinks)
-		r.With(authmw.RequireScope("links:read")).Get("/{slug}/links/{code}", handlers.LinkHandler.GetLink)
-		r.With(authmw.RequireScope("links:update")).Put("/{slug}/links/{code}", handlers.LinkHandler.UpdateLink)
-		r.With(authmw.RequireScope("links:delete")).Delete("/{slug}/links/{code}", handlers.LinkHandler.DeleteLink)
+	mux.Handle("GET /projects/{slug}/analytics", auth(fn(handlers.AnalyticsHandler.GetProjectAnalytics)))
+	mux.Handle("GET /projects/{slug}/links/{code}/analytics", auth(fn(handlers.AnalyticsHandler.GetLinkAnalytics)))
 
-		// Analytics — JWT only (API key check is enforced inside the handler).
-		r.Get("/{slug}/analytics", handlers.AnalyticsHandler.GetProjectAnalytics)
-		r.Get("/{slug}/links/{code}/analytics", handlers.AnalyticsHandler.GetLinkAnalytics)
+	mux.Handle("GET /projects/stream", auth(fn(handlers.SSEHandler.HandleUserStream)))
+	mux.Handle("GET /projects/{slug}/stream", auth(fn(handlers.SSEHandler.HandleProjectStream)))
+	mux.Handle("GET /projects/{slug}/links/{code}/stream", auth(fn(handlers.SSEHandler.HandleLinkStream)))
 
-		// SSE streams — JWT only.
-		r.Get("/stream", handlers.SSEHandler.HandleUserStream)
-		r.Get("/{slug}/stream", handlers.SSEHandler.HandleProjectStream)
-		r.Get("/{slug}/links/{code}/stream", handlers.SSEHandler.HandleLinkStream)
-
-		// Webhooks.
-		r.Route("/{slug}/webhooks", func(r chi.Router) {
-			r.With(authmw.RequireScope("webhooks:read")).Get("/", handlers.WebhookHandler.ListWebhooks)
-			r.With(authmw.RequireScope("webhooks:create")).Post("/", handlers.WebhookHandler.CreateWebhook)
-			r.With(authmw.RequireScope("webhooks:delete")).Delete("/{id}", handlers.WebhookHandler.DeleteWebhook)
-			r.With(authmw.RequireScope("webhooks:read")).Get("/{id}/deliveries", handlers.WebhookHandler.ListDeliveries)
-		})
-	})
+	mux.Handle("GET /projects/{slug}/webhooks", auth(scope("webhooks:read")(fn(handlers.WebhookHandler.ListWebhooks))))
+	mux.Handle("POST /projects/{slug}/webhooks", auth(scope("webhooks:create")(fn(handlers.WebhookHandler.CreateWebhook))))
+	mux.Handle("DELETE /projects/{slug}/webhooks/{id}", auth(scope("webhooks:delete")(fn(handlers.WebhookHandler.DeleteWebhook))))
+	mux.Handle("GET /projects/{slug}/webhooks/{id}/deliveries", auth(scope("webhooks:read")(fn(handlers.WebhookHandler.ListDeliveries))))
 
 	server := &http.Server{
-		Handler:           r,
+		Handler:           mux,
 		Addr:              ":" + cfg.Port,
 		ReadHeaderTimeout: 5 * time.Second,
 		WriteTimeout:      30 * time.Second,

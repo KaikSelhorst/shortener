@@ -18,8 +18,9 @@ import (
 type contextKey string
 
 const (
-	UserIDKey contextKey = "user_id"
-	APIKeyKey contextKey = "api_key"
+	UserIDKey    contextKey = "user_id"
+	APIKeyKey    contextKey = "api_key"
+	requestIDKey contextKey = "request_id"
 )
 
 func UserIDFromContext(ctx context.Context) (int64, bool) {

@@ -66,7 +66,7 @@ func main() {
 	authService := service.NewAuthService(cfg.JWTSecret)
 	webhookService := service.NewWebhookService(webhookRepository, []byte(cfg.WebhookSecretKey))
 
-	shortcodeService, err := service.NewShortcodeService()
+	shortcodeService, err := service.NewShortcodeService([]byte(cfg.ShortcodeSecret))
 	if err != nil {
 		logger.Fatal(err)
 	}
@@ -82,7 +82,7 @@ func main() {
 	projectHandler := handler.NewProjectHandler(projectRepository, hub)
 	linkHandler := handler.NewLinkHandler(linkRepository, projectRepository, shortcodeService, webhookService, linkCache, cfg.BaseURL, cfg.CursorSecret)
 	webhookHandler := handler.NewWebhookHandler(webhookService, webhookRepository, projectRepository)
-	authHandler := handler.NewAuthHandler(userRepository, refreshTokenRepository, authService)
+	authHandler := handler.NewAuthHandler(userRepository, refreshTokenRepository, authService, cfg.RegistrationDisabled)
 	apiKeyHandler := handler.NewAPIKeyHandler(apiKeyRepository, projectRepository, authService)
 	totpHandler := handler.NewTOTPHandler(userRepository, refreshTokenRepository, authService)
 	analyticsHandler := handler.NewAnalyticsHandler(clickRepository, projectRepository, linkRepository, analyticsCache)
@@ -103,7 +103,7 @@ func main() {
 
 	go webhook.Start(ctx, webhookRepository, webhookService, &http.Client{Timeout: 10 * time.Second}, logger)
 
-	r := router.New(cfg, handlers, authService, apiKeyRepository, apiKeyCache)
+	r := router.New(cfg, handlers, authService, apiKeyRepository, apiKeyCache, logger)
 
 	go func() {
 		if err := r.Run(); err != nil && !errors.Is(err, http.ErrServerClosed) {

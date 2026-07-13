@@ -11,7 +11,6 @@ import (
 	"github.com/KaikSelhorst/shortener/internal/model"
 	"github.com/KaikSelhorst/shortener/internal/repository"
 	"github.com/KaikSelhorst/shortener/internal/service"
-	"github.com/go-chi/chi/v5"
 )
 
 type APIKeyHandler struct {
@@ -148,7 +147,7 @@ func (h *APIKeyHandler) DeleteAPIKey(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	idStr := chi.URLParam(r, "id")
+	idStr := r.PathValue("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "invalid id")

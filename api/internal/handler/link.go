@@ -14,7 +14,6 @@ import (
 	"github.com/KaikSelhorst/shortener/internal/model"
 	"github.com/KaikSelhorst/shortener/internal/repository"
 	"github.com/KaikSelhorst/shortener/internal/service"
-	"github.com/go-chi/chi/v5"
 )
 
 type linkClickedPayload struct {
@@ -106,7 +105,7 @@ func (h *LinkHandler) assertProjectAccess(w http.ResponseWriter, r *http.Request
 // verifies ownership and API key scope. Returns the project and true on
 // success, or writes an HTTP error and returns nil, false on failure.
 func (h *LinkHandler) loadProjectBySlug(w http.ResponseWriter, r *http.Request, userID int64) (*model.Project, bool) {
-	slug := chi.URLParam(r, "slug")
+	slug := r.PathValue("slug")
 	project, err := h.projectRepository.FindBySlug(r.Context(), slug)
 	if err != nil {
 		repoError(w, err, "project not found")
@@ -278,7 +277,7 @@ func (h *LinkHandler) GetLink(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	code := chi.URLParam(r, "code")
+	code := r.PathValue("code")
 
 	link, err := h.linkRepository.GetByCodeWithStats(r.Context(), code)
 	if err != nil {
@@ -300,7 +299,7 @@ func (h *LinkHandler) UpdateLink(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	code := chi.URLParam(r, "code")
+	code := r.PathValue("code")
 
 	var req dto.LinkRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -357,7 +356,7 @@ func (h *LinkHandler) DeleteLink(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	code := chi.URLParam(r, "code")
+	code := r.PathValue("code")
 
 	link, err := h.linkRepository.GetByCode(r.Context(), code)
 	if err != nil {

@@ -7,7 +7,7 @@ import (
 
 	"github.com/KaikSelhorst/shortener/internal/model"
 	"github.com/KaikSelhorst/shortener/internal/repository"
-	"github.com/google/uuid"
+	"github.com/KaikSelhorst/shortener/internal/uuidv7"
 )
 
 type WebhookRepo struct {
@@ -30,11 +30,11 @@ func (r *WebhookRepo) Create(_ context.Context, w *model.Webhook) error {
 	}
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	id, err := uuid.NewV7()
+	id, err := uuidv7.New()
 	if err != nil {
 		return err
 	}
-	w.ID = id.String()
+	w.ID = id
 	w.CreatedAt = time.Now()
 	cp := *w
 	r.webhooks[cp.ID] = &cp
@@ -113,7 +113,11 @@ func (r *WebhookRepo) CreateDelivery(_ context.Context, d *model.WebhookDelivery
 	}
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	d.ID = uuid.New().String()
+	id, err := uuidv7.New()
+	if err != nil {
+		return err
+	}
+	d.ID = id
 	d.Status = "pending"
 	d.CreatedAt = time.Now()
 	cp := *d

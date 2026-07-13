@@ -1,7 +1,6 @@
 package handler_test
 
 import (
-	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -14,25 +13,23 @@ import (
 	"github.com/KaikSelhorst/shortener/internal/repository/fakes"
 	"github.com/KaikSelhorst/shortener/internal/service"
 	"github.com/KaikSelhorst/shortener/internal/testutil"
-	"github.com/go-chi/chi/v5"
 )
 
 func newLinkHandler() (*handler.LinkHandler, *fakes.LinkRepo, *fakes.ProjectRepo) {
 	links := fakes.NewLinkRepo()
 	projects := fakes.NewProjectRepo()
-	svc, _ := service.NewShortcodeService()
+	svc, _ := service.NewShortcodeService([]byte("test-shortcode-secret-32-chars!!"))
 	lc := cache.NewLinkCache(100, time.Minute)
 	webhookSvc := service.NewWebhookService(fakes.NewWebhookRepo(), []byte("test-key"))
 	return handler.NewLinkHandler(links, projects, svc, webhookSvc, lc, "http://short.test", "cursor-secret"), links, projects
 }
 
-// withChiParams injects chi URL parameters into the request context.
-func withChiParams(r *http.Request, params map[string]string) *http.Request {
-	rctx := chi.NewRouteContext()
+// withPathValues injects URL path parameters into the request (Go 1.22+).
+func withPathValues(r *http.Request, params map[string]string) *http.Request {
 	for k, v := range params {
-		rctx.URLParams.Add(k, v)
+		r.SetPathValue(k, v)
 	}
-	return r.WithContext(context.WithValue(r.Context(), chi.RouteCtxKey, rctx))
+	return r
 }
 
 // seedProject creates a project owned by userID in the fake repo.
@@ -48,7 +45,7 @@ func seedProject(t *testing.T, projects *fakes.ProjectRepo, userID int64, name, 
 // seedLink creates a link in the fake repo using the shortcode service.
 func seedLink(t *testing.T, links *fakes.LinkRepo, projectID int64, url string) *model.Link {
 	t.Helper()
-	svc, _ := service.NewShortcodeService()
+	svc, _ := service.NewShortcodeService([]byte("test-shortcode-secret-32-chars!!"))
 	link := &model.Link{ProjectID: projectID, OriginalURL: url}
 	if err := links.Create(t.Context(), link, svc.GenerateShortCode); err != nil {
 		t.Fatalf("seedLink: %v", err)
@@ -66,7 +63,7 @@ func TestLinkHandler_CreateLink_Success(t *testing.T) {
 
 	w := httptest.NewRecorder()
 	r := testutil.WithUserID(
-		withChiParams(
+		withPathValues(
 			testutil.NewRequest(http.MethodPost, "/projects/my-project/links", dto.LinkRequest{
 				URL: "https://example.com",
 			}),
@@ -99,7 +96,7 @@ func TestLinkHandler_CreateLink_ProjectNotFound(t *testing.T) {
 
 	w := httptest.NewRecorder()
 	r := testutil.WithUserID(
-		withChiParams(
+		withPathValues(
 			testutil.NewRequest(http.MethodPost, "/projects/missing/links", dto.LinkRequest{
 				URL: "https://example.com",
 			}),
@@ -122,7 +119,7 @@ func TestLinkHandler_CreateLink_ForbiddenOtherUser(t *testing.T) {
 
 	w := httptest.NewRecorder()
 	r := testutil.WithUserID(
-		withChiParams(
+		withPathValues(
 			testutil.NewRequest(http.MethodPost, "/projects/owner-project/links", dto.LinkRequest{
 				URL: "https://example.com",
 			}),
@@ -150,7 +147,7 @@ func TestLinkHandler_ListLinks_Success(t *testing.T) {
 
 	w := httptest.NewRecorder()
 	r := testutil.WithUserID(
-		withChiParams(
+		withPathValues(
 			testutil.NewRequest(http.MethodGet, "/projects/list-project/links", nil),
 			map[string]string{"slug": "list-project"},
 		),
@@ -183,7 +180,7 @@ func TestLinkHandler_GetLink_Success(t *testing.T) {
 
 	w := httptest.NewRecorder()
 	r := testutil.WithUserID(
-		withChiParams(
+		withPathValues(
 			testutil.NewRequest(http.MethodGet, "/projects/get-project/links/"+link.ShortCode, nil),
 			map[string]string{"slug": "get-project", "code": link.ShortCode},
 		),
@@ -205,7 +202,7 @@ func TestLinkHandler_GetLink_NotFound(t *testing.T) {
 
 	w := httptest.NewRecorder()
 	r := testutil.WithUserID(
-		withChiParams(
+		withPathValues(
 			testutil.NewRequest(http.MethodGet, "/projects/nf-project/links/missing-code", nil),
 			map[string]string{"slug": "nf-project", "code": "missing-code"},
 		),
@@ -230,7 +227,7 @@ func TestLinkHandler_UpdateLink_Success(t *testing.T) {
 
 	w := httptest.NewRecorder()
 	r := testutil.WithUserID(
-		withChiParams(
+		withPathValues(
 			testutil.NewRequest(http.MethodPut, "/projects/update-project/links/"+link.ShortCode, dto.LinkRequest{
 				URL: "https://new.com",
 			}),
@@ -265,7 +262,7 @@ func TestLinkHandler_DeleteLink_Success(t *testing.T) {
 
 	w := httptest.NewRecorder()
 	r := testutil.WithUserID(
-		withChiParams(
+		withPathValues(
 			testutil.NewRequest(http.MethodDelete, "/projects/delete-project/links/"+link.ShortCode, nil),
 			map[string]string{"slug": "delete-project", "code": link.ShortCode},
 		),
