@@ -3,22 +3,21 @@
 	import type { SubmitFunction } from '@sveltejs/kit'
 	import type { Link } from '$lib/types'
 	import { enhance } from '$app/forms'
-	import { useSSE } from '$lib/sse.svelte'
-	import { useQrcode } from '$lib/qrcode.svelte'
+	import { useSSE } from '$lib/state/sse.svelte'
+	import { useQrcode } from '$lib/state/qrcode.svelte'
 	import { formatDate, toDatetimeLocal, parseUtm } from '$lib/format'
 	import {
 		Badge,
 		Button,
-		Input,
 		Dialog,
-		QRCode,
 		Table,
 		TableHead,
 		TableBody,
 		TableRow,
 		TableHeader,
 		TableCell,
-	} from '$lib'
+	} from '$lib/components/ui'
+	import { QRCode, LinkFormFields } from '$lib/components/links'
 
 	let { data, form }: { data: PageData; form: ActionData } = $props()
 
@@ -86,20 +85,13 @@
 
 <div class="sticky top-0 z-10 bg-background border-b border-border px-4 h-11 flex items-center justify-between">
 	<div class="flex items-center gap-1.5 text-sm min-w-0">
-		<a href="/dashboard" class="text-muted-foreground hover:text-foreground transition-colors shrink-0">Projects</a>
-		<span class="text-border shrink-0">/</span>
-		<span class="font-medium text-foreground truncate">{data.slug}</span>
 		{#if sse.connected}
-			<span class="flex items-center gap-1.5 text-xs text-success ml-2 shrink-0">
+			<span class="flex items-center gap-1.5 text-xs text-success shrink-0">
 				<span class="w-1.5 h-1.5 rounded-full bg-success"></span>Live
 			</span>
 		{/if}
 	</div>
-	<div class="flex items-center gap-2 shrink-0">
-		<a href="/{data.slug}/analytics" class="text-sm text-muted-foreground hover:text-foreground transition-colors">Analytics</a>
-		<a href="/{data.slug}/webhooks" class="text-sm text-muted-foreground hover:text-foreground transition-colors">Webhooks</a>
-		<Button size="sm" onclick={() => (createOpen = true)}>+ Link</Button>
-	</div>
+	<Button size="sm" onclick={() => (createOpen = true)}>+ Link</Button>
 </div>
 
 {#if form?.error}
@@ -188,35 +180,7 @@
 			use:enhance={handleCreate}
 			class="flex flex-col gap-4"
 		>
-			<Input name="url" type="url" label="URL" placeholder="https://example.com" required />
-			<Input name="title" type="text" label="Title" placeholder="optional title" />
-			<Input
-				name="custom_code"
-				type="text"
-				label="Short code"
-				placeholder="my-link (leave blank to auto-generate)"
-				pattern="[a-zA-Z0-9_\-]+"
-				minlength={3}
-				maxlength={50}
-			/>
-			<Input name="expires_at" type="datetime-local" label="Expires at" />
-			<Input name="max_clicks" type="number" label="Max clicks" placeholder="unlimited" min={1} />
-			<button
-				type="button"
-				onclick={() => (createUtmExpanded = !createUtmExpanded)}
-				class="text-sm text-muted-foreground hover:text-foreground transition-colors text-left"
-			>
-				{createUtmExpanded ? '▾' : '▸'} UTM parameters
-			</button>
-			{#if createUtmExpanded}
-				<div class="flex flex-col gap-4 border-l border-border pl-3">
-					<Input name="utm_source" type="text" label="Source" placeholder="newsletter, twitter, google" />
-					<Input name="utm_medium" type="text" label="Medium" placeholder="email, social, cpc" />
-					<Input name="utm_campaign" type="text" label="Campaign" placeholder="spring_sale" />
-					<Input name="utm_term" type="text" label="Term" placeholder="keywords (optional)" />
-					<Input name="utm_content" type="text" label="Content" placeholder="variant_a (optional)" />
-				</div>
-			{/if}
+			<LinkFormFields mode="create" bind:utmExpanded={createUtmExpanded} />
 			{#if createError}
 				<p class="text-sm text-destructive">{createError}</p>
 			{/if}
@@ -240,26 +204,15 @@
 				class="flex flex-col gap-4"
 			>
 				<input type="hidden" name="code" value={editLink.short_code} />
-				<Input name="url" type="url" label="URL" required value={utm.baseUrl} />
-				<Input name="title" type="text" label="Title" placeholder="optional title" value={editLink.title ?? ''} />
-				<Input name="expires_at" type="datetime-local" label="Expires at" value={toDatetimeLocal(editLink.expires_at)} />
-				<Input name="max_clicks" type="number" label="Max clicks" placeholder="unlimited" min={1} value={editLink.max_clicks ?? ''} />
-				<button
-					type="button"
-					onclick={() => (editUtmExpanded = !editUtmExpanded)}
-					class="text-sm text-muted-foreground hover:text-foreground transition-colors text-left"
-				>
-					{editUtmExpanded ? '▾' : '▸'} UTM parameters
-				</button>
-				{#if editUtmExpanded}
-					<div class="flex flex-col gap-4 border-l border-border pl-3">
-						<Input name="utm_source" type="text" label="Source" placeholder="newsletter, twitter, google" value={utm.source} />
-						<Input name="utm_medium" type="text" label="Medium" placeholder="email, social, cpc" value={utm.medium} />
-						<Input name="utm_campaign" type="text" label="Campaign" placeholder="spring_sale" value={utm.campaign} />
-						<Input name="utm_term" type="text" label="Term" placeholder="keywords (optional)" value={utm.term} />
-						<Input name="utm_content" type="text" label="Content" placeholder="variant_a (optional)" value={utm.content} />
-					</div>
-				{/if}
+				<LinkFormFields
+					mode="edit"
+					bind:utmExpanded={editUtmExpanded}
+					url={utm.baseUrl}
+					title={editLink.title ?? ''}
+					expiresAt={toDatetimeLocal(editLink.expires_at)}
+					maxClicks={editLink.max_clicks ?? ''}
+					utm={{ source: utm.source, medium: utm.medium, campaign: utm.campaign, term: utm.term, content: utm.content }}
+				/>
 				{#if editError}
 					<p class="text-sm text-destructive">{editError}</p>
 				{/if}

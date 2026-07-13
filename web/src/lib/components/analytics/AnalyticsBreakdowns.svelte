@@ -1,5 +1,5 @@
 <script lang="ts">
-	import BarChart from './BarChart.svelte'
+	import BarChart from '../charts/BarChart.svelte'
 
 	interface Item { label: string; value: number }
 	interface Props { devices: Item[]; browsers: Item[]; referrers: Item[] }

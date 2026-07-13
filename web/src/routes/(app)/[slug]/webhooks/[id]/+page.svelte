@@ -9,7 +9,7 @@
 		TableRow,
 		TableHeader,
 		TableCell,
-	} from '$lib'
+	} from '$lib/components/ui'
 
 	let { data }: { data: PageData } = $props()
 
@@ -19,18 +19,6 @@
 		return (link?.short_code as string) ?? null
 	}
 </script>
-
-<div class="sticky top-0 z-10 bg-background border-b border-border px-4 h-11 flex items-center">
-	<div class="flex items-center gap-1.5 text-sm min-w-0">
-		<a href="/dashboard" class="text-muted-foreground hover:text-foreground transition-colors shrink-0">Projects</a>
-		<span class="text-border shrink-0">/</span>
-		<a href="/{data.slug}" class="text-muted-foreground hover:text-foreground transition-colors shrink-0">{data.slug}</a>
-		<span class="text-border shrink-0">/</span>
-		<a href="/{data.slug}/webhooks" class="text-muted-foreground hover:text-foreground transition-colors shrink-0">Webhooks</a>
-		<span class="text-border shrink-0">/</span>
-		<span class="font-medium text-foreground truncate" title={data.webhook.url}>{data.webhook.url}</span>
-	</div>
-</div>
 
 <Table>
 	<TableHead>

@@ -6,11 +6,12 @@
 		title: string
 		description?: string
 		size?: 'sm' | 'md'
+		dismissable?: boolean
 		children?: Snippet
 		footer?: Snippet
 	}
 
-	let { open = $bindable(), title, description, size = 'sm', children, footer }: Props = $props()
+	let { open = $bindable(), title, description, size = 'sm', dismissable = true, children, footer }: Props = $props()
 
 	let dialog = $state<HTMLDialogElement>()
 	let inner = $state<HTMLDivElement>()
@@ -28,21 +29,24 @@
 <dialog
 	bind:this={dialog}
 	onclose={() => (open = false)}
-	onmousedown={(e) => { if (!inner?.contains(e.target as Node)) open = false }}
+	oncancel={(e) => { if (!dismissable) e.preventDefault() }}
+	onmousedown={(e) => { if (dismissable && !inner?.contains(e.target as Node)) open = false }}
 	class="m-auto w-full {widths[size]} border border-border bg-card rounded-xl p-0 shadow-2xl backdrop:bg-black/60 open:flex open:flex-col"
 >
 	<div bind:this={inner} class="flex flex-col">
 		<div class="flex items-center justify-between border-b border-border px-4 py-3">
 			<span class="text-sm font-semibold text-foreground">{title}</span>
-			<button
-				onclick={() => (open = false)}
-				class="flex items-center justify-center w-6 h-6 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
-				aria-label="Close"
-			>
-				<svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-					<path d="M1 1l12 12M13 1L1 13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-				</svg>
-			</button>
+			{#if dismissable}
+				<button
+					onclick={() => (open = false)}
+					class="flex items-center justify-center w-6 h-6 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+					aria-label="Close"
+				>
+					<svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+						<path d="M1 1l12 12M13 1L1 13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+					</svg>
+				</button>
+			{/if}
 		</div>
 
 		<div class="p-5">
@@ -53,12 +57,12 @@
 			{#if children}
 				<div>{@render children()}</div>
 			{/if}
-
-			{#if footer}
-				<div class="mt-5 flex justify-end gap-2 border-t border-border pt-4">
-					{@render footer()}
-				</div>
-			{/if}
 		</div>
+
+		{#if footer}
+			<div class="flex justify-end gap-2 border-t border-border px-5 py-4">
+				{@render footer()}
+			</div>
+		{/if}
 	</div>
 </dialog>

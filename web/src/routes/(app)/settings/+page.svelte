@@ -4,14 +4,8 @@
 	import type { CreateApiKeyResponse, TOTPSetupResponse } from '$lib/types'
 	import { enhance } from '$app/forms'
 	import { formatDate } from '$lib/format'
-	import {
-		Badge,
-		Button,
-		CopyInput,
-		Input,
-		Dialog,
-		QRCode,
-	} from '$lib'
+	import { Badge, Button, CopyInput, Input, Dialog } from '$lib/components/ui'
+	import { QRCode } from '$lib/components/links'
 
 	let { data, form }: { data: PageData; form: ActionData } = $props()
 
@@ -103,10 +97,6 @@
 		if (!confirmOpen) pendingDeleteId = null
 	})
 </script>
-
-<div class="sticky top-0 z-10 bg-background border-b border-border px-4 h-11 flex items-center">
-	<span class="text-sm font-medium text-foreground">Settings</span>
-</div>
 
 <!-- API Keys -->
 <div class="border-b border-border px-4 h-10 flex items-center justify-between shrink-0">
@@ -290,7 +280,7 @@
 			<Input name="name" type="text" label="Name" placeholder="e.g. CI/CD pipeline" required />
 
 			<div>
-				<p class="tui-label mb-2">Scopes</p>
+				<p class="field-label mb-2">Scopes</p>
 				<div class="grid grid-cols-2 gap-1">
 					{#each ALL_SCOPES as scope}
 						<label class="flex cursor-pointer items-center gap-2 px-2 py-1.5 text-sm text-foreground hover:bg-card transition-colors">
@@ -303,7 +293,7 @@
 
 			{#if data.projects.length > 0}
 				<div>
-					<label for="project_id" class="tui-label mb-1.5 block">
+					<label for="project_id" class="field-label mb-1.5 block">
 						Restrict to project <span class="normal-case text-muted-foreground">(optional)</span>
 					</label>
 					<select id="project_id" name="project_id" class="w-full">

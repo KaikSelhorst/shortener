@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { ActionData } from './$types'
-	import { Button, Input } from '$lib'
+	import { Button, Input } from '$lib/components/ui'
 	let { form }: { form: ActionData } = $props()
 	let session = $derived(form && 'session' in form ? (form.session as string) : null)
 </script>
@@ -18,10 +18,6 @@
 	</form>
 {:else}
 	<form method="POST" action="?/credentials" class="flex flex-col gap-3">
-		<div class="mb-1">
-			<h1 class="text-sm font-semibold text-foreground">Sign in</h1>
-			<p class="mt-1 text-sm text-muted-foreground">Enter your credentials to continue.</p>
-		</div>
 		{#if form?.error}<p class="text-sm text-destructive">{form.error}</p>{/if}
 		<Input label="Email" name="email" type="email" required autocomplete="email" />
 		<Input label="Password" name="password" type="password" required autocomplete="current-password" />

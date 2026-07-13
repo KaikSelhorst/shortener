@@ -239,10 +239,6 @@
 	<title>API Reference — Shortener</title>
 </svelte:head>
 
-<div class="sticky top-0 z-10 bg-background border-b border-border px-4 h-11 flex items-center">
-	<span class="text-sm font-medium text-foreground">API Docs</span>
-</div>
-
 <div class="flex h-[calc(100vh-44px)]">
 	<!-- Endpoint list (left) -->
 	<div class="w-64 shrink-0 border-r border-border overflow-y-auto">

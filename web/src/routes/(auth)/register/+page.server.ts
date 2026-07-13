@@ -4,7 +4,7 @@ import { createApi } from '$lib/api'
 import { setAuthCookies, assertComplete } from '$lib/server/cookies'
 
 export const load: PageServerLoad = ({ locals }) => {
-	if (locals.user) redirect(302, '/dashboard')
+	if (locals.user) redirect(302, '/')
 }
 
 export const actions: Actions = {
@@ -21,6 +21,6 @@ export const actions: Actions = {
 			return fail(400, { error: err instanceof Error ? err.message : 'Registration failed' })
 		}
 
-		redirect(302, '/dashboard')
+		redirect(302, '/')
 	},
 }

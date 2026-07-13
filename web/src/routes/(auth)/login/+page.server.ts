@@ -4,13 +4,13 @@ import { createApi, ApiError } from '$lib/api'
 import { setAuthCookies, assertComplete } from '$lib/server/cookies'
 
 export const load: PageServerLoad = ({ locals }) => {
-	if (locals.user) redirect(302, '/dashboard')
+	if (locals.user) redirect(302, '/')
 }
 
 export const actions: Actions = {
 	// Step 1: validate email + password.
 	// If TOTP is enabled, returns { session } so the page shows the code input.
-	// Otherwise sets cookies and redirects to the dashboard.
+	// Otherwise sets cookies and redirects into the app.
 	credentials: async ({ request, cookies, fetch }) => {
 		const data = await request.formData()
 		const email = data.get('email') as string
@@ -28,7 +28,7 @@ export const actions: Actions = {
 			return fail(400, { error: err instanceof ApiError ? err.message : 'Login failed' })
 		}
 
-		redirect(302, '/dashboard')
+		redirect(302, '/')
 	},
 
 	// Step 2: validate the TOTP code using the session token from step 1.
@@ -51,6 +51,6 @@ export const actions: Actions = {
 			})
 		}
 
-		redirect(302, '/dashboard')
+		redirect(302, '/')
 	},
 }

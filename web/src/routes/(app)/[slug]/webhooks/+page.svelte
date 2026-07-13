@@ -16,7 +16,7 @@
 		TableRow,
 		TableHeader,
 		TableCell,
-	} from '$lib'
+	} from '$lib/components/ui'
 
 	let { data, form }: { data: PageData; form: ActionData } = $props()
 
@@ -56,18 +56,8 @@
 
 </script>
 
-<div class="sticky top-0 z-10 bg-background border-b border-border px-4 h-11 flex items-center justify-between">
-	<div class="flex items-center gap-1.5 text-sm min-w-0">
-		<a href="/dashboard" class="text-muted-foreground hover:text-foreground transition-colors shrink-0">Projects</a>
-		<span class="text-border shrink-0">/</span>
-		<a href="/{data.slug}" class="text-muted-foreground hover:text-foreground transition-colors shrink-0">{data.slug}</a>
-		<span class="text-border shrink-0">/</span>
-		<span class="font-medium text-foreground">Webhooks</span>
-	</div>
-	<div class="flex items-center gap-2 shrink-0">
-		<a href="/{data.slug}/analytics" class="text-sm text-muted-foreground hover:text-foreground transition-colors">Analytics</a>
-		<Button size="sm" onclick={() => (createOpen = true)}>+ Webhook</Button>
-	</div>
+<div class="sticky top-0 z-10 bg-background border-b border-border px-4 h-11 flex items-center justify-end">
+	<Button size="sm" onclick={() => (createOpen = true)}>+ Webhook</Button>
 </div>
 
 <Table>
@@ -114,7 +104,7 @@
 		<form id="create-webhook-form" method="POST" action="?/create" use:enhance={handleCreate} class="flex flex-col gap-4">
 			<Input name="url" type="url" label="Endpoint URL" placeholder="https://your-app.com/webhook" required />
 			<fieldset class="flex flex-col gap-2 border-0 p-0 m-0">
-				<legend class="tui-label mb-2">Events</legend>
+				<legend class="field-label mb-2">Events</legend>
 				<div class="grid grid-cols-2 gap-2">
 					{#each ALL_EVENTS as evt}
 						<label class="flex items-center gap-2 cursor-pointer">

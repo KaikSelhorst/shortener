@@ -6,7 +6,7 @@
 		height?: number
 	}
 
-	let { data, height = 140 }: Props = $props()
+	let { data, height = 240 }: Props = $props()
 
 	const W = 600
 	const padTop = 10
@@ -76,15 +76,16 @@
 {:else}
 	<svg
 		viewBox="0 0 {W} {height}"
+		style="height: {height}px"
 		class="w-full overflow-visible"
 		preserveAspectRatio="none"
 		aria-hidden="true"
 		onmouseleave={() => (hovered = null)}
 	>
 		<defs>
-			<linearGradient id="tui-area" x1="0" y1="0" x2="0" y2="1">
-				<stop offset="0%"   stop-color="var(--tui-green)" stop-opacity="0.18" />
-				<stop offset="100%" stop-color="var(--tui-green)" stop-opacity="0"    />
+			<linearGradient id="line-chart-area" x1="0" y1="0" x2="0" y2="1">
+				<stop offset="0%"   stop-color="var(--success)" stop-opacity="0.18" />
+				<stop offset="100%" stop-color="var(--success)" stop-opacity="0"    />
 			</linearGradient>
 		</defs>
 
@@ -97,9 +98,9 @@
 			/>
 		{/each}
 
-		<path d={areaPath} fill="url(#tui-area)" />
+		<path d={areaPath} fill="url(#line-chart-area)" />
 
-		<path d={linePath} fill="none" stroke="var(--tui-green)" stroke-width="1.5" stroke-linejoin="round" />
+		<path d={linePath} fill="none" stroke="var(--success)" stroke-width="1.5" stroke-linejoin="round" />
 
 		<!-- invisible wider hit area + visible dot per point -->
 		{#each pts as p (p.date)}
@@ -114,7 +115,7 @@
 				<circle
 					cx={p.x} cy={p.y}
 					r={hovered?.date === p.date ? 4 : 2.5}
-					fill="var(--tui-green)"
+					fill="var(--success)"
 					stroke={hovered?.date === p.date ? 'var(--background)' : 'none'}
 					stroke-width="1.5"
 					style="transition: r 0.1s"
@@ -129,8 +130,7 @@
 					x={p.x} y={height - 5}
 					text-anchor={i === 0 ? 'start' : i === pts.length - 1 ? 'end' : 'middle'}
 					font-size="9"
-					font-family="JetBrains Mono, monospace"
-					fill={hovered?.date === p.date ? 'var(--tui-cyan)' : 'var(--tui-muted)'}
+					fill={hovered?.date === p.date ? 'var(--info)' : 'var(--muted-foreground)'}
 				>
 					{fmtDate(p.date)}
 				</text>
@@ -151,7 +151,6 @@
 				<text
 					x={tooltipX + 8} y={tooltipY + 13}
 					font-size="9"
-					font-family="JetBrains Mono, monospace"
 					fill="var(--muted-foreground)"
 				>
 					{fmtDate(hovered.date)}
@@ -160,8 +159,7 @@
 				<text
 					x={tooltipX + 8} y={tooltipY + 27}
 					font-size="10"
-					font-family="JetBrains Mono, monospace"
-					fill="var(--tui-green)"
+					fill="var(--success)"
 					font-weight="700"
 				>
 					{hovered.count.toLocaleString()} clicks

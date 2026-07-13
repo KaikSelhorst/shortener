@@ -1,9 +1,10 @@
 <script lang="ts">
 	import { untrack } from 'svelte'
 	import type { PageData } from './$types'
-	import { LineChart, StatBox, PeriodSelector, AnalyticsBreakdowns } from '$lib'
+	import { LineChart } from '$lib/components/charts'
+	import { PeriodSelector, AnalyticsBreakdowns, StatCard } from '$lib/components/analytics'
 	import { deviceItems, referrerItems, browserItems } from '$lib/analytics'
-	import { useSSE } from '$lib/sse.svelte'
+	import { useSSE } from '$lib/state/sse.svelte'
 
 	let { data }: { data: PageData } = $props()
 
@@ -25,13 +26,8 @@
 
 <div class="sticky top-0 z-10 bg-background border-b border-border px-4 h-11 flex items-center justify-between">
 	<div class="flex items-center gap-1.5 text-sm min-w-0">
-		<a href="/dashboard" class="text-muted-foreground hover:text-foreground transition-colors shrink-0">Projects</a>
-		<span class="text-border shrink-0">/</span>
-		<a href="/{data.slug}" class="text-muted-foreground hover:text-foreground transition-colors shrink-0">{data.slug}</a>
-		<span class="text-border shrink-0">/</span>
-		<span class="font-medium text-foreground shrink-0">Analytics</span>
 		{#if sse.connected}
-			<span class="flex items-center gap-1.5 text-xs text-success ml-2 shrink-0">
+			<span class="flex items-center gap-1.5 text-xs text-success shrink-0">
 				<span class="w-1.5 h-1.5 rounded-full bg-success"></span>Live
 			</span>
 		{/if}
@@ -41,22 +37,10 @@
 
 <!-- Stats strip -->
 <div class="grid grid-cols-2 sm:grid-cols-4 border-b border-border">
-	<div class="px-6 py-4 border-r border-border">
-		<p class="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Total Clicks</p>
-		<p class="mt-1 text-2xl font-semibold text-success">{liveClicks.toLocaleString()}</p>
-	</div>
-	<div class="px-6 py-4 border-r border-border">
-		<p class="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Unique Visitors</p>
-		<p class="mt-1 text-2xl font-semibold">{data.analytics.unique_clicks.toLocaleString()}</p>
-	</div>
-	<div class="px-6 py-4 border-r border-border">
-		<p class="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Links</p>
-		<p class="mt-1 text-2xl font-semibold">{(data.analytics.top_links ?? []).length}</p>
-	</div>
-	<div class="px-6 py-4">
-		<p class="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Avg / Day</p>
-		<p class="mt-1 text-2xl font-semibold">{avgPerDay.toLocaleString()}</p>
-	</div>
+	<StatCard label="Total Clicks" value={liveClicks} color="success" />
+	<StatCard label="Unique Visitors" value={data.analytics.unique_clicks} />
+	<StatCard label="Links" value={(data.analytics.top_links ?? []).length} />
+	<StatCard label="Avg / Day" value={avgPerDay} bordered={false} />
 </div>
 
 <!-- Chart -->

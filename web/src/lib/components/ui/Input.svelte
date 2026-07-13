@@ -25,7 +25,7 @@
 
 {#if label}
 	<label class="flex flex-col gap-1.5">
-		<span class="tui-label">{label}</span>
+		<span class="field-label">{label}</span>
 		<div class="relative">
 			<input class={cls} type={inputType} aria-invalid={error ? true : undefined} {...rest} />
 			{#if isPassword}

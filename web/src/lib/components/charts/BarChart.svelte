@@ -27,7 +27,7 @@
 			<span class="w-20 shrink-0 truncate text-right text-muted-foreground" title={item.label}>
 				{item.label}
 			</span>
-			<span class="shrink-0 text-[11px] tracking-tighter" style="color: color-mix(in srgb, var(--tui-green) {Math.round(40 + pct * 60)}%, var(--tui-muted))">
+			<span class="shrink-0 text-[11px] tracking-tighter" style="color: color-mix(in srgb, var(--success) {Math.round(40 + pct * 60)}%, var(--muted-foreground))">
 				{bar(pct)}
 			</span>
 			<div class="flex gap-2 shrink-0 text-muted-foreground">
