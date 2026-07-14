@@ -34,7 +34,7 @@ export const load: PageServerLoad = async (event) => {
 };
 
 export const actions: Actions = {
-  default: async (event) => {
+  create: async (event) => {
     const data = await event.request.formData();
     const url = data.get("url");
     const title = data.get("title");
@@ -57,6 +57,26 @@ export const actions: Actions = {
 
     if (!res.ok) {
       return fail(res.status, { error: responseBody.error ?? "Something went wrong." });
+    }
+
+    return { success: true };
+  },
+
+  delete: async (event) => {
+    const data = await event.request.formData();
+    const code = data.get("code");
+
+    if (typeof code !== "string" || !code) {
+      return fail(400, { error: "Missing link code." });
+    }
+
+    const res = await apiFetch(event, `/projects/${event.params.slug}/links/${code}`, {
+      method: "DELETE",
+    });
+
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      return fail(res.status, { error: body.error ?? "Failed to delete link." });
     }
 
     return { success: true };
