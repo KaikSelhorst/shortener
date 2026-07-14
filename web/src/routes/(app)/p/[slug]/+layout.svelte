@@ -25,7 +25,7 @@
   <aside class="flex w-56 shrink-0 flex-col border-r border-border bg-card">
     <ProjectSwitcher projects={data.projects} active={data.project} />
 
-    <div class="flex flex-1 flex-col gap-4 p-4">
+    <div class="flex flex-1 flex-col gap-3 p-3">
       <SidebarNav.Root>
         <SidebarNav.Item href={linksHref} active={page.url.pathname.startsWith(linksHref)}>
           {#snippet icon()}
