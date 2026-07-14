@@ -31,9 +31,11 @@
   --secondary: var(--brand-700);
   --secondary-foreground: var(--brand-50);
 
-  --primary: oklch(54% 0.2 265);
-  --primary-foreground: var(--brand-50);
-  --ring: var(--lime);
+  --lime: oklch(95% 0.19 117);
+
+  --primary: var(--lime);
+  --primary-foreground: var(--brand-900);
+  --ring: color-mix(in oklab, var(--lime) 65%, var(--brand-900));
 
   --destructive: oklch(57% 0.2 25);
   --destructive-foreground: oklch(97% 0.01 25);
@@ -44,7 +46,6 @@
   --violet: oklch(71% 0.16 293);
   --rose: oklch(72% 0.17 350);
   --neutral: var(--brand-300);
-  --lime: oklch(95% 0.19 117);
 }
 
 @theme inline {
