@@ -7,6 +7,7 @@
   import { Input } from "$lib/components/ui/input";
   import { Button } from "$lib/components/ui/button";
   import { Alert } from "$lib/components/ui/alert";
+  import ProjectIcon from "$lib/components/project-icon.svelte";
   import type { Project } from "$lib/types";
 
   interface Props {
@@ -27,9 +28,10 @@
       <button
         type="button"
         onclick={toggle}
-        class="flex h-14 w-full items-center justify-between border-b border-border px-4 text-sm font-medium text-foreground hover:bg-accent"
+        class="flex h-14 w-full items-center gap-2.5 border-b border-border px-4 text-sm font-medium text-foreground hover:bg-accent"
       >
-        <span class="truncate">{active.name}</span>
+        <ProjectIcon seed={active.slug} size={24} />
+        <span class="min-w-0 flex-1 truncate text-left">{active.name}</span>
         <svg
           class="size-4 shrink-0 text-muted-foreground"
           viewBox="0 0 24 24"
@@ -39,7 +41,8 @@
           stroke-linecap="round"
           stroke-linejoin="round"
         >
-          <path d="M6 9l6 6 6-6" />
+          <path d="m7 15 5 5 5-5" />
+          <path d="m7 9 5-5 5 5" />
         </svg>
       </button>
     {/snippet}
@@ -52,11 +55,13 @@
         <a
           href="/p/{project.slug}/links"
           onclick={close}
-          class="block truncate rounded-md px-2.5 py-2 text-left text-sm hover:bg-accent {project.id === active.id
+          class="flex items-center gap-2.5 rounded-md px-2.5 py-2 text-left text-sm hover:bg-accent {project.id ===
+          active.id
             ? 'text-foreground'
             : 'text-muted-foreground'}"
         >
-          {project.name}
+          <ProjectIcon seed={project.slug} size={20} />
+          <span class="min-w-0 flex-1 truncate">{project.name}</span>
         </a>
       {/each}
 
