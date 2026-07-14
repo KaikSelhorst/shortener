@@ -3,6 +3,7 @@
   import { Breadcrumbs } from "$lib/components/ui/breadcrumbs";
   import * as SidebarNav from "$lib/components/ui/sidebar-nav";
   import ProjectSwitcher from "$lib/components/project-switcher.svelte";
+  import LogoutButton from "$lib/components/logout-button.svelte";
   import type { LayoutProps } from "./$types";
 
   let { data, children }: LayoutProps = $props();
@@ -82,14 +83,9 @@
         </SidebarNav.Item>
       </SidebarNav.Root>
 
-      <form method="POST" action="/logout" class="mt-auto">
-        <button
-          type="submit"
-          class="w-full rounded-md px-3 py-2 text-left text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground"
-        >
-          Logout
-        </button>
-      </form>
+      <div class="mt-auto">
+        <LogoutButton />
+      </div>
     </div>
   </aside>
 
