@@ -5,6 +5,13 @@
 
   const isNotFound = $derived(page.status === 404);
   const ascii = $derived(renderAsciiCode(String(page.status)));
+
+  // Only send the user back into the app if the error actually happened
+  // somewhere inside it — a random/mistyped path outside (app) should land on
+  // the marketing page, not redirect into an app area they weren't in.
+  const backHref = $derived(
+    page.url.pathname.startsWith("/p") || page.url.pathname.startsWith("/settings") ? "/p" : "/",
+  );
 </script>
 
 <main class="fixed inset-0 flex flex-col items-center justify-center gap-3 p-8 text-center">
@@ -21,7 +28,7 @@
   </p>
 
   <a
-    href="/"
+    href={backHref}
     class="mt-3 rounded-md px-3.5 py-2 text-sm font-medium transition-opacity {buttonVariants.primary} {buttonSizes.md}"
   >
     Back to home
