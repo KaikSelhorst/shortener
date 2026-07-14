@@ -83,12 +83,12 @@
       <Table.Body>
         {#each data.links.data as link (link.id)}
           <Table.Row>
-            <Table.Cell>
+            <Table.Cell class="max-w-40">
               <a
                 href={link.short_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                class="font-medium text-foreground hover:underline"
+                class="block truncate font-medium text-foreground hover:underline"
               >
                 {link.short_url}
               </a>
