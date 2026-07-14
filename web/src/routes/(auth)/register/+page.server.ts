@@ -25,6 +25,6 @@ export const actions: Actions = {
     }
 
     setAuthCookies(cookies, body);
-    redirect(303, "/");
+    redirect(303, "/p");
   },
 };

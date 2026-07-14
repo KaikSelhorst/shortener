@@ -32,6 +32,6 @@ export const actions: Actions = {
 
     cookies.delete(MFA_SESSION_COOKIE, { path: "/" });
     setAuthCookies(cookies, body);
-    redirect(303, "/");
+    redirect(303, "/p");
   },
 };
