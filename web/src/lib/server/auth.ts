@@ -46,3 +46,12 @@ export function setMfaSessionCookie(cookies: Cookies, session: string) {
     maxAge: MFA_SESSION_MAX_AGE,
   });
 }
+
+export function getRefreshToken(cookies: Cookies) {
+  return cookies.get(REFRESH_TOKEN_COOKIE);
+}
+
+export function clearAuthCookies(cookies: Cookies) {
+  cookies.delete(ACCESS_TOKEN_COOKIE, { path: "/" });
+  cookies.delete(REFRESH_TOKEN_COOKIE, { path: "/" });
+}
