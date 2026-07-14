@@ -7,11 +7,9 @@
 
   let { data, children }: LayoutProps = $props();
 
-  const navItems = $derived([
-    { label: "Links", href: `/p/${data.project.slug}/links` },
-    { label: "Analytics", href: `/p/${data.project.slug}/analytics` },
-    { label: "Webhooks", href: `/p/${data.project.slug}/webhooks` },
-  ]);
+  const linksHref = $derived(`/p/${data.project.slug}/links`);
+  const analyticsHref = $derived(`/p/${data.project.slug}/analytics`);
+  const webhooksHref = $derived(`/p/${data.project.slug}/webhooks`);
 
   const section = $derived(page.url.pathname.split("/")[3] ?? "");
   const sectionLabel = $derived(section ? section.charAt(0).toUpperCase() + section.slice(1) : "");
@@ -24,29 +22,79 @@
 </script>
 
 <div class="flex min-h-screen">
-  <aside class="flex w-56 shrink-0 flex-col gap-4 border-r border-border bg-card p-4">
+  <aside class="flex w-56 shrink-0 flex-col border-r border-border bg-card">
     <ProjectSwitcher projects={data.projects} active={data.project} />
 
-    <SidebarNav.Root>
-      {#each navItems as item (item.href)}
-        <SidebarNav.Item href={item.href} active={page.url.pathname.startsWith(item.href)}>
-          {item.label}
+    <div class="flex flex-1 flex-col gap-4 p-4">
+      <SidebarNav.Root>
+        <SidebarNav.Item href={linksHref} active={page.url.pathname.startsWith(linksHref)}>
+          {#snippet icon()}
+            <svg
+              class="size-4 shrink-0"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+              <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+            </svg>
+          {/snippet}
+          Links
         </SidebarNav.Item>
-      {/each}
-    </SidebarNav.Root>
 
-    <form method="POST" action="/logout" class="mt-auto">
-      <button
-        type="submit"
-        class="w-full rounded-md px-3 py-2 text-left text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground"
-      >
-        Logout
-      </button>
-    </form>
+        <SidebarNav.Item href={analyticsHref} active={page.url.pathname.startsWith(analyticsHref)}>
+          {#snippet icon()}
+            <svg
+              class="size-4 shrink-0"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <line x1="18" y1="20" x2="18" y2="10" />
+              <line x1="12" y1="20" x2="12" y2="4" />
+              <line x1="6" y1="20" x2="6" y2="14" />
+            </svg>
+          {/snippet}
+          Analytics
+        </SidebarNav.Item>
+
+        <SidebarNav.Item href={webhooksHref} active={page.url.pathname.startsWith(webhooksHref)}>
+          {#snippet icon()}
+            <svg
+              class="size-4 shrink-0"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+            </svg>
+          {/snippet}
+          Webhooks
+        </SidebarNav.Item>
+      </SidebarNav.Root>
+
+      <form method="POST" action="/logout" class="mt-auto">
+        <button
+          type="submit"
+          class="w-full rounded-md px-3 py-2 text-left text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground"
+        >
+          Logout
+        </button>
+      </form>
+    </div>
   </aside>
 
   <div class="flex flex-1 flex-col">
-    <header class="border-b border-border px-6 py-4">
+    <header class="flex h-14 shrink-0 items-center border-b border-border px-6">
       <Breadcrumbs items={crumbs} />
     </header>
     <main class="flex-1">

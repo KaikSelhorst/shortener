@@ -26,7 +26,7 @@
       <button
         type="button"
         onclick={toggle}
-        class="flex w-full items-center justify-between rounded-md border border-border bg-foreground/5 px-3 py-2 text-sm font-medium text-foreground hover:bg-accent"
+        class="flex h-14 w-full items-center justify-between border-b border-border px-4 text-sm font-medium text-foreground hover:bg-accent"
       >
         <span class="truncate">{active.name}</span>
         <svg
