@@ -90,7 +90,7 @@
                 rel="noopener noreferrer"
                 class="font-medium text-foreground hover:underline"
               >
-                {link.short_code}
+                {link.short_url}
               </a>
             </Table.Cell>
             <Table.Cell class="max-w-xs truncate text-muted-foreground">{link.original_url}</Table.Cell>
