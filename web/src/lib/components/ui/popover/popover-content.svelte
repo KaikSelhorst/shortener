@@ -18,7 +18,7 @@
     onclick={() => ctx.setOpen(false)}
     aria-label="Close popover"
   ></button>
-  <div class="absolute left-0 z-20 mt-2 rounded-lg border border-border bg-popover p-1 shadow-lg {className}">
+  <div class="absolute left-0 z-20 rounded-lg border border-border bg-popover p-1 shadow-lg {className}">
     {@render children(() => ctx.setOpen(false))}
   </div>
 {/if}
