@@ -1,6 +1,5 @@
 import { error, fail } from "@sveltejs/kit";
-import { env } from "$env/dynamic/private";
-import { ACCESS_TOKEN_COOKIE } from "$lib/server/auth";
+import { apiFetch } from "$lib/server/api";
 import type { Actions, PageServerLoad } from "./$types";
 
 interface Link {
@@ -25,10 +24,8 @@ interface LinksPage {
   limit: number;
 }
 
-export const load: PageServerLoad = async ({ params, cookies, fetch }) => {
-  const res = await fetch(`${env.API_URL}/projects/${params.slug}/links`, {
-    headers: { authorization: `Bearer ${cookies.get(ACCESS_TOKEN_COOKIE)}` },
-  });
+export const load: PageServerLoad = async (event) => {
+  const res = await apiFetch(event, `/projects/${event.params.slug}/links`);
 
   if (!res.ok) error(res.status, "Failed to load links");
 
@@ -37,8 +34,8 @@ export const load: PageServerLoad = async ({ params, cookies, fetch }) => {
 };
 
 export const actions: Actions = {
-  default: async ({ request, params, cookies, fetch }) => {
-    const data = await request.formData();
+  default: async (event) => {
+    const data = await event.request.formData();
     const url = data.get("url");
     const title = data.get("title");
     const customCode = data.get("custom_code");
@@ -51,12 +48,9 @@ export const actions: Actions = {
     if (typeof title === "string" && title) body.title = title;
     if (typeof customCode === "string" && customCode) body.custom_code = customCode;
 
-    const res = await fetch(`${env.API_URL}/projects/${params.slug}/links`, {
+    const res = await apiFetch(event, `/projects/${event.params.slug}/links`, {
       method: "POST",
-      headers: {
-        "content-type": "application/json",
-        authorization: `Bearer ${cookies.get(ACCESS_TOKEN_COOKIE)}`,
-      },
+      headers: { "content-type": "application/json" },
       body: JSON.stringify(body),
     });
     const responseBody = await res.json();

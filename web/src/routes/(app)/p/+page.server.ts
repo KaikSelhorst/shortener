@@ -1,6 +1,5 @@
 import { fail, redirect } from "@sveltejs/kit";
-import { env } from "$env/dynamic/private";
-import { ACCESS_TOKEN_COOKIE } from "$lib/server/auth";
+import { apiFetch } from "$lib/server/api";
 import type { Actions, PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = async ({ parent }) => {
@@ -9,20 +8,17 @@ export const load: PageServerLoad = async ({ parent }) => {
 };
 
 export const actions: Actions = {
-  default: async ({ request, cookies, fetch }) => {
-    const data = await request.formData();
+  default: async (event) => {
+    const data = await event.request.formData();
     const name = data.get("name");
 
     if (typeof name !== "string" || !name) {
       return fail(400, { error: "Project name is required." });
     }
 
-    const res = await fetch(`${env.API_URL}/projects`, {
+    const res = await apiFetch(event, "/projects", {
       method: "POST",
-      headers: {
-        "content-type": "application/json",
-        authorization: `Bearer ${cookies.get(ACCESS_TOKEN_COOKIE)}`,
-      },
+      headers: { "content-type": "application/json" },
       body: JSON.stringify({ name }),
     });
     const body = await res.json();
