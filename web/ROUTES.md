@@ -1,6 +1,6 @@
 # Frontend Routes
 
-Baseado nos recursos da API (ver `API_ROUTES.md`) e no shell desenhado em `ui.md`. SvelteKit com route groups — `(auth)` e `(app)` são apenas organizacionais e não aparecem na URL.
+Baseado nos recursos da API (ver `API_ROUTES.md`) e no shell desenhado em `ui.md`. SvelteKit com route groups — `(auth)`, `(app)` e `(server)` são apenas organizacionais e não aparecem na URL.
 
 ```
 /                                        landing (marketing)
@@ -23,7 +23,7 @@ Baseado nos recursos da API (ver `API_ROUTES.md`) e no shell desenhado em `ui.md
 (app)/settings/api-keys                  GET/POST/DELETE /api-keys/
 (app)/settings/security                  GET /auth/me, /auth/totp/setup|confirm, DELETE /auth/totp
 
-logout                                   limpa os cookies de auth, chama POST /auth/logout, → /login
+(server)/logout                          limpa os cookies de auth, chama POST /auth/logout, → /login
 ```
 
 ## Notas
@@ -33,3 +33,4 @@ logout                                   limpa os cookies de auth, chama POST /a
 - A URL do frontend usa o prefixo curto `/p/[slug]/...`, desacoplado do path da API (`/projects/{slug}/...`) — decisão deliberada por brevidade.
 - `GET /projects/` deve ser buscado uma única vez em `(app)/p/+layout.server.ts` e compartilhado com as rotas `[slug]` abaixo, em vez de refetch por página. O projeto ativo em `[slug]` pode ser derivado dessa mesma lista — a API não tem endpoint de GET para um projeto individual (só list/create/update/delete).
 - As streams SSE (`/projects/stream`, `/projects/{slug}/stream`, `/projects/{slug}/links/{code}/stream`) não entram nessa árvore por não serem páginas. Nota para o futuro: a API só autentica via `Authorization: Bearer`, que o `EventSource` do browser não consegue enviar — vai ser necessário um proxy `+server.ts` same-origin lendo o cookie no servidor.
+- `(server)` agrupa rotas `+server.ts` que não renderizam página (ações utilitárias tipo logout, e futuramente os proxies SSE acima) — separado de `(app)`/`(auth)` pra não confundir com rotas navegáveis. Não chamamos de `(api)` pra não colidir com "API" já se referindo ao backend Go em `API_ROUTES.md`.
