@@ -1,11 +1,14 @@
 <script lang="ts">
+  import { enhance } from "$app/forms";
   import { Field } from "$lib/components/ui/field";
   import { Input } from "$lib/components/ui/input";
   import { Button } from "$lib/components/ui/button";
+  import { Alert } from "$lib/components/ui/alert";
+  import type { PageProps } from "./$types";
 
-  function onsubmit(e: SubmitEvent) {
-    e.preventDefault();
-  }
+  let { form }: PageProps = $props();
+
+  let submitting = $state(false);
 </script>
 
 <div class="flex flex-col gap-1 text-center">
@@ -13,7 +16,21 @@
   <p class="text-sm text-muted-foreground">Enter the 6-digit code from your authenticator app.</p>
 </div>
 
-<form class="flex flex-col gap-4" {onsubmit}>
+{#if form?.error}
+  <Alert token="destructive" title="Couldn't verify code">{form.error}</Alert>
+{/if}
+
+<form
+  class="flex flex-col gap-4"
+  method="POST"
+  use:enhance={() => {
+    submitting = true;
+    return async ({ update }) => {
+      await update();
+      submitting = false;
+    };
+  }}
+>
   <Field label="Code">
     <Input
       type="text"
@@ -26,7 +43,9 @@
       required
     />
   </Field>
-  <Button type="submit" class="mt-2 w-full">Verify</Button>
+  <Button type="submit" class="mt-2 w-full" disabled={submitting}>
+    {submitting ? "Verifying…" : "Verify"}
+  </Button>
 </form>
 
 <p class="text-center text-sm text-muted-foreground">
