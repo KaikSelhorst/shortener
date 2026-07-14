@@ -6,6 +6,7 @@
   import { Input } from "$lib/components/ui/input";
   import { Button } from "$lib/components/ui/button";
   import { Alert } from "$lib/components/ui/alert";
+  import { Tooltip } from "$lib/components/ui/tooltip";
   import DeleteLinkButton from "$lib/components/delete-link-button.svelte";
   import type { PageProps } from "./$types";
 
@@ -102,25 +103,27 @@
             <Table.Cell class="text-muted-foreground">{new Date(link.created_at).toLocaleDateString()}</Table.Cell>
             <Table.Cell>
               <div class="flex items-center gap-1">
-                <a
-                  href="/p/{data.project.slug}/links/{link.short_code}"
-                  aria-label="View analytics"
-                  class="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground"
-                >
-                  <svg
-                    class="size-4"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
+                <Tooltip label="View analytics">
+                  <a
+                    href="/p/{data.project.slug}/links/{link.short_code}"
+                    aria-label="View analytics"
+                    class="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground"
                   >
-                    <line x1="18" y1="20" x2="18" y2="10" />
-                    <line x1="12" y1="20" x2="12" y2="4" />
-                    <line x1="6" y1="20" x2="6" y2="14" />
-                  </svg>
-                </a>
+                    <svg
+                      class="size-4"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <line x1="18" y1="20" x2="18" y2="10" />
+                      <line x1="12" y1="20" x2="12" y2="4" />
+                      <line x1="6" y1="20" x2="6" y2="14" />
+                    </svg>
+                  </a>
+                </Tooltip>
                 <DeleteLinkButton code={link.short_code} />
               </div>
             </Table.Cell>
