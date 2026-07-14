@@ -75,7 +75,6 @@
           <Table.Head>Short link</Table.Head>
           <Table.Head>Original URL</Table.Head>
           <Table.Head>Clicks</Table.Head>
-          <Table.Head>Max clicks</Table.Head>
           <Table.Head>Expires</Table.Head>
           <Table.Head>Created</Table.Head>
           <Table.Head>Actions</Table.Head>
@@ -95,8 +94,7 @@
               </a>
             </Table.Cell>
             <Table.Cell class="max-w-xs truncate text-muted-foreground">{link.original_url}</Table.Cell>
-            <Table.Cell>{link.total_clicks}</Table.Cell>
-            <Table.Cell class="text-muted-foreground">{link.max_clicks ?? "—"}</Table.Cell>
+            <Table.Cell>{link.total_clicks}{link.max_clicks ? `/${link.max_clicks}` : ""}</Table.Cell>
             <Table.Cell class="text-muted-foreground">
               {link.expires_at ? new Date(link.expires_at).toLocaleDateString() : "—"}
             </Table.Cell>
