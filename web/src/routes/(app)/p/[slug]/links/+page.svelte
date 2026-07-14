@@ -83,7 +83,7 @@
       <Table.Body>
         {#each data.links.data as link (link.id)}
           <Table.Row>
-            <Table.Cell class="max-w-40">
+            <Table.Cell class="max-w-32">
               <a
                 href={link.short_url}
                 target="_blank"
