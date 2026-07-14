@@ -18,6 +18,7 @@
 
   let submitting = $state(false);
   let createError = $state<string | null>(null);
+  let modalOpen = $state(false);
 </script>
 
 <Popover.Root class="w-full">
@@ -61,61 +62,58 @@
 
       <div class="my-1 border-t border-border"></div>
 
-      <Modal.Root>
-        <Modal.Trigger>
-          {#snippet children(open)}
-            <button
-              type="button"
-              onclick={() => {
-                close();
-                open();
-              }}
-              class="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-sm text-foreground hover:bg-accent"
-            >
-              + New project
-            </button>
-          {/snippet}
-        </Modal.Trigger>
-        <Modal.Content>
-          {#snippet children(closeModal)}
-            <Modal.Header>
-              <Modal.Title>New project</Modal.Title>
-              <Modal.Description>Give it a name — the URL slug is generated automatically.</Modal.Description>
-            </Modal.Header>
-
-            {#if createError}
-              <Alert token="destructive" title="Couldn't create project" class="mt-4">{createError}</Alert>
-            {/if}
-
-            <form
-              class="mt-4"
-              method="POST"
-              action="/p"
-              use:enhance={() => {
-                submitting = true;
-                createError = null;
-                return async ({ result }) => {
-                  submitting = false;
-                  if (result.type === "failure") {
-                    createError = (result.data as { error?: string } | undefined)?.error ?? "Something went wrong.";
-                  } else if (result.type === "redirect") {
-                    closeModal();
-                    await goto(result.location, { invalidateAll: true });
-                  }
-                };
-              }}
-            >
-              <Field label="Name">
-                <Input name="name" placeholder="My project" required maxlength={100} />
-              </Field>
-              <Modal.Footer>
-                <Button type="button" variant="outline" onclick={closeModal}>Cancel</Button>
-                <Button type="submit" disabled={submitting}>{submitting ? "Creating…" : "Create"}</Button>
-              </Modal.Footer>
-            </form>
-          {/snippet}
-        </Modal.Content>
-      </Modal.Root>
+      <button
+        type="button"
+        onclick={() => {
+          close();
+          modalOpen = true;
+        }}
+        class="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-sm text-foreground hover:bg-accent"
+      >
+        + New project
+      </button>
     {/snippet}
   </Popover.Content>
 </Popover.Root>
+
+<Modal.Root bind:open={modalOpen}>
+  <Modal.Content>
+    {#snippet children(closeModal)}
+      <Modal.Header>
+        <Modal.Title>New project</Modal.Title>
+        <Modal.Description>Give it a name — the URL slug is generated automatically.</Modal.Description>
+      </Modal.Header>
+
+      {#if createError}
+        <Alert token="destructive" title="Couldn't create project" class="mt-4">{createError}</Alert>
+      {/if}
+
+      <form
+        class="mt-4"
+        method="POST"
+        action="/p"
+        use:enhance={() => {
+          submitting = true;
+          createError = null;
+          return async ({ result }) => {
+            submitting = false;
+            if (result.type === "failure") {
+              createError = (result.data as { error?: string } | undefined)?.error ?? "Something went wrong.";
+            } else if (result.type === "redirect") {
+              closeModal();
+              await goto(result.location, { invalidateAll: true });
+            }
+          };
+        }}
+      >
+        <Field label="Name">
+          <Input name="name" placeholder="My project" required maxlength={100} />
+        </Field>
+        <Modal.Footer>
+          <Button type="button" variant="outline" onclick={closeModal}>Cancel</Button>
+          <Button type="submit" disabled={submitting}>{submitting ? "Creating…" : "Create"}</Button>
+        </Modal.Footer>
+      </form>
+    {/snippet}
+  </Modal.Content>
+</Modal.Root>
