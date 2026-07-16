@@ -135,24 +135,40 @@ func ensureProjects(ctx context.Context, pool *pgxpool.Pool, userID int64) map[s
 
 // --- Links ---------------------------------------------------------------
 
-var linkSeeds = []struct {
+type linkSeed struct {
 	project    string
 	url        string
 	title      string
 	customCode string // empty = auto-generate
 	maxClicks  int64  // 0 = unlimited
-}{
-	{"marketing", "https://github.com/KaikSelhorst/shortener", "Shortener on GitHub", "repo", 0},
-	{"marketing", "https://example.com/landing", "Landing Page", "landing", 500},
-	{"marketing", "https://example.com/pricing", "Pricing", "pricing", 0},
-	{"marketing", "https://example.com/docs", "Documentation", "", 0},
-	{"tech-blog", "https://go.dev/blog/intro-generics", "Intro to Go Generics", "", 0},
-	{"tech-blog", "https://svelte.dev/blog/runes", "Svelte Runes", "svelte-runes", 100},
-	{"tech-blog", "https://www.postgresql.org/docs/current/", "PostgreSQL Docs", "pg-docs", 0},
-	{"tech-blog", "https://tailwindcss.com/blog/tailwindcss-v4", "Tailwind CSS v4", "", 0},
-	{"social-media", "https://twitter.com/golang", "Go on Twitter/X", "golang-x", 0},
-	{"social-media", "https://linkedin.com/company/postgresql", "PostgreSQL on LinkedIn", "", 50},
-	{"social-media", "https://youtube.com/@ThePrimeagen", "ThePrimeagen on YouTube", "prime", 0},
+}
+
+var linkSeeds = buildLinkSeeds()
+
+func buildLinkSeeds() []linkSeed {
+	seeds := []linkSeed{
+		{"marketing", "https://github.com/KaikSelhorst/shortener", "Shortener on GitHub", "repo", 0},
+		{"marketing", "https://example.com/landing", "Landing Page", "landing", 500},
+		{"marketing", "https://example.com/pricing", "Pricing", "pricing", 0},
+		{"marketing", "https://example.com/docs", "Documentation", "", 0},
+		{"tech-blog", "https://go.dev/blog/intro-generics", "Intro to Go Generics", "", 0},
+		{"tech-blog", "https://svelte.dev/blog/runes", "Svelte Runes", "svelte-runes", 100},
+		{"tech-blog", "https://www.postgresql.org/docs/current/", "PostgreSQL Docs", "pg-docs", 0},
+		{"tech-blog", "https://tailwindcss.com/blog/tailwindcss-v4", "Tailwind CSS v4", "", 0},
+		{"social-media", "https://twitter.com/golang", "Go on Twitter/X", "golang-x", 0},
+		{"social-media", "https://linkedin.com/company/postgresql", "PostgreSQL on LinkedIn", "", 50},
+		{"social-media", "https://youtube.com/@ThePrimeagen", "ThePrimeagen on YouTube", "prime", 0},
+	}
+
+	projects := []string{"marketing", "tech-blog", "social-media"}
+	for i := 1; i <= 100; i++ {
+		seeds = append(seeds, linkSeed{
+			project: projects[i%len(projects)],
+			url:     fmt.Sprintf("https://example.com/bulk-%d", i),
+			title:   fmt.Sprintf("Bulk Link %d", i),
+		})
+	}
+	return seeds
 }
 
 type seededLink struct {
