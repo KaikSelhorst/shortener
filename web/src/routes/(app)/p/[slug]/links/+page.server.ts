@@ -25,7 +25,9 @@ interface LinksPage {
 }
 
 export const load: PageServerLoad = async (event) => {
-  const res = await apiFetch(event, `/projects/${event.params.slug}/links`);
+  const cursor = event.url.searchParams.get("cursor");
+  const query = cursor ? `?cursor=${encodeURIComponent(cursor)}` : "";
+  const res = await apiFetch(event, `/projects/${event.params.slug}/links${query}`);
 
   if (!res.ok) error(res.status, "Failed to load links");
 
