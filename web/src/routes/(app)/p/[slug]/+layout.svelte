@@ -22,8 +22,8 @@
   ]);
 </script>
 
-<div class="flex min-h-screen">
-  <aside class="flex w-56 shrink-0 flex-col border-r border-border bg-card">
+<div class="flex h-screen">
+  <aside class="flex w-56 shrink-0 flex-col overflow-y-auto border-r border-border bg-card">
     <ProjectSwitcher projects={data.projects} active={data.project} />
 
     <div class="flex flex-1 flex-col gap-3 p-3">
@@ -89,11 +89,11 @@
     </div>
   </aside>
 
-  <div class="flex flex-1 flex-col">
+  <div class="flex min-h-0 flex-1 flex-col">
     <header class="flex h-14 shrink-0 items-center border-b border-border px-6">
       <Breadcrumbs items={crumbs} />
     </header>
-    <main class="flex-1">
+    <main class="min-h-0 flex-1 overflow-y-auto">
       {@render children()}
     </main>
   </div>
