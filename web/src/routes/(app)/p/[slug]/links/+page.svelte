@@ -132,34 +132,22 @@
 
     {#if data.links.prev_cursor || data.links.next_cursor}
       <div class="flex items-center justify-end gap-2">
-        {#if data.links.prev_cursor}
-          <a
-            href="?cursor={encodeURIComponent(data.links.prev_cursor)}"
-            class="rounded-md border border-border bg-foreground/5 px-2.5 py-1 text-xs text-foreground hover:bg-accent"
-          >
-            Previous
-          </a>
-        {:else}
-          <span
-            class="cursor-not-allowed rounded-md border border-border px-2.5 py-1 text-xs text-muted-foreground opacity-40"
-          >
-            Previous
-          </span>
-        {/if}
-        {#if data.links.next_cursor}
-          <a
-            href="?cursor={encodeURIComponent(data.links.next_cursor)}"
-            class="rounded-md border border-border bg-foreground/5 px-2.5 py-1 text-xs text-foreground hover:bg-accent"
-          >
-            Next
-          </a>
-        {:else}
-          <span
-            class="cursor-not-allowed rounded-md border border-border px-2.5 py-1 text-xs text-muted-foreground opacity-40"
-          >
-            Next
-          </span>
-        {/if}
+        <Button
+          variant="outline"
+          size="sm"
+          href={data.links.prev_cursor ? `?cursor=${encodeURIComponent(data.links.prev_cursor)}` : undefined}
+          disabled={!data.links.prev_cursor}
+        >
+          Previous
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          href={data.links.next_cursor ? `?cursor=${encodeURIComponent(data.links.next_cursor)}` : undefined}
+          disabled={!data.links.next_cursor}
+        >
+          Next
+        </Button>
       </div>
     {/if}
   {/if}
