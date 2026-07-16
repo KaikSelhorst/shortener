@@ -9,7 +9,7 @@
   let { children, class: className = "" }: Props = $props();
 </script>
 
-<div class="overflow-hidden rounded-lg border border-border bg-card {className}">
+<div class="rounded-lg border border-border bg-card {className}">
   <table class="w-full text-sm">
     {@render children()}
   </table>
