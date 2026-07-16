@@ -139,33 +139,69 @@ type linkSeed struct {
 	project    string
 	url        string
 	title      string
-	customCode string // empty = auto-generate
-	maxClicks  int64  // 0 = unlimited
+	customCode string     // empty = auto-generate
+	maxClicks  int64      // 0 = unlimited
+	expiresAt  *time.Time // nil = never expires
 }
 
 var linkSeeds = buildLinkSeeds()
 
+var bulkDomains = []string{
+	"example.com", "docs.example.com", "blog.example.com", "shop.example.com",
+	"news.ycombinator.com", "github.com", "dev.to", "medium.com", "notion.so", "coda.io",
+}
+
+var bulkPaths = []string{
+	"guide", "release", "update", "tutorial", "case-study", "webinar", "changelog",
+	"roadmap", "announcement", "faq", "pricing-update", "integration", "migration",
+}
+
+var bulkTitles = []string{
+	"Getting Started Guide", "Q1 Product Update", "New Feature Announcement",
+	"Migration Walkthrough", "Performance Deep Dive", "Customer Case Study",
+	"API Changelog", "Security Advisory", "Roadmap Preview", "Integration Tutorial",
+	"Community Spotlight", "Release Notes", "Onboarding Checklist", "Pricing Update",
+}
+
+var bulkMaxClicks = []int64{0, 0, 0, 0, 50, 100, 200, 500, 1000}
+
 func buildLinkSeeds() []linkSeed {
 	seeds := []linkSeed{
-		{"marketing", "https://github.com/KaikSelhorst/shortener", "Shortener on GitHub", "repo", 0},
-		{"marketing", "https://example.com/landing", "Landing Page", "landing", 500},
-		{"marketing", "https://example.com/pricing", "Pricing", "pricing", 0},
-		{"marketing", "https://example.com/docs", "Documentation", "", 0},
-		{"tech-blog", "https://go.dev/blog/intro-generics", "Intro to Go Generics", "", 0},
-		{"tech-blog", "https://svelte.dev/blog/runes", "Svelte Runes", "svelte-runes", 100},
-		{"tech-blog", "https://www.postgresql.org/docs/current/", "PostgreSQL Docs", "pg-docs", 0},
-		{"tech-blog", "https://tailwindcss.com/blog/tailwindcss-v4", "Tailwind CSS v4", "", 0},
-		{"social-media", "https://twitter.com/golang", "Go on Twitter/X", "golang-x", 0},
-		{"social-media", "https://linkedin.com/company/postgresql", "PostgreSQL on LinkedIn", "", 50},
-		{"social-media", "https://youtube.com/@ThePrimeagen", "ThePrimeagen on YouTube", "prime", 0},
+		{"marketing", "https://github.com/KaikSelhorst/shortener", "Shortener on GitHub", "repo", 0, nil},
+		{"marketing", "https://example.com/landing", "Landing Page", "landing", 500, nil},
+		{"marketing", "https://example.com/pricing", "Pricing", "pricing", 0, nil},
+		{"marketing", "https://example.com/docs", "Documentation", "", 0, nil},
+		{"tech-blog", "https://go.dev/blog/intro-generics", "Intro to Go Generics", "", 0, nil},
+		{"tech-blog", "https://svelte.dev/blog/runes", "Svelte Runes", "svelte-runes", 100, nil},
+		{"tech-blog", "https://www.postgresql.org/docs/current/", "PostgreSQL Docs", "pg-docs", 0, nil},
+		{"tech-blog", "https://tailwindcss.com/blog/tailwindcss-v4", "Tailwind CSS v4", "", 0, nil},
+		{"social-media", "https://twitter.com/golang", "Go on Twitter/X", "golang-x", 0, nil},
+		{"social-media", "https://linkedin.com/company/postgresql", "PostgreSQL on LinkedIn", "", 50, nil},
+		{"social-media", "https://youtube.com/@ThePrimeagen", "ThePrimeagen on YouTube", "prime", 0, nil},
 	}
 
+	now := time.Now()
 	projects := []string{"marketing", "tech-blog", "social-media"}
 	for i := 1; i <= 100; i++ {
+		domain := bulkDomains[rand.IntN(len(bulkDomains))]
+		path := bulkPaths[rand.IntN(len(bulkPaths))]
+
+		var expiresAt *time.Time
+		switch roll := rand.IntN(100); {
+		case roll < 8: // already expired
+			t := now.AddDate(0, 0, -rand.IntN(20)-1)
+			expiresAt = &t
+		case roll < 20: // expires in the future
+			t := now.AddDate(0, 0, rand.IntN(90)+1)
+			expiresAt = &t
+		}
+
 		seeds = append(seeds, linkSeed{
-			project: projects[i%len(projects)],
-			url:     fmt.Sprintf("https://example.com/bulk-%d", i),
-			title:   fmt.Sprintf("Bulk Link %d", i),
+			project:   projects[i%len(projects)],
+			url:       fmt.Sprintf("https://%s/%s-%d", domain, path, i),
+			title:     bulkTitles[rand.IntN(len(bulkTitles))],
+			maxClicks: bulkMaxClicks[rand.IntN(len(bulkMaxClicks))],
+			expiresAt: expiresAt,
 		})
 	}
 	return seeds
@@ -194,16 +230,16 @@ func ensureLinks(ctx context.Context, pool *pgxpool.Pool, svc *service.Shortcode
 			}
 			if l.customCode != "" {
 				if err = pool.QueryRow(ctx,
-					`INSERT INTO links (project_id, original_url, title, short_code, max_clicks) VALUES ($1, $2, $3, $4, $5) RETURNING id`,
-					pid, l.url, l.title, l.customCode, maxClicks,
+					`INSERT INTO links (project_id, original_url, title, short_code, max_clicks, expires_at) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
+					pid, l.url, l.title, l.customCode, maxClicks, l.expiresAt,
 				).Scan(&id); err != nil {
 					log.Fatalf("insert link %q: %v", l.url, err)
 				}
 				code = l.customCode
 			} else {
 				if err = pool.QueryRow(ctx,
-					`INSERT INTO links (project_id, original_url, title, max_clicks) VALUES ($1, $2, $3, $4) RETURNING id`,
-					pid, l.url, l.title, maxClicks,
+					`INSERT INTO links (project_id, original_url, title, max_clicks, expires_at) VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+					pid, l.url, l.title, maxClicks, l.expiresAt,
 				).Scan(&id); err != nil {
 					log.Fatalf("insert link %q: %v", l.url, err)
 				}
