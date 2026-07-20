@@ -5,11 +5,12 @@
   import { Input } from "$lib/components/ui/input";
   import { Button } from "$lib/components/ui/button";
   import { Alert } from "$lib/components/ui/alert";
+  import { createFormSubmit } from "$lib/form-submit.svelte";
   import type { PageProps } from "./$types";
 
   let { form }: PageProps = $props();
 
-  let submitting = $state(false);
+  const formSubmit = createFormSubmit();
 </script>
 
 <div class="flex min-h-screen flex-col items-center justify-center gap-4 p-4 text-center">
@@ -34,23 +35,15 @@
           <Modal.Title>New project</Modal.Title>
           <Modal.Description>Give it a name — the URL slug is generated automatically.</Modal.Description>
         </Modal.Header>
-        <form
-          class="mt-4"
-          method="POST"
-          use:enhance={() => {
-            submitting = true;
-            return async ({ update }) => {
-              await update();
-              submitting = false;
-            };
-          }}
-        >
+        <form class="mt-4" method="POST" use:enhance={formSubmit.submit}>
           <Field label="Name">
             <Input name="name" placeholder="My project" required maxlength={100} />
           </Field>
           <Modal.Footer>
             <Button type="button" variant="outline" onclick={close}>Cancel</Button>
-            <Button type="submit" disabled={submitting}>{submitting ? "Creating…" : "Create"}</Button>
+            <Button type="submit" disabled={formSubmit.submitting}>
+              {formSubmit.submitting ? "Creating…" : "Create"}
+            </Button>
           </Modal.Footer>
         </form>
       {/snippet}

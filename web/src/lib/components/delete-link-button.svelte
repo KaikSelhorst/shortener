@@ -3,13 +3,13 @@
   import * as Modal from "$lib/components/ui/modal";
   import { Button } from "$lib/components/ui/button";
   import { Tooltip } from "$lib/components/ui/tooltip";
+  import { createFormSubmit } from "$lib/form-submit.svelte";
 
   interface Props {
     code: string;
   }
 
   let { code }: Props = $props();
-  let submitting = $state(false);
 </script>
 
 <Modal.Root>
@@ -45,23 +45,13 @@
         <Modal.Title>Delete link?</Modal.Title>
         <Modal.Description>This can't be undone. The short link will stop working immediately.</Modal.Description>
       </Modal.Header>
-      <form
-        method="POST"
-        action="?/delete"
-        use:enhance={() => {
-          submitting = true;
-          return async ({ update, result }) => {
-            await update();
-            submitting = false;
-            if (result.type === "success") close();
-          };
-        }}
-      >
+      {@const formSubmit = createFormSubmit(close)}
+      <form method="POST" action="?/delete" use:enhance={formSubmit.submit}>
         <input type="hidden" name="code" value={code} />
         <Modal.Footer>
           <Button type="button" variant="outline" onclick={close}>Cancel</Button>
-          <Button type="submit" variant="destructive" disabled={submitting}>
-            {submitting ? "Deleting…" : "Delete"}
+          <Button type="submit" variant="destructive" disabled={formSubmit.submitting}>
+            {formSubmit.submitting ? "Deleting…" : "Delete"}
           </Button>
         </Modal.Footer>
       </form>

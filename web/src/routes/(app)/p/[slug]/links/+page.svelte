@@ -8,11 +8,11 @@
   import { Alert } from "$lib/components/ui/alert";
   import { Tooltip } from "$lib/components/ui/tooltip";
   import DeleteLinkButton from "$lib/components/delete-link-button.svelte";
+  import { createFormSubmit } from "$lib/form-submit.svelte";
+  import { formatDate } from "$lib/format";
   import type { PageProps } from "./$types";
 
   let { data, form }: PageProps = $props();
-
-  let submitting = $state(false);
 </script>
 
 <div class="flex flex-col gap-4 p-6">
@@ -34,19 +34,8 @@
             <Alert token="destructive" title="Couldn't create link" class="mt-4">{form.error}</Alert>
           {/if}
 
-          <form
-            class="mt-4 flex flex-col gap-4"
-            method="POST"
-            action="?/create"
-            use:enhance={() => {
-              submitting = true;
-              return async ({ update, result }) => {
-                await update();
-                submitting = false;
-                if (result.type === "success") close();
-              };
-            }}
-          >
+          {@const formSubmit = createFormSubmit(close)}
+          <form class="mt-4 flex flex-col gap-4" method="POST" action="?/create" use:enhance={formSubmit.submit}>
             <Field label="URL">
               <Input type="url" name="url" placeholder="https://example.com/very/long/path" required />
             </Field>
@@ -58,7 +47,9 @@
             </Field>
             <Modal.Footer>
               <Button type="button" variant="outline" onclick={close}>Cancel</Button>
-              <Button type="submit" disabled={submitting}>{submitting ? "Creating…" : "Create"}</Button>
+              <Button type="submit" disabled={formSubmit.submitting}>
+                {formSubmit.submitting ? "Creating…" : "Create"}
+              </Button>
             </Modal.Footer>
           </form>
         {/snippet}
@@ -95,10 +86,8 @@
             </Table.Cell>
             <Table.Cell class="max-w-xs truncate text-muted-foreground">{link.original_url}</Table.Cell>
             <Table.Cell>{link.total_clicks}{link.max_clicks ? `/${link.max_clicks}` : ""}</Table.Cell>
-            <Table.Cell class="text-muted-foreground">
-              {link.expires_at ? new Date(link.expires_at).toLocaleDateString() : "—"}
-            </Table.Cell>
-            <Table.Cell class="text-muted-foreground">{new Date(link.created_at).toLocaleDateString()}</Table.Cell>
+            <Table.Cell class="text-muted-foreground">{formatDate(link.expires_at)}</Table.Cell>
+            <Table.Cell class="text-muted-foreground">{formatDate(link.created_at)}</Table.Cell>
             <Table.Cell>
               <div class="flex items-center gap-1">
                 <Tooltip label="View analytics">
