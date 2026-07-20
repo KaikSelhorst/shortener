@@ -10,9 +10,25 @@
   import DeleteLinkButton from "$lib/components/delete-link-button.svelte";
   import { createFormSubmit } from "$lib/form-submit.svelte";
   import { formatDate } from "$lib/format";
+  import { untrack } from "svelte";
   import type { PageProps } from "./$types";
 
   let { data, form }: PageProps = $props();
+
+  let links = $state(untrack(() => data.links.data));
+  $effect(() => {
+    links = data.links.data;
+  });
+
+  $effect(() => {
+    const source = new EventSource(`/stream/projects/${data.project.slug}/stream`);
+    source.onmessage = (event) => {
+      const evt: { short_code: string } = JSON.parse(event.data);
+      const link = links.find((l) => l.short_code === evt.short_code);
+      if (link) link.total_clicks += 1;
+    };
+    return () => source.close();
+  });
 </script>
 
 <div class="flex flex-col gap-4 p-6">
@@ -57,7 +73,7 @@
     </Modal.Root>
   </div>
 
-  {#if data.links.data.length === 0}
+  {#if links.length === 0}
     <p class="text-sm text-muted-foreground">No links yet.</p>
   {:else}
     <Table.Root>
@@ -72,7 +88,7 @@
         </Table.Row>
       </Table.Header>
       <Table.Body>
-        {#each data.links.data as link (link.id)}
+        {#each links as link (link.id)}
           <Table.Row>
             <Table.Cell class="max-w-32">
               <a
