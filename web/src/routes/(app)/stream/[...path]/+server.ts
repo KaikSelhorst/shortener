@@ -7,7 +7,7 @@ import type { RequestHandler } from "./$types";
 // the matching API path. The API itself still enforces per-endpoint
 // authorization, so proxying any path through is safe.
 export const GET: RequestHandler = async (event) => {
-  const res = await apiFetch(event, `/${event.params.path}`);
+  const res = await apiFetch(event, `/${event.params.path}`, { signal: event.request.signal });
 
   if (!res.ok || !res.body) error(res.status, "Failed to open stream");
 
