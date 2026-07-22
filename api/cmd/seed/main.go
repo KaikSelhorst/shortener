@@ -182,7 +182,7 @@ func buildLinkSeeds() []linkSeed {
 
 	now := time.Now()
 	projects := []string{"marketing", "tech-blog", "social-media"}
-	for i := 1; i <= 100; i++ {
+	for i := 1; i <= 400; i++ {
 		domain := bulkDomains[rand.IntN(len(bulkDomains))]
 		path := bulkPaths[rand.IntN(len(bulkPaths))]
 
@@ -409,29 +409,53 @@ func ensureWebhookDeliveries(ctx context.Context, pool *pgxpool.Pool, webhookIDs
 	}
 }
 
+// clickCountFor returns a click count skewed like a real link portfolio: a
+// handful of viral links, a slice of solidly popular ones, and a long tail
+// of links with a few clicks each.
+func clickCountFor() int {
+	switch roll := rand.IntN(100); {
+	case roll < 5: // viral
+		return 400 + rand.IntN(1200)
+	case roll < 20: // popular
+		return 120 + rand.IntN(280)
+	default: // long tail
+		return 5 + rand.IntN(80)
+	}
+}
+
 func ensureClicks(ctx context.Context, pool *pgxpool.Pool, links []seededLink, ipHashSecret string) {
 	ids := make([]int64, len(links))
 	for i, l := range links {
 		ids[i] = l.id
 	}
 
-	var count int64
-	_ = pool.QueryRow(ctx,
-		`SELECT COUNT(*) FROM clicks WHERE link_id = ANY($1)`, ids,
-	).Scan(&count)
-
-	if count > 0 {
-		fmt.Printf("· clicks      %d already present\n", count)
-		return
+	seeded := make(map[int64]bool, len(links))
+	existing, err := pool.Query(ctx, `SELECT DISTINCT link_id FROM clicks WHERE link_id = ANY($1)`, ids)
+	if err != nil {
+		log.Fatalf("query existing clicks: %v", err)
 	}
+	for existing.Next() {
+		var id int64
+		if err := existing.Scan(&id); err != nil {
+			log.Fatalf("scan existing click link_id: %v", err)
+		}
+		seeded[id] = true
+	}
+	existing.Close()
 
 	now := time.Now()
-	rows := make([][]any, 0, len(links)*30)
+	rows := make([][]any, 0, len(links)*100)
+	newlySeeded := 0
 
 	for _, link := range links {
-		n := 20 + rand.IntN(20) // 20–39 clicks per link
-		for range n {
-			daysAgo := rand.IntN(30)
+		if seeded[link.id] {
+			continue
+		}
+		newlySeeded++
+
+		for range clickCountFor() {
+			// biased toward recent days, with a long tail back to 90 days ago
+			daysAgo := int(90 * rand.Float64() * rand.Float64())
 			hoursAgo := rand.IntN(24)
 			ts := now.AddDate(0, 0, -daysAgo).Add(-time.Duration(hoursAgo) * time.Hour)
 
@@ -456,7 +480,12 @@ func ensureClicks(ctx context.Context, pool *pgxpool.Pool, links []seededLink, i
 		}
 	}
 
-	_, err := pool.CopyFrom(ctx,
+	if len(rows) == 0 {
+		fmt.Printf("· clicks      already present for all %d links\n", len(links))
+		return
+	}
+
+	_, err = pool.CopyFrom(ctx,
 		pgx.Identifier{"clicks"},
 		[]string{"link_id", "user_agent", "ip_hash", "referer", "device_type", "referrer_source", "browser", "created_at"},
 		pgx.CopyFromRows(rows),
@@ -464,5 +493,5 @@ func ensureClicks(ctx context.Context, pool *pgxpool.Pool, links []seededLink, i
 	if err != nil {
 		log.Fatalf("insert clicks: %v", err)
 	}
-	fmt.Printf("✓ clicks      %d inserted across %d links\n", len(rows), len(links))
+	fmt.Printf("✓ clicks      %d inserted across %d links (%d already had data)\n", len(rows), newlySeeded, len(links)-newlySeeded)
 }
