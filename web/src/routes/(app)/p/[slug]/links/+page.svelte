@@ -73,21 +73,23 @@
     </Modal.Root>
   </div>
 
-  {#if links.length === 0}
-    <p class="text-sm text-muted-foreground">No links yet.</p>
-  {:else}
-    <Table.Root>
-      <Table.Header>
+  <Table.Root>
+    <Table.Header>
+      <Table.Row>
+        <Table.Head>Short link</Table.Head>
+        <Table.Head>Original URL</Table.Head>
+        <Table.Head>Clicks</Table.Head>
+        <Table.Head>Expires</Table.Head>
+        <Table.Head>Created</Table.Head>
+        <Table.Head>Actions</Table.Head>
+      </Table.Row>
+    </Table.Header>
+    <Table.Body>
+      {#if links.length === 0}
         <Table.Row>
-          <Table.Head>Short link</Table.Head>
-          <Table.Head>Original URL</Table.Head>
-          <Table.Head>Clicks</Table.Head>
-          <Table.Head>Expires</Table.Head>
-          <Table.Head>Created</Table.Head>
-          <Table.Head>Actions</Table.Head>
+          <Table.Cell colspan={6} class="text-center text-muted-foreground">No links yet.</Table.Cell>
         </Table.Row>
-      </Table.Header>
-      <Table.Body>
+      {:else}
         {#each links as link (link.id)}
           <Table.Row>
             <Table.Cell class="max-w-32">
@@ -132,28 +134,28 @@
             </Table.Cell>
           </Table.Row>
         {/each}
-      </Table.Body>
-    </Table.Root>
+      {/if}
+    </Table.Body>
+  </Table.Root>
 
-    {#if data.links.prev_cursor || data.links.next_cursor}
-      <div class="flex items-center justify-end gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          href={data.links.prev_cursor ? `?cursor=${encodeURIComponent(data.links.prev_cursor)}` : undefined}
-          disabled={!data.links.prev_cursor}
-        >
-          Previous
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          href={data.links.next_cursor ? `?cursor=${encodeURIComponent(data.links.next_cursor)}` : undefined}
-          disabled={!data.links.next_cursor}
-        >
-          Next
-        </Button>
-      </div>
-    {/if}
+  {#if data.links.prev_cursor || data.links.next_cursor}
+    <div class="flex items-center justify-end gap-2">
+      <Button
+        variant="outline"
+        size="sm"
+        href={data.links.prev_cursor ? `?cursor=${encodeURIComponent(data.links.prev_cursor)}` : undefined}
+        disabled={!data.links.prev_cursor}
+      >
+        Previous
+      </Button>
+      <Button
+        variant="outline"
+        size="sm"
+        href={data.links.next_cursor ? `?cursor=${encodeURIComponent(data.links.next_cursor)}` : undefined}
+        disabled={!data.links.next_cursor}
+      >
+        Next
+      </Button>
+    </div>
   {/if}
 </div>

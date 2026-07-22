@@ -80,20 +80,22 @@
     </Modal.Root>
   </div>
 
-  {#if data.webhooks.length === 0}
-    <p class="text-sm text-muted-foreground">No webhooks yet.</p>
-  {:else}
-    <Table.Root>
-      <Table.Header>
+  <Table.Root>
+    <Table.Header>
+      <Table.Row>
+        <Table.Head>URL</Table.Head>
+        <Table.Head>Events</Table.Head>
+        <Table.Head>Status</Table.Head>
+        <Table.Head>Created</Table.Head>
+        <Table.Head>Actions</Table.Head>
+      </Table.Row>
+    </Table.Header>
+    <Table.Body>
+      {#if data.webhooks.length === 0}
         <Table.Row>
-          <Table.Head>URL</Table.Head>
-          <Table.Head>Events</Table.Head>
-          <Table.Head>Status</Table.Head>
-          <Table.Head>Created</Table.Head>
-          <Table.Head>Actions</Table.Head>
+          <Table.Cell colspan={5} class="text-center text-muted-foreground">No webhooks yet.</Table.Cell>
         </Table.Row>
-      </Table.Header>
-      <Table.Body>
+      {:else}
         {#each data.webhooks as webhook (webhook.id)}
           <Table.Row>
             <Table.Cell class="max-w-xs truncate font-medium text-foreground">{webhook.url}</Table.Cell>
@@ -113,7 +115,7 @@
             </Table.Cell>
           </Table.Row>
         {/each}
-      </Table.Body>
-    </Table.Root>
-  {/if}
+      {/if}
+    </Table.Body>
+  </Table.Root>
 </div>
