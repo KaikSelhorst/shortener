@@ -433,6 +433,40 @@ func clickCountFor() int {
 	}
 }
 
+const daySpan = 90
+
+// buildDayPicker returns a weighted daysAgo sampler shared by every click in
+// this run, so the *aggregate* over_time series has real day-to-day bumps
+// instead of tracing one smooth per-click distribution. A mild recency trend
+// (more clicks lately) is layered with a per-day random multiplier — and
+// occasional spike days — computed once so the same "this day was unusually
+// busy" shape shows up across every link, the way a real traffic day would.
+func buildDayPicker() func() int {
+	weights := make([]float64, daySpan)
+	cumulative := make([]float64, daySpan)
+	total := 0.0
+	for d := 0; d < daySpan; d++ {
+		trend := 1.0 + float64(daySpan-d)/daySpan*2.0
+		noise := 0.3 + rand.Float64()*1.4
+		if rand.IntN(100) < 5 {
+			noise *= 3 + rand.Float64()*4 // viral/spike day
+		}
+		weights[d] = trend * noise
+		total += weights[d]
+		cumulative[d] = total
+	}
+
+	return func() int {
+		r := rand.Float64() * total
+		for d, c := range cumulative {
+			if r <= c {
+				return d
+			}
+		}
+		return daySpan - 1
+	}
+}
+
 func ensureClicks(ctx context.Context, pool *pgxpool.Pool, links []seededLink, ipHashSecret string) {
 	ids := make([]int64, len(links))
 	for i, l := range links {
@@ -456,6 +490,7 @@ func ensureClicks(ctx context.Context, pool *pgxpool.Pool, links []seededLink, i
 	now := time.Now()
 	rows := make([][]any, 0, len(links)*100)
 	newlySeeded := 0
+	pickDay := buildDayPicker()
 
 	for _, link := range links {
 		if seeded[link.id] {
@@ -464,8 +499,7 @@ func ensureClicks(ctx context.Context, pool *pgxpool.Pool, links []seededLink, i
 		newlySeeded++
 
 		for range clickCountFor() {
-			// biased toward recent days, with a long tail back to 90 days ago
-			daysAgo := int(90 * rand.Float64() * rand.Float64())
+			daysAgo := pickDay()
 			hoursAgo := rand.IntN(24)
 			ts := now.AddDate(0, 0, -daysAgo).Add(-time.Duration(hoursAgo) * time.Hour)
 
