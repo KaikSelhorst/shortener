@@ -9,6 +9,6 @@
   let { children, class: className = "" }: Props = $props();
 </script>
 
-<tr class="border-b border-border [&>*:last-child]:border-r-0 {className}">
+<tr class="border-b border-border [&>*:last-child]:shadow-none {className}">
   {@render children()}
 </tr>
