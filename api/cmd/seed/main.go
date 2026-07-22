@@ -293,11 +293,21 @@ var referers = []string{
 	"https://news.ycombinator.com/item?id=12345",
 }
 
-var sampleIPs = []string{
-	"203.0.113.10", "203.0.113.42", "198.51.100.20",
-	"198.51.100.77", "192.0.2.15", "192.0.2.88",
-	"185.220.101.1", "104.16.100.1", "45.33.32.156",
-	"151.101.1.195", "8.8.8.8", "1.1.1.1",
+var sampleIPs = buildSampleIPs()
+
+// buildSampleIPs draws from the RFC 5737 documentation ranges so the pool is
+// large enough for a believable unique-visitor count (small hardcoded lists
+// make every click look like the same handful of visitors).
+func buildSampleIPs() []string {
+	bases := []string{"203.0.113.", "198.51.100.", "192.0.2."}
+	ips := make([]string, 0, len(bases)*80+2)
+	for _, base := range bases {
+		for octet := 2; octet < 82; octet++ {
+			ips = append(ips, fmt.Sprintf("%s%d", base, octet))
+		}
+	}
+	ips = append(ips, "8.8.8.8", "1.1.1.1")
+	return ips
 }
 
 // --- Webhooks ------------------------------------------------------------
