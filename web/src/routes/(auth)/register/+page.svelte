@@ -12,6 +12,10 @@
   let submitting = $state(false);
 </script>
 
+<svelte:head>
+  <title>Create an account — Shortener</title>
+</svelte:head>
+
 <div class="flex flex-col gap-1 text-center">
   <h1 class="text-2xl font-semibold text-foreground">Create an account</h1>
   <p class="text-sm text-muted-foreground">Enter your email and choose a password to get started.</p>

@@ -11,6 +11,10 @@
   let submitting = $state(false);
 </script>
 
+<svelte:head>
+  <title>Two-factor authentication — Shortener</title>
+</svelte:head>
+
 <div class="flex flex-col gap-1 text-center">
   <h1 class="text-2xl font-semibold text-foreground">Two-factor authentication</h1>
   <p class="text-sm text-muted-foreground">Enter the 6-digit code from your authenticator app.</p>
