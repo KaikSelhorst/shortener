@@ -13,7 +13,7 @@
 
   const width = 720;
   const height = 220;
-  const padding = { top: 16, right: 12, bottom: 28, left: 36 };
+  const padding = { top: 12, right: 4, bottom: 18, left: 20 };
   const plotWidth = width - padding.left - padding.right;
   const plotHeight = height - padding.top - padding.bottom;
 
@@ -48,8 +48,8 @@
     return padding.top + plotHeight - (r + 1) * rowModule;
   }
   function tickY(value: number): number {
-    const r = Math.round((value / scaleMax) * rows);
-    return rowY(r) + square / 2;
+    const filled = filledRows(value);
+    return filled === 0 ? padding.top + plotHeight : rowY(filled - 1) + square / 2;
   }
 
   function range(n: number): number[] {
