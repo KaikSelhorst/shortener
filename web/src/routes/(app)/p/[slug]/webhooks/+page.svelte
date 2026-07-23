@@ -8,6 +8,7 @@
   import { Alert } from "$lib/components/ui/alert";
   import { Badge } from "$lib/components/ui/badge";
   import { Checkbox } from "$lib/components/ui/checkbox";
+  import { Tooltip } from "$lib/components/ui/tooltip";
   import DeleteWebhookButton from "$lib/components/delete-webhook-button.svelte";
   import { createFormSubmit } from "$lib/form-submit.svelte";
   import { formatDate } from "$lib/format";
@@ -111,7 +112,30 @@
             </Table.Cell>
             <Table.Cell class="text-muted-foreground">{formatDate(webhook.created_at)}</Table.Cell>
             <Table.Cell>
-              <DeleteWebhookButton id={webhook.id} />
+              <div class="flex items-center gap-1">
+                <Tooltip label="View deliveries">
+                  <a
+                    href="/p/{data.project.slug}/webhooks/{webhook.id}/deliveries"
+                    aria-label="View deliveries"
+                    class="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground"
+                  >
+                    <svg
+                      class="size-4"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <line x1="18" y1="20" x2="18" y2="10" />
+                      <line x1="12" y1="20" x2="12" y2="4" />
+                      <line x1="6" y1="20" x2="6" y2="14" />
+                    </svg>
+                  </a>
+                </Tooltip>
+                <DeleteWebhookButton id={webhook.id} />
+              </div>
             </Table.Cell>
           </Table.Row>
         {/each}
