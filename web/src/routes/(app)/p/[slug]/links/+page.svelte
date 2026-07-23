@@ -8,6 +8,7 @@
   import { Alert } from "$lib/components/ui/alert";
   import { Tooltip } from "$lib/components/ui/tooltip";
   import DeleteLinkButton from "$lib/components/delete-link-button.svelte";
+  import EditLinkButton from "$lib/components/edit-link-button.svelte";
   import { createFormSubmit } from "$lib/form-submit.svelte";
   import { formatDate } from "$lib/format";
   import { untrack } from "svelte";
@@ -51,7 +52,18 @@
           {/if}
 
           {@const formSubmit = createFormSubmit(close)}
-          <form class="mt-4 flex flex-col gap-4" method="POST" action="?/create" use:enhance={formSubmit.submit}>
+          <form
+            class="mt-4 flex flex-col gap-4"
+            method="POST"
+            action="?/create"
+            use:enhance={(input) => {
+              const expiresAt = input.formData.get("expires_at");
+              if (typeof expiresAt === "string" && expiresAt) {
+                input.formData.set("expires_at", new Date(expiresAt).toISOString());
+              }
+              return formSubmit.submit(input);
+            }}
+          >
             <Field label="URL">
               <Input type="url" name="url" placeholder="https://example.com/very/long/path" required />
             </Field>
@@ -60,6 +72,12 @@
             </Field>
             <Field label="Custom code" description="Optional, 3–50 characters.">
               <Input name="custom_code" placeholder="my-link" minlength={3} maxlength={50} />
+            </Field>
+            <Field label="Max clicks" description="Optional. The link stops working after this many clicks.">
+              <Input type="number" name="max_clicks" min="1" placeholder="Unlimited" />
+            </Field>
+            <Field label="Expires at" description="Optional, in your local time.">
+              <Input type="datetime-local" name="expires_at" />
             </Field>
             <Modal.Footer>
               <Button type="button" variant="outline" onclick={close}>Cancel</Button>
@@ -129,6 +147,7 @@
                     </svg>
                   </a>
                 </Tooltip>
+                <EditLinkButton {link} />
                 <DeleteLinkButton code={link.short_code} />
               </div>
             </Table.Cell>
