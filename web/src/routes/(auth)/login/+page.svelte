@@ -1,51 +1,52 @@
 <script lang="ts">
-	import type { ActionData } from './$types'
-	import { Button, Input } from '$lib'
+  import { enhance } from "$app/forms";
+  import { Field } from "$lib/components/ui/field";
+  import { Input } from "$lib/components/ui/input";
+  import { PasswordInput } from "$lib/components/ui/password-input";
+  import { Button } from "$lib/components/ui/button";
+  import { Alert } from "$lib/components/ui/alert";
+  import type { PageProps } from "./$types";
 
-	let { form }: { form: ActionData } = $props()
+  let { form }: PageProps = $props();
 
-	let session = $derived(form && 'session' in form ? (form.session as string) : null)
+  let submitting = $state(false);
 </script>
 
-<div class="tui-label mb-5 text-accent">
-	{#if session}mfa verification{:else}sign in{/if}
+<svelte:head>
+  <title>Sign in — Shortener</title>
+</svelte:head>
+
+<div class="flex flex-col gap-1 text-center">
+  <h1 class="text-2xl font-semibold text-foreground">Sign in</h1>
+  <p class="text-sm text-muted-foreground">Enter your email and password to continue.</p>
 </div>
 
 {#if form?.error}
-	<p class="mb-4 font-mono text-xs text-destructive">{form.error}</p>
+  <Alert token="destructive" title="Couldn't sign in">{form.error}</Alert>
 {/if}
 
-{#if session}
-	<form method="POST" action="?/totp" class="flex flex-col gap-5">
-		<input type="hidden" name="session" value={session} />
-		<p class="font-mono text-xs text-muted-foreground">
-			Enter the 6-digit code from your authenticator app.
-		</p>
-		<Input
-			label="Code"
-			name="code"
-			type="text"
-			inputmode="numeric"
-			pattern="[0-9]*"
-			maxlength={6}
-			autocomplete="one-time-code"
-			required
-		/>
-		<Button type="submit" class="mt-1 w-full">verify</Button>
-	</form>
-{:else}
-	<form method="POST" action="?/credentials" class="flex flex-col gap-5">
-		<Input label="Email" name="email" type="email" required autocomplete="email" />
-		<Input
-			label="Password"
-			name="password"
-			type="password"
-			required
-			autocomplete="current-password"
-		/>
-		<Button type="submit" class="mt-1 w-full">sign in</Button>
-		<p class="text-center font-mono text-xs text-muted-foreground">
-			no account? <a href="/register" class="text-accent hover:underline">register</a>
-		</p>
-	</form>
-{/if}
+<form
+  class="flex flex-col gap-4"
+  method="POST"
+  use:enhance={() => {
+    submitting = true;
+    return async ({ update }) => {
+      await update();
+      submitting = false;
+    };
+  }}
+>
+  <Field label="Email">
+    <Input type="email" name="email" placeholder="you@example.com" autocomplete="email" required />
+  </Field>
+  <Field label="Password">
+    <PasswordInput name="password" placeholder="••••••••" autocomplete="current-password" required />
+  </Field>
+  <Button type="submit" class="mt-2 w-full" disabled={submitting}>
+    {submitting ? "Signing in…" : "Sign in"}
+  </Button>
+</form>
+
+<p class="text-center text-sm text-muted-foreground">
+  Don't have an account? <a href="/register" class="font-medium text-foreground hover:underline">Sign up</a>
+</p>

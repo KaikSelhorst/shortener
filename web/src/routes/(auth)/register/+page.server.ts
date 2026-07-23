@@ -1,26 +1,30 @@
-import { redirect, fail } from '@sveltejs/kit'
-import type { Actions, PageServerLoad } from './$types'
-import { createApi } from '$lib/api'
-import { setAuthCookies, assertComplete } from '$lib/server/cookies'
-
-export const load: PageServerLoad = ({ locals }) => {
-	if (locals.user) redirect(302, '/dashboard')
-}
+import { fail, redirect } from "@sveltejs/kit";
+import { env } from "$env/dynamic/private";
+import { setAuthCookies } from "$lib/server/auth";
+import type { Actions } from "./$types";
 
 export const actions: Actions = {
-	default: async ({ request, cookies, fetch }) => {
-		const data = await request.formData()
-		const email = data.get('email') as string
-		const password = data.get('password') as string
+  default: async ({ request, cookies, fetch }) => {
+    const data = await request.formData();
+    const email = data.get("email");
+    const password = data.get("password");
 
-		try {
-			// Register always returns next === 'complete' — new users never have TOTP enabled.
-			const state = await createApi(fetch).auth.register(email, password)
-			setAuthCookies(cookies, assertComplete(state))
-		} catch (err) {
-			return fail(400, { error: err instanceof Error ? err.message : 'Registration failed' })
-		}
+    if (typeof email !== "string" || typeof password !== "string" || !email || !password) {
+      return fail(400, { error: "Email and password are required." });
+    }
 
-		redirect(302, '/dashboard')
-	},
-}
+    const res = await fetch(`${env.API_URL}/auth/register`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
+    const body = await res.json();
+
+    if (!res.ok) {
+      return fail(res.status, { error: body.error ?? "Something went wrong." });
+    }
+
+    setAuthCookies(cookies, body);
+    redirect(303, "/p");
+  },
+};

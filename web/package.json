@@ -1,19 +1,6 @@
 {
   "name": "web",
   "version": "0.0.1",
-  "private": true,
-  "type": "module",
-  "scripts": {
-    "dev": "vite dev",
-    "build": "vite build",
-    "preview": "vite preview",
-    "prepare": "svelte-kit sync || echo ''",
-    "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
-    "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
-    "lint": "oxlint",
-    "format": "oxfmt --write",
-    "format:check": "oxfmt --check"
-  },
   "devDependencies": {
     "@sveltejs/adapter-auto": "7.0.1",
     "@sveltejs/adapter-node": "5.5.4",
@@ -28,5 +15,18 @@
     "tailwindcss": "4.3.0",
     "typescript": "6.0.3",
     "vite": "8.0.14"
-  }
+  },
+  "private": true,
+  "scripts": {
+    "dev": "vite dev",
+    "build": "vite build",
+    "preview": "vite preview",
+    "prepare": "svelte-kit sync || echo ''",
+    "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+    "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
+    "lint": "oxlint",
+    "format": "oxfmt --write",
+    "format:check": "oxfmt --check"
+  },
+  "type": "module"
 }

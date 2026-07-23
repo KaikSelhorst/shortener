@@ -1,7 +1,7 @@
-import { redirect } from '@sveltejs/kit'
-import type { LayoutServerLoad } from './$types'
+import { redirect } from "@sveltejs/kit";
+import { ACCESS_TOKEN_COOKIE } from "$lib/server/auth";
+import type { LayoutServerLoad } from "./$types";
 
-export const load: LayoutServerLoad = ({ locals }) => {
-	if (!locals.user) redirect(302, '/login')
-	return { user: locals.user }
-}
+export const load: LayoutServerLoad = ({ cookies }) => {
+  if (!cookies.get(ACCESS_TOKEN_COOKIE)) redirect(303, "/login");
+};

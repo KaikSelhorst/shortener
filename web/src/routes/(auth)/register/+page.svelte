@@ -1,31 +1,52 @@
 <script lang="ts">
-	import type { ActionData } from './$types'
-	import { Button, Input } from '$lib'
+  import { enhance } from "$app/forms";
+  import { Field } from "$lib/components/ui/field";
+  import { Input } from "$lib/components/ui/input";
+  import { PasswordInput } from "$lib/components/ui/password-input";
+  import { Button } from "$lib/components/ui/button";
+  import { Alert } from "$lib/components/ui/alert";
+  import type { PageProps } from "./$types";
 
-	let { form }: { form: ActionData } = $props()
+  let { form }: PageProps = $props();
+
+  let submitting = $state(false);
 </script>
 
-<div class="tui-label mb-5 text-accent">create account</div>
+<svelte:head>
+  <title>Create an account — Shortener</title>
+</svelte:head>
 
-<form method="POST" class="flex flex-col gap-5">
-	{#if form?.error}
-		<p class="font-mono text-xs text-destructive">{form.error}</p>
-	{/if}
+<div class="flex flex-col gap-1 text-center">
+  <h1 class="text-2xl font-semibold text-foreground">Create an account</h1>
+  <p class="text-sm text-muted-foreground">Enter your email and choose a password to get started.</p>
+</div>
 
-	<Input label="Email" name="email" type="email" required autocomplete="email" />
+{#if form?.error}
+  <Alert token="destructive" title="Couldn't create account">{form.error}</Alert>
+{/if}
 
-	<Input
-		label="Password"
-		name="password"
-		type="password"
-		required
-		minlength={8}
-		autocomplete="new-password"
-	/>
-
-	<Button type="submit" class="mt-1 w-full">create account</Button>
-
-	<p class="text-center font-mono text-xs text-muted-foreground">
-		already have an account? <a href="/login" class="text-accent hover:underline">sign in</a>
-	</p>
+<form
+  class="flex flex-col gap-4"
+  method="POST"
+  use:enhance={() => {
+    submitting = true;
+    return async ({ update }) => {
+      await update();
+      submitting = false;
+    };
+  }}
+>
+  <Field label="Email">
+    <Input type="email" name="email" placeholder="you@example.com" autocomplete="email" required />
+  </Field>
+  <Field label="Password" description="8–72 characters.">
+    <PasswordInput name="password" placeholder="••••••••" autocomplete="new-password" minlength={8} maxlength={72} required />
+  </Field>
+  <Button type="submit" class="mt-2 w-full" disabled={submitting}>
+    {submitting ? "Creating account…" : "Create account"}
+  </Button>
 </form>
+
+<p class="text-center text-sm text-muted-foreground">
+  Already have an account? <a href="/login" class="font-medium text-foreground hover:underline">Sign in</a>
+</p>

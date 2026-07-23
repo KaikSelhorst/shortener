@@ -135,24 +135,76 @@ func ensureProjects(ctx context.Context, pool *pgxpool.Pool, userID int64) map[s
 
 // --- Links ---------------------------------------------------------------
 
-var linkSeeds = []struct {
+type linkSeed struct {
 	project    string
 	url        string
 	title      string
-	customCode string // empty = auto-generate
-	maxClicks  int64  // 0 = unlimited
-}{
-	{"marketing", "https://github.com/KaikSelhorst/shortener", "Shortener on GitHub", "repo", 0},
-	{"marketing", "https://example.com/landing", "Landing Page", "landing", 500},
-	{"marketing", "https://example.com/pricing", "Pricing", "pricing", 0},
-	{"marketing", "https://example.com/docs", "Documentation", "", 0},
-	{"tech-blog", "https://go.dev/blog/intro-generics", "Intro to Go Generics", "", 0},
-	{"tech-blog", "https://svelte.dev/blog/runes", "Svelte Runes", "svelte-runes", 100},
-	{"tech-blog", "https://www.postgresql.org/docs/current/", "PostgreSQL Docs", "pg-docs", 0},
-	{"tech-blog", "https://tailwindcss.com/blog/tailwindcss-v4", "Tailwind CSS v4", "", 0},
-	{"social-media", "https://twitter.com/golang", "Go on Twitter/X", "golang-x", 0},
-	{"social-media", "https://linkedin.com/company/postgresql", "PostgreSQL on LinkedIn", "", 50},
-	{"social-media", "https://youtube.com/@ThePrimeagen", "ThePrimeagen on YouTube", "prime", 0},
+	customCode string     // empty = auto-generate
+	maxClicks  int64      // 0 = unlimited
+	expiresAt  *time.Time // nil = never expires
+}
+
+var linkSeeds = buildLinkSeeds()
+
+var bulkDomains = []string{
+	"example.com", "docs.example.com", "blog.example.com", "shop.example.com",
+	"news.ycombinator.com", "github.com", "dev.to", "medium.com", "notion.so", "coda.io",
+}
+
+var bulkPaths = []string{
+	"guide", "release", "update", "tutorial", "case-study", "webinar", "changelog",
+	"roadmap", "announcement", "faq", "pricing-update", "integration", "migration",
+}
+
+var bulkTitles = []string{
+	"Getting Started Guide", "Q1 Product Update", "New Feature Announcement",
+	"Migration Walkthrough", "Performance Deep Dive", "Customer Case Study",
+	"API Changelog", "Security Advisory", "Roadmap Preview", "Integration Tutorial",
+	"Community Spotlight", "Release Notes", "Onboarding Checklist", "Pricing Update",
+}
+
+var bulkMaxClicks = []int64{0, 0, 0, 0, 50, 100, 200, 500, 1000}
+
+func buildLinkSeeds() []linkSeed {
+	seeds := []linkSeed{
+		{"marketing", "https://github.com/KaikSelhorst/shortener", "Shortener on GitHub", "repo", 0, nil},
+		{"marketing", "https://example.com/landing", "Landing Page", "landing", 500, nil},
+		{"marketing", "https://example.com/pricing", "Pricing", "pricing", 0, nil},
+		{"marketing", "https://example.com/docs", "Documentation", "", 0, nil},
+		{"tech-blog", "https://go.dev/blog/intro-generics", "Intro to Go Generics", "", 0, nil},
+		{"tech-blog", "https://svelte.dev/blog/runes", "Svelte Runes", "svelte-runes", 100, nil},
+		{"tech-blog", "https://www.postgresql.org/docs/current/", "PostgreSQL Docs", "pg-docs", 0, nil},
+		{"tech-blog", "https://tailwindcss.com/blog/tailwindcss-v4", "Tailwind CSS v4", "", 0, nil},
+		{"social-media", "https://twitter.com/golang", "Go on Twitter/X", "golang-x", 0, nil},
+		{"social-media", "https://linkedin.com/company/postgresql", "PostgreSQL on LinkedIn", "", 50, nil},
+		{"social-media", "https://youtube.com/@ThePrimeagen", "ThePrimeagen on YouTube", "prime", 0, nil},
+	}
+
+	now := time.Now()
+	projects := []string{"marketing", "tech-blog", "social-media"}
+	for i := 1; i <= 400; i++ {
+		domain := bulkDomains[rand.IntN(len(bulkDomains))]
+		path := bulkPaths[rand.IntN(len(bulkPaths))]
+
+		var expiresAt *time.Time
+		switch roll := rand.IntN(100); {
+		case roll < 8: // already expired
+			t := now.AddDate(0, 0, -rand.IntN(20)-1)
+			expiresAt = &t
+		case roll < 20: // expires in the future
+			t := now.AddDate(0, 0, rand.IntN(90)+1)
+			expiresAt = &t
+		}
+
+		seeds = append(seeds, linkSeed{
+			project:   projects[i%len(projects)],
+			url:       fmt.Sprintf("https://%s/%s-%d", domain, path, i),
+			title:     bulkTitles[rand.IntN(len(bulkTitles))],
+			maxClicks: bulkMaxClicks[rand.IntN(len(bulkMaxClicks))],
+			expiresAt: expiresAt,
+		})
+	}
+	return seeds
 }
 
 type seededLink struct {
@@ -178,16 +230,16 @@ func ensureLinks(ctx context.Context, pool *pgxpool.Pool, svc *service.Shortcode
 			}
 			if l.customCode != "" {
 				if err = pool.QueryRow(ctx,
-					`INSERT INTO links (project_id, original_url, title, short_code, max_clicks) VALUES ($1, $2, $3, $4, $5) RETURNING id`,
-					pid, l.url, l.title, l.customCode, maxClicks,
+					`INSERT INTO links (project_id, original_url, title, short_code, max_clicks, expires_at) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
+					pid, l.url, l.title, l.customCode, maxClicks, l.expiresAt,
 				).Scan(&id); err != nil {
 					log.Fatalf("insert link %q: %v", l.url, err)
 				}
 				code = l.customCode
 			} else {
 				if err = pool.QueryRow(ctx,
-					`INSERT INTO links (project_id, original_url, title, max_clicks) VALUES ($1, $2, $3, $4) RETURNING id`,
-					pid, l.url, l.title, maxClicks,
+					`INSERT INTO links (project_id, original_url, title, max_clicks, expires_at) VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+					pid, l.url, l.title, maxClicks, l.expiresAt,
 				).Scan(&id); err != nil {
 					log.Fatalf("insert link %q: %v", l.url, err)
 				}
@@ -241,11 +293,21 @@ var referers = []string{
 	"https://news.ycombinator.com/item?id=12345",
 }
 
-var sampleIPs = []string{
-	"203.0.113.10", "203.0.113.42", "198.51.100.20",
-	"198.51.100.77", "192.0.2.15", "192.0.2.88",
-	"185.220.101.1", "104.16.100.1", "45.33.32.156",
-	"151.101.1.195", "8.8.8.8", "1.1.1.1",
+var sampleIPs = buildSampleIPs()
+
+// buildSampleIPs draws from the RFC 5737 documentation ranges so the pool is
+// large enough for a believable unique-visitor count (small hardcoded lists
+// make every click look like the same handful of visitors).
+func buildSampleIPs() []string {
+	bases := []string{"203.0.113.", "198.51.100.", "192.0.2."}
+	ips := make([]string, 0, len(bases)*80+2)
+	for _, base := range bases {
+		for octet := 2; octet < 82; octet++ {
+			ips = append(ips, fmt.Sprintf("%s%d", base, octet))
+		}
+	}
+	ips = append(ips, "8.8.8.8", "1.1.1.1")
+	return ips
 }
 
 // --- Webhooks ------------------------------------------------------------
@@ -357,29 +419,87 @@ func ensureWebhookDeliveries(ctx context.Context, pool *pgxpool.Pool, webhookIDs
 	}
 }
 
+// clickCountFor returns a click count skewed like a real link portfolio: a
+// handful of viral links, a slice of solidly popular ones, and a long tail
+// of links with a few clicks each.
+func clickCountFor() int {
+	switch roll := rand.IntN(100); {
+	case roll < 5: // viral
+		return 400 + rand.IntN(1200)
+	case roll < 20: // popular
+		return 120 + rand.IntN(280)
+	default: // long tail
+		return 5 + rand.IntN(80)
+	}
+}
+
+const daySpan = 90
+
+// buildDayPicker returns a weighted daysAgo sampler shared by every click in
+// this run, so the *aggregate* over_time series has real day-to-day bumps
+// instead of tracing one smooth per-click distribution. A mild recency trend
+// (more clicks lately) is layered with a per-day random multiplier — and
+// occasional spike days — computed once so the same "this day was unusually
+// busy" shape shows up across every link, the way a real traffic day would.
+func buildDayPicker() func() int {
+	weights := make([]float64, daySpan)
+	cumulative := make([]float64, daySpan)
+	total := 0.0
+	for d := 0; d < daySpan; d++ {
+		trend := 1.0 + float64(daySpan-d)/daySpan*2.0
+		noise := 0.3 + rand.Float64()*1.4
+		if rand.IntN(100) < 5 {
+			noise *= 3 + rand.Float64()*4 // viral/spike day
+		}
+		weights[d] = trend * noise
+		total += weights[d]
+		cumulative[d] = total
+	}
+
+	return func() int {
+		r := rand.Float64() * total
+		for d, c := range cumulative {
+			if r <= c {
+				return d
+			}
+		}
+		return daySpan - 1
+	}
+}
+
 func ensureClicks(ctx context.Context, pool *pgxpool.Pool, links []seededLink, ipHashSecret string) {
 	ids := make([]int64, len(links))
 	for i, l := range links {
 		ids[i] = l.id
 	}
 
-	var count int64
-	_ = pool.QueryRow(ctx,
-		`SELECT COUNT(*) FROM clicks WHERE link_id = ANY($1)`, ids,
-	).Scan(&count)
-
-	if count > 0 {
-		fmt.Printf("· clicks      %d already present\n", count)
-		return
+	seeded := make(map[int64]bool, len(links))
+	existing, err := pool.Query(ctx, `SELECT DISTINCT link_id FROM clicks WHERE link_id = ANY($1)`, ids)
+	if err != nil {
+		log.Fatalf("query existing clicks: %v", err)
 	}
+	for existing.Next() {
+		var id int64
+		if err := existing.Scan(&id); err != nil {
+			log.Fatalf("scan existing click link_id: %v", err)
+		}
+		seeded[id] = true
+	}
+	existing.Close()
 
 	now := time.Now()
-	rows := make([][]any, 0, len(links)*30)
+	rows := make([][]any, 0, len(links)*100)
+	newlySeeded := 0
+	pickDay := buildDayPicker()
 
 	for _, link := range links {
-		n := 20 + rand.IntN(20) // 20–39 clicks per link
-		for range n {
-			daysAgo := rand.IntN(30)
+		if seeded[link.id] {
+			continue
+		}
+		newlySeeded++
+
+		for range clickCountFor() {
+			daysAgo := pickDay()
 			hoursAgo := rand.IntN(24)
 			ts := now.AddDate(0, 0, -daysAgo).Add(-time.Duration(hoursAgo) * time.Hour)
 
@@ -404,7 +524,12 @@ func ensureClicks(ctx context.Context, pool *pgxpool.Pool, links []seededLink, i
 		}
 	}
 
-	_, err := pool.CopyFrom(ctx,
+	if len(rows) == 0 {
+		fmt.Printf("· clicks      already present for all %d links\n", len(links))
+		return
+	}
+
+	_, err = pool.CopyFrom(ctx,
 		pgx.Identifier{"clicks"},
 		[]string{"link_id", "user_agent", "ip_hash", "referer", "device_type", "referrer_source", "browser", "created_at"},
 		pgx.CopyFromRows(rows),
@@ -412,5 +537,5 @@ func ensureClicks(ctx context.Context, pool *pgxpool.Pool, links []seededLink, i
 	if err != nil {
 		log.Fatalf("insert clicks: %v", err)
 	}
-	fmt.Printf("✓ clicks      %d inserted across %d links\n", len(rows), len(links))
+	fmt.Printf("✓ clicks      %d inserted across %d links (%d already had data)\n", len(rows), newlySeeded, len(links)-newlySeeded)
 }

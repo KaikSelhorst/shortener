@@ -1,56 +1,35 @@
-import { redirect, fail } from '@sveltejs/kit'
-import type { Actions, PageServerLoad } from './$types'
-import { createApi, ApiError } from '$lib/api'
-import { setAuthCookies, assertComplete } from '$lib/server/cookies'
-
-export const load: PageServerLoad = ({ locals }) => {
-	if (locals.user) redirect(302, '/dashboard')
-}
+import { fail, redirect } from "@sveltejs/kit";
+import { env } from "$env/dynamic/private";
+import { setAuthCookies, setMfaSessionCookie } from "$lib/server/auth";
+import type { Actions } from "./$types";
 
 export const actions: Actions = {
-	// Step 1: validate email + password.
-	// If TOTP is enabled, returns { session } so the page shows the code input.
-	// Otherwise sets cookies and redirects to the dashboard.
-	credentials: async ({ request, cookies, fetch }) => {
-		const data = await request.formData()
-		const email = data.get('email') as string
-		const password = data.get('password') as string
+  default: async ({ request, cookies, fetch }) => {
+    const data = await request.formData();
+    const email = data.get("email");
+    const password = data.get("password");
 
-		try {
-			const state = await createApi(fetch).auth.login(email, password)
+    if (typeof email !== "string" || typeof password !== "string" || !email || !password) {
+      return fail(400, { error: "Email and password are required." });
+    }
 
-			if (state.next === 'totp') {
-				return { session: state.session }
-			}
+    const res = await fetch(`${env.API_URL}/auth/login`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
+    const body = await res.json();
 
-			setAuthCookies(cookies, assertComplete(state))
-		} catch (err) {
-			return fail(400, { error: err instanceof ApiError ? err.message : 'Login failed' })
-		}
+    if (!res.ok) {
+      return fail(res.status, { error: body.error ?? "Something went wrong." });
+    }
 
-		redirect(302, '/dashboard')
-	},
+    if (body.next === "totp") {
+      setMfaSessionCookie(cookies, body.session);
+      redirect(303, "/mfa");
+    }
 
-	// Step 2: validate the TOTP code using the session token from step 1.
-	totp: async ({ request, cookies, fetch }) => {
-		const data = await request.formData()
-		const session = data.get('session') as string
-		const code = data.get('code') as string
-
-		if (!session || !code) {
-			return fail(400, { error: 'Session and code are required' })
-		}
-
-		try {
-			const state = await createApi(fetch).auth.totp.validateMFA(session, code)
-			setAuthCookies(cookies, assertComplete(state))
-		} catch (err) {
-			return fail(400, {
-				session,
-				error: err instanceof ApiError ? err.message : 'Invalid code',
-			})
-		}
-
-		redirect(302, '/dashboard')
-	},
-}
+    setAuthCookies(cookies, body);
+    redirect(303, "/p");
+  },
+};

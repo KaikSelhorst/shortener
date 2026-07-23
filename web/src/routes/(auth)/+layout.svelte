@@ -1,19 +1,17 @@
 <script lang="ts">
-	let { children } = $props()
+  import type { Snippet } from "svelte";
+  import AsciiPlasma from "$lib/components/ascii-plasma.svelte";
+
+  let { children }: { children: Snippet } = $props();
 </script>
 
-<div class="flex min-h-screen items-center justify-center bg-background px-4">
-	<div class="w-full max-w-sm">
-		<div class="border border-border bg-card p-6">
-			{@render children()}
-		</div>
-		<div class="border-x border-b border-border bg-background px-3 py-1">
-			<div class="flex items-center justify-between">
-				<span class="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">
-					secure connection
-				</span>
-				<span class="font-mono text-[9px] text-primary">●</span>
-			</div>
-		</div>
-	</div>
+<div class="flex min-h-screen">
+  <div class="flex w-full flex-col items-center justify-center bg-card p-4 md:w-1/2">
+    <div class="flex w-full max-w-sm flex-col gap-6">
+      {@render children()}
+    </div>
+  </div>
+  <div class="relative hidden items-center justify-center overflow-hidden bg-card md:flex md:w-1/2">
+    <AsciiPlasma />
+  </div>
 </div>

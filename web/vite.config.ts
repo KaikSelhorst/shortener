@@ -6,12 +6,5 @@ export default defineConfig({
   plugins: [tailwindcss(), sveltekit()],
   build: {
     target: 'esnext',
-    rollupOptions: {
-      output: {
-        manualChunks(id) {
-          if (id.includes('qrcodegen')) return 'qrcodegen'
-        },
-      },
-    },
   },
 });
