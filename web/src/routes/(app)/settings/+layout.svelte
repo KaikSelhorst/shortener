@@ -2,7 +2,7 @@
   import { page } from "$app/state";
   import { Breadcrumbs } from "$lib/components/ui/breadcrumbs";
   import * as SidebarNav from "$lib/components/ui/sidebar-nav";
-  import LogoutButton from "$lib/components/logout-button.svelte";
+  import AccountMenu from "$lib/components/account-menu.svelte";
   import type { LayoutProps } from "./$types";
 
   let { children }: LayoutProps = $props();
@@ -82,7 +82,7 @@
       </div>
 
       <div class="mt-auto">
-        <LogoutButton />
+        <AccountMenu />
       </div>
     </div>
   </aside>
