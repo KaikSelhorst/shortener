@@ -10,7 +10,7 @@ import (
 	"github.com/KaikSelhorst/shortener/internal/service"
 )
 
-const totpIssuer = "Shortener"
+const totpIssuer = "Docut"
 
 type TOTPHandler struct {
 	userRepository repository.UserRepo

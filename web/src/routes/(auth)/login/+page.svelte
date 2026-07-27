@@ -13,7 +13,7 @@
 </script>
 
 <svelte:head>
-  <title>Sign in — Shortener</title>
+  <title>Sign in — Docut</title>
 </svelte:head>
 
 <div class="flex flex-col gap-1 text-center">

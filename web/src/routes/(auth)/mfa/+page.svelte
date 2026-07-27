@@ -12,7 +12,7 @@
 </script>
 
 <svelte:head>
-  <title>Two-factor authentication — Shortener</title>
+  <title>Two-factor authentication — Docut</title>
 </svelte:head>
 
 <div class="flex flex-col gap-1 text-center">

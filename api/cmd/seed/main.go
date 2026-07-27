@@ -167,7 +167,7 @@ var bulkMaxClicks = []int64{0, 0, 0, 0, 50, 100, 200, 500, 1000}
 
 func buildLinkSeeds() []linkSeed {
 	seeds := []linkSeed{
-		{"marketing", "https://github.com/KaikSelhorst/shortener", "Shortener on GitHub", "repo", 0, nil},
+		{"marketing", "https://github.com/KaikSelhorst/shortener", "Docut on GitHub", "repo", 0, nil},
 		{"marketing", "https://example.com/landing", "Landing Page", "landing", 500, nil},
 		{"marketing", "https://example.com/pricing", "Pricing", "pricing", 0, nil},
 		{"marketing", "https://example.com/docs", "Documentation", "", 0, nil},

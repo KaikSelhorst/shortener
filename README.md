@@ -1,4 +1,4 @@
-# Shortener
+# Docut
 
 A self-hosted link shortener with click analytics and webhooks.
 
