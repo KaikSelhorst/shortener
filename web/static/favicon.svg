@@ -1,4 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="oklch(95% 0.19 117)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-  <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-  <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="4" fill="oklch(95% 0.19 117)" />
+  <path d="M4,13 L12,13 L12,18 Q12,20 14,20 L19,20 L19,28 L6,28 Q4,28 4,26 L4,13 Z" fill="oklch(15.5% 0 none)" />
+  <path d="M13,4 L13,12 L18,12 Q20,12 20,14 L20,19 L28,19 L28,6 Q28,4 26,4 L13,4 Z" fill="oklch(15.5% 0 none)" />
+  <path d="M4,6 A2,2 0 0 1 6,4 L12,4 L12,12 L4,12 Z" fill="oklch(15.5% 0 none)" />
+  <path d="M20,20 L28,20 L28,26 A2,2 0 0 1 26,28 L20,28 Z" fill="oklch(15.5% 0 none)" />
 </svg>
